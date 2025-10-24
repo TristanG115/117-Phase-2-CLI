@@ -174,7 +174,10 @@ def run_tests():
         passed_tests = total_tests - len(result.failures) - len(result.errors)
 
         print(
-            f"{passed_tests}/{total_tests} test cases passed. {coverage_percent}% line coverage achieved."
+            (
+                f"{passed_tests}/{total_tests} test cases passed. "
+                f"{coverage_percent}% line coverage achieved."
+            )
         )
 
         if result.failures or result.errors or coverage_percent < 80:

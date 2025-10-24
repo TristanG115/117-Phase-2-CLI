@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import sys
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -345,8 +344,7 @@ class ModelEvaluator:
                     os.makedirs(log_dir, exist_ok=True)
 
                 # Test if we can write to the log file
-                with open(log_file, "a") as f:
-                    pass
+                open(log_file, "a").close()
 
                 logging.basicConfig(
                     filename=log_file,
