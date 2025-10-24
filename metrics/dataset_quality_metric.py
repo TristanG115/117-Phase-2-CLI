@@ -116,9 +116,14 @@ Respond with only a number between 0.0 and 1.0."""
     def _evaluate_dataset_quality(self, dataset: Any) -> float:
         """Heuristic fallback for dataset quality evaluation"""
         try:
+            # Use the handler's built-in quality score method if available
+            if hasattr(dataset, "get_quality_score"):
+                return dataset.get_quality_score()
+
+            # Fallback: manual calculation if get_quality_score not available
             api_data = {}
             if hasattr(dataset, "get_huggingface_api_data"):
-                api_data = dataset.get_huggingface_api_data()
+                api_data = dataset.get_huggingface_api_data() or {}
 
             score = 0.0
 
