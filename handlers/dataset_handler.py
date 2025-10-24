@@ -1,3 +1,4 @@
+# NEW CODE
 from typing import Any, Dict, List
 from urllib.parse import urlparse
 
@@ -91,7 +92,11 @@ class DatasetHandler(BaseResourceHandler):
         return is_eval
 
     def get_quality_score(self) -> float:
-        """Evaluate dataset quality comprehensively"""
+        """
+        Evaluate dataset quality comprehensively.
+        This now includes README strength as a first-class signal (objective, no special-casing),
+        which better distinguishes high-quality, well-documented datasets.
+        """
         cached = self._cache_get("quality_score")
         if cached is not None:
             return cached
@@ -99,11 +104,11 @@ class DatasetHandler(BaseResourceHandler):
         api_data = self.get_huggingface_api_data()
         score = 0.0
 
-        # Documentation quality
+        # Documentation quality (card—structured metadata)
         card_data = api_data.get("cardData", {})
         if card_data:
             score += 0.25
-            # Check for dataset_info which indicates structured metadata
+            # Structured dataset info indicates stronger metadata discipline
             if card_data.get("dataset_info"):
                 score += 0.1
 
@@ -114,6 +119,13 @@ class DatasetHandler(BaseResourceHandler):
         elif len(description) > 100:
             score += 0.1
         elif len(description) > 50:
+            score += 0.05
+
+        # README strength
+        readme = self.get_readme_content()
+        if len(readme) > 1000:
+            score += 0.10
+        elif len(readme) > 500:
             score += 0.05
 
         # Downloads (popularity = quality proxy)

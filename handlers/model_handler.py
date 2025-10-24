@@ -1,3 +1,4 @@
+# NEW CODE
 import re
 from typing import Any, Dict, List
 from urllib.parse import urlparse
@@ -38,7 +39,8 @@ class ModelHandler(BaseResourceHandler):
                 self._cache_set("hf_api_data", data)
                 self._api_data_fetched = True
                 self.logger.info(
-                    f"Fetched HuggingFace API data for {self.model_id}: downloads={data.get('downloads', 0)}, likes={data.get('likes', 0)}"
+                    f"Fetched HuggingFace API data for {self.model_id}: "
+                    f"downloads={data.get('downloads', 0)}, likes={data.get('likes', 0)}"
                 )
                 return data
             else:
@@ -148,16 +150,37 @@ class ModelHandler(BaseResourceHandler):
 
         return []
 
+    def _resolve_file_size_via_head(self, filename: str) -> int:
+        """
+        Resolve a single file size using a HEAD request on the /resolve endpoint.
+        Returns size in bytes or 0 on failure.
+        """
+        try:
+            # Try `main` first, then fall back to `master`
+            for branch in ("main", "master"):
+                url = f"https://huggingface.co/{self.model_id}/resolve/{branch}/{filename}"
+                r = requests.head(url, timeout=10, allow_redirects=True)
+                if r.status_code == 200 and "Content-Length" in r.headers:
+                    sz = int(r.headers["Content-Length"])
+                    if sz > 0:
+                        return sz
+        except Exception as e:
+            self.logger.debug(f"HEAD size probe failed for {filename}: {e}")
+        return 0
+
     def get_size_mb(self) -> float:
-        """Calculate total model size in MB"""
+        """
+        Calculate total model size in MB with robust fallbacks.
+        This improves accuracy for models that store large LFS blobs (common for BERT),
+        which can be under-counted by naive tree listings.
+        """
         cached = self._cache_get("size_mb")
         if cached is not None:
             return cached
 
-        # Try to get from API first (more reliable)
+        # 1) Try to use safetensors total reported by API
         api_data = self.get_huggingface_api_data()
         if api_data.get("safetensors"):
-            # SafeTensors metadata often includes total size
             total_size = api_data["safetensors"].get("total", 0)
             if total_size > 0:
                 size_mb = total_size / (1024 * 1024)
@@ -165,18 +188,60 @@ class ModelHandler(BaseResourceHandler):
                 self.logger.info(f"Model size from safetensors: {size_mb:.2f} MB")
                 return size_mb
 
-        # Fallback: sum all file sizes
+        # 2) Sum sizes from the API 'tree' if present
         total_size = 0
         files = self.get_model_files()
-
         for file_info in files:
             if isinstance(file_info, dict) and "size" in file_info:
-                total_size += file_info["size"]
+                try:
+                    total_size += int(file_info["size"])
+                except Exception:
+                    pass
+
+        # 3) If still suspiciously low, try the 'siblings' list from API (if present)
+        if total_size == 0 and isinstance(api_data, dict):
+            siblings = api_data.get("siblings", [])
+            for sib in siblings:
+                if isinstance(sib, dict) and "rsize" in sib:
+                    try:
+                        total_size += int(sib["rsize"])
+                    except Exception:
+                        # some entries label as 'size' instead of 'rsize'
+                        sz = sib.get("size", 0)
+                        try:
+                            total_size += int(sz)
+                        except Exception:
+                            pass
+
+        # 4) If still low, probe common weight files via HEAD on /resolve
+        if total_size == 0:
+            common_weight_names = [
+                # pytorch
+                "pytorch_model.bin",
+                "pytorch_model.bin.index.json",
+                # safetensors
+                "model.safetensors",
+                "model-00001-of-00002.safetensors",
+                "model-00002-of-00002.safetensors",
+                # TF / ONNX (less common for BERT base)
+                "tf_model.h5",
+                "model.onnx",
+            ]
+            probed = 0
+            for fname in common_weight_names:
+                sz = self._resolve_file_size_via_head(fname)
+                if sz > 0:
+                    total_size += sz
+                    probed += 1
+            if probed:
+                self.logger.info(
+                    f"Resolved {probed} weight file sizes via HEAD for {self.model_id}"
+                )
 
         size_mb = total_size / (1024 * 1024) if total_size > 0 else 0.0
         self._cache_set("size_mb", size_mb)
         self.logger.info(
-            f"Model size calculated: {size_mb:.2f} MB from {len(files)} files"
+            f"Model size calculated: {size_mb:.2f} MB (aggregated from API/tree/HEAD)"
         )
         return size_mb
 
