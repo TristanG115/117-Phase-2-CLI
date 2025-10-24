@@ -159,10 +159,9 @@ def run_tests():
 
     # exact syntax autograder expects
     sys.stdout.write(
-        f"{passed_tests}/{total_tests} tests passed. {coverage_percent}% line coverage achieved.\n"
+        f"{passed_tests}/{total_tests} test cases passed. {coverage_percent}% line coverage achieved.\n"
     )
     sys.stdout.flush()
-    # always exit 0 to mark the run as successful
     sys.exit(0)
 
 
