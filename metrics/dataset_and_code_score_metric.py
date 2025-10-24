@@ -1,7 +1,9 @@
-from typing import Tuple, Dict, List, Any
 import time
-from .base_metric import BaseMetric
+from typing import Any, Dict, List, Tuple
+
 from url_classifier import URLType
+
+from .base_metric import BaseMetric
 
 
 class DatasetAndCodeScoreMetric(BaseMetric):
@@ -25,4 +27,4 @@ class DatasetAndCodeScoreMetric(BaseMetric):
         end_time = time.time()
         latency_ms = int((end_time - start_time) * 1000)
 
-        return score, latency_ms
+        return round(score, 2), latency_ms

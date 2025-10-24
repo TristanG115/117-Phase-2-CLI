@@ -1,7 +1,9 @@
-from typing import Tuple, Dict, List, Any
 import time
-from .base_metric import BaseMetric
+from typing import Any, Dict, List, Tuple
+
 from url_classifier import URLType
+
+from .base_metric import BaseMetric
 
 
 class RampUpTimeMetric(BaseMetric):
@@ -23,12 +25,16 @@ class RampUpTimeMetric(BaseMetric):
                     documentation_scores.append(doc_score)
 
         # Average documentation quality across all resources
-        final_score = sum(documentation_scores) / len(documentation_scores) if documentation_scores else 0.0
+        final_score = (
+            sum(documentation_scores) / len(documentation_scores)
+            if documentation_scores
+            else 0.0
+        )
 
         end_time = time.time()
         latency_ms = int((end_time - start_time) * 1000)
 
-        return final_score, latency_ms
+        return round(final_score, 2), latency_ms
 
     def _evaluate_documentation_quality(self, resource: Any) -> float:
         try:

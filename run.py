@@ -4,10 +4,67 @@ import os
 import subprocess
 import sys
 
+import requests
+
 from model_evaluator import ModelEvaluator
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REQUIREMENTS = os.path.join(SCRIPT_DIR, "requirements.txt")
+
+
+def validate_github_token() -> None:
+    token = os.getenv("GITHUB_TOKEN")
+    if not token or not token.strip():
+        sys.stderr.write("Error: Invalid GITHUB_TOKEN\n")
+        sys.exit(1)
+
+    headers = {"Authorization": f"token {token}"}
+    try:
+        resp = requests.get(
+            "https://api.github.com/rate_limit", headers=headers, timeout=5
+        )
+        if resp.status_code != 200:
+            sys.stderr.write("Error: Invalid GITHUB_TOKEN\n")
+            sys.exit(1)
+    except Exception:
+        sys.stderr.write("Error: Invalid GITHUB_TOKEN\n")
+        sys.exit(1)
+
+
+def validate_log_file() -> None:
+    log_path = os.getenv("LOG_FILE")
+    if not log_path:
+        sys.stderr.write("Error: LOG_FILE not set\n")
+        sys.exit(1)
+
+    parent = os.path.dirname(log_path) or "."
+    if not os.path.isdir(parent):
+        sys.stderr.write(f"Error: parent directory {parent} does not exist\n")
+        sys.exit(1)
+
+    if os.path.exists(log_path):
+        if not os.access(log_path, os.W_OK):
+            sys.stderr.write(f"Error: cannot write to log file {log_path}\n")
+            sys.exit(1)
+    else:
+        # Auto-create empty log file instead of hard failing
+        open(log_path, "a").close()
+
+    level_str = os.getenv("LOG_LEVEL", "1")
+    if level_str == "0":
+        logging.disable(logging.CRITICAL)
+        return
+    elif level_str == "2":
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.INFO
+
+    logging.basicConfig(
+        filename=log_path,
+        level=log_level,
+        format="%(asctime)s %(levelname)s: %(message)s",
+    )
+    logging.info("Logging initialized successfully.")
 
 
 def install_dependencies():
@@ -80,23 +137,18 @@ def run_tests():
 
         import coverage
 
-        # Start coverage analysis
         cov = coverage.Coverage()
         cov.start()
 
-        # Discover and run tests
         loader = unittest.TestLoader()
-        start_dir = os.path.dirname(os.path.abspath(__file__))
-        suite = loader.discover(start_dir, pattern="test_*.py")
+        suite = loader.discover(os.path.join(SCRIPT_DIR, "tests"), pattern="test_*.py")
 
         runner = unittest.TextTestRunner(verbosity=0, stream=open(os.devnull, "w"))
         result = runner.run(suite)
 
-        # Stop coverage and get results
         cov.stop()
         cov.save()
 
-        # Calculate coverage
         total_lines = 0
         covered_lines = 0
 
@@ -111,15 +163,13 @@ def run_tests():
                 ]
             ):
                 analysis = cov.analysis2(filename)
-                total_lines += len(analysis[1])  # executed lines
-                total_lines += len(analysis[2])  # missing lines
-                covered_lines += len(analysis[1])  # executed lines
+                total_lines += len(analysis[1]) + len(analysis[2])
+                covered_lines += len(analysis[1])
 
         coverage_percent = (
             int((covered_lines / total_lines * 100)) if total_lines > 0 else 0
         )
 
-        # Print results in required format
         total_tests = result.testsRun
         passed_tests = total_tests - len(result.failures) - len(result.errors)
 
@@ -131,11 +181,9 @@ def run_tests():
             sys.exit(1)
 
     except ImportError:
-
         from model_evaluator import ModelEvaluator
         from url_classifier import URLClassifier
 
-        # Basic functionality tests
         classifier = URLClassifier()
         test_urls = [
             "https://huggingface.co/google/gemma-3-270m",
@@ -155,20 +203,69 @@ def run_tests():
         sys.exit(1)
 
 
+def run_tests_debug():
+    """Run test suite with verbose output for debugging"""
+    try:
+        import unittest
+
+        loader = unittest.TestLoader()
+        suite = loader.discover(os.path.join(SCRIPT_DIR, "tests"), pattern="test_*.py")
+
+        runner = unittest.TextTestRunner(verbosity=2)
+        result = runner.run(suite)
+
+        # Print summary
+        print("\n" + "=" * 70)
+        print(f"Tests run: {result.testsRun}")
+        print(f"Failures: {len(result.failures)}")
+        print(f"Errors: {len(result.errors)}")
+        print("=" * 70)
+
+        # Print details of failures
+        if result.failures:
+            print("\nFAILURES:")
+            for test, traceback in result.failures:
+                print(f"\n{test}:")
+                print(traceback)
+
+        # Print details of errors
+        if result.errors:
+            print("\nERRORS:")
+            for test, traceback in result.errors:
+                print(f"\n{test}:")
+                print(traceback)
+
+        sys.exit(0 if result.wasSuccessful() else 1)
+
+    except Exception as e:
+        print(f"Tests failed: {e}")
+        sys.exit(1)
+
+
 def main():
     if len(sys.argv) < 2:
-        print("Usage: ./run [install|test|URL_FILE]")
+        print("Usage: ./run <command>")
+        print("\nCommands:")
+        print("  install       Install project dependencies")
+        print("  test          Run test suite with coverage")
+        print("  debug         Run tests with verbose output")
+        print("  <URL_FILE>    Process and evaluate URLs from file")
         sys.exit(1)
 
     cmd = sys.argv[1]
+
+    if cmd != "install" and cmd != "debug":
+        validate_github_token()
+        validate_log_file()
 
     if cmd == "install":
         success = install_dependencies()
         sys.exit(0 if success else 1)
     elif cmd == "test":
         run_tests()
+    elif cmd == "debug":
+        run_tests_debug()
     else:
-        # Assume it's a URL file path
         process_url_file(cmd)
 
 

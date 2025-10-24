@@ -1,7 +1,9 @@
-from typing import Tuple, Dict, List, Any
 import time
-from .base_metric import BaseMetric
+from typing import Any, Dict, List, Tuple
+
 from url_classifier import URLType
+
+from .base_metric import BaseMetric
 
 
 class BusFactorMetric(BaseMetric):
@@ -23,7 +25,11 @@ class BusFactorMetric(BaseMetric):
                     contributor_counts.append(contributor_count)
 
         # Calculate bus factor based on contributor diversity
-        avg_contributors = sum(contributor_counts) / len(contributor_counts) if contributor_counts else 0
+        avg_contributors = (
+            sum(contributor_counts) / len(contributor_counts)
+            if contributor_counts
+            else 0
+        )
 
         # Convert to 0-1 score (more contributors = higher score)
         if avg_contributors >= 10:
@@ -38,7 +44,7 @@ class BusFactorMetric(BaseMetric):
         end_time = time.time()
         latency_ms = int((end_time - start_time) * 1000)
 
-        return final_score, latency_ms
+        return round(final_score, 2), latency_ms
 
     def _get_contributor_count(self, resource: Any) -> int:
         try:

@@ -1,7 +1,9 @@
-from typing import Tuple, Dict, List, Any
 import time
-from .base_metric import BaseMetric
+from typing import Any, Dict, List, Tuple
+
 from url_classifier import URLType
+
+from .base_metric import BaseMetric
 
 
 class CodeQualityMetric(BaseMetric):
@@ -13,7 +15,6 @@ class CodeQualityMetric(BaseMetric):
     def calculate(self, resources: Dict[URLType, List[Any]]) -> Tuple[float, int]:
         start_time = time.time()
 
-
         if not resources.get(URLType.CODE):
             return 0.0, int((time.time() - start_time) * 1000)
 
@@ -23,7 +24,7 @@ class CodeQualityMetric(BaseMetric):
         end_time = time.time()
         latency_ms = int((end_time - start_time) * 1000)
 
-        return quality_score, latency_ms
+        return round(quality_score, 2), latency_ms
 
     def _evaluate_code_quality(self, code_repo: Any) -> float:
         try:

@@ -1,16 +1,20 @@
-
-from typing import List, Dict, Any, Optional, Tuple
 import json
 import logging
 import os
 import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any, Dict, List, Optional, Tuple
 
-from url_classifier import URLClassifier, URLType
-from resource_handlers import ModelHandler, DatasetHandler, CodeHandler, BaseResourceHandler
 from metrics import METRIC_CLASSES
 from metrics.base_metric import BaseMetric
+from resource_handlers import (
+    BaseResourceHandler,
+    CodeHandler,
+    DatasetHandler,
+    ModelHandler,
+)
+from url_classifier import URLClassifier, URLType
 
 
 class ModelEvaluator:
@@ -22,7 +26,9 @@ class ModelEvaluator:
         self.logger = logging.getLogger(__name__)
 
         # Initialize metrics
-        self.metrics = {name: metric_class() for name, metric_class in METRIC_CLASSES.items()}
+        self.metrics = {
+            name: metric_class() for name, metric_class in METRIC_CLASSES.items()
+        }
 
     def evaluate_urls(self, urls: List[str]) -> List[Dict[str, Any]]:
         """
@@ -51,7 +57,9 @@ class ModelEvaluator:
 
         return results
 
-    def _create_resource_handlers(self, grouped_urls: Dict[URLType, List[str]]) -> Dict[URLType, List[BaseResourceHandler]]:
+    def _create_resource_handlers(
+        self, grouped_urls: Dict[URLType, List[str]]
+    ) -> Dict[URLType, List[BaseResourceHandler]]:
         """Create resource handlers for each URL type with error handling"""
         resources = {}
 
@@ -93,14 +101,18 @@ class ModelEvaluator:
 
         return resources
 
-    def _evaluate_single_model(self, model_url: str, resources: Dict[URLType, List[BaseResourceHandler]]) -> Optional[Dict[str, Any]]:
+    def _evaluate_single_model(
+        self, model_url: str, resources: Dict[URLType, List[BaseResourceHandler]]
+    ) -> Optional[Dict[str, Any]]:
         """Evaluate a single model with available resources"""
         try:
             model_handler = ModelHandler(model_url)
             # Extract just the model name part (e.g., "bert-base-uncased" from "google-bert/bert-base-uncased")
             model_id = model_handler.model_id or "unknown"
             if "/" in model_id:
-                model_name = model_id.split("/")[-1]  # Get the last part after the slash
+                model_name = model_id.split("/")[
+                    -1
+                ]  # Get the last part after the slash
             else:
                 model_name = model_id
 
@@ -111,27 +123,61 @@ class ModelEvaluator:
             net_score, net_score_latency = self._calculate_net_score(metric_results)
 
             # Build result according to specification
+            # Round size_score dict values
+            size_score_dict = metric_results.get("size_score", {}).get("score", {})
+            if isinstance(size_score_dict, dict):
+                size_score_dict = {k: round(v, 2) for k, v in size_score_dict.items()}
+
             result = {
                 "name": model_name,
                 "category": "MODEL",
                 "net_score": net_score,
                 "net_score_latency": net_score_latency,
-                "ramp_up_time": metric_results.get("ramp_up_time", {}).get("score", 0.0),
-                "ramp_up_time_latency": metric_results.get("ramp_up_time", {}).get("latency", 0),
-                "bus_factor": metric_results.get("bus_factor", {}).get("score", 0.0),
-                "bus_factor_latency": metric_results.get("bus_factor", {}).get("latency", 0),
-                "performance_claims": metric_results.get("performance_claims", {}).get("score", 0.0),
-                "performance_claims_latency": metric_results.get("performance_claims", {}).get("latency", 0),
-                "license": metric_results.get("license", {}).get("score", 0.0),
+                "ramp_up_time": round(
+                    metric_results.get("ramp_up_time", {}).get("score", 0.0), 2
+                ),
+                "ramp_up_time_latency": metric_results.get("ramp_up_time", {}).get(
+                    "latency", 0
+                ),
+                "bus_factor": round(
+                    metric_results.get("bus_factor", {}).get("score", 0.0), 2
+                ),
+                "bus_factor_latency": metric_results.get("bus_factor", {}).get(
+                    "latency", 0
+                ),
+                "performance_claims": round(
+                    metric_results.get("performance_claims", {}).get("score", 0.0), 2
+                ),
+                "performance_claims_latency": metric_results.get(
+                    "performance_claims", {}
+                ).get("latency", 0),
+                "license": round(
+                    metric_results.get("license", {}).get("score", 0.0), 2
+                ),
                 "license_latency": metric_results.get("license", {}).get("latency", 0),
-                "size_score": metric_results.get("size_score", {}).get("score", {}),
-                "size_score_latency": metric_results.get("size_score", {}).get("latency", 0),
-                "dataset_and_code_score": metric_results.get("dataset_and_code_score", {}).get("score", 0.0),
-                "dataset_and_code_score_latency": metric_results.get("dataset_and_code_score", {}).get("latency", 0),
-                "dataset_quality": metric_results.get("dataset_quality", {}).get("score", 0.0),
-                "dataset_quality_latency": metric_results.get("dataset_quality", {}).get("latency", 0),
-                "code_quality": metric_results.get("code_quality", {}).get("score", 0.0),
-                "code_quality_latency": metric_results.get("code_quality", {}).get("latency", 0)
+                "size_score": size_score_dict,
+                "size_score_latency": metric_results.get("size_score", {}).get(
+                    "latency", 0
+                ),
+                "dataset_and_code_score": round(
+                    metric_results.get("dataset_and_code_score", {}).get("score", 0.0),
+                    2,
+                ),
+                "dataset_and_code_score_latency": metric_results.get(
+                    "dataset_and_code_score", {}
+                ).get("latency", 0),
+                "dataset_quality": round(
+                    metric_results.get("dataset_quality", {}).get("score", 0.0), 2
+                ),
+                "dataset_quality_latency": metric_results.get(
+                    "dataset_quality", {}
+                ).get("latency", 0),
+                "code_quality": round(
+                    metric_results.get("code_quality", {}).get("score", 0.0), 2
+                ),
+                "code_quality_latency": metric_results.get("code_quality", {}).get(
+                    "latency", 0
+                ),
             }
 
             return result
@@ -140,7 +186,9 @@ class ModelEvaluator:
             self.logger.error(f"Error evaluating model {model_url}: {e}")
             return None
 
-    def _calculate_metrics_parallel(self, resources: Dict[URLType, List[BaseResourceHandler]]) -> Dict[str, Dict[str, Any]]:
+    def _calculate_metrics_parallel(
+        self, resources: Dict[URLType, List[BaseResourceHandler]]
+    ) -> Dict[str, Dict[str, Any]]:
         """Calculate all metrics in parallel with graceful handling of missing resources"""
         metric_results = {}
 
@@ -158,7 +206,9 @@ class ModelEvaluator:
 
                 # Always try to calculate the metric, even with partial/missing resources
                 # The metric implementations should handle missing resources gracefully
-                future = executor.submit(self._safe_calculate_metric, metric, available_resources)
+                future = executor.submit(
+                    self._safe_calculate_metric, metric, available_resources
+                )
                 future_to_metric[future] = metric_name
 
             # Collect results
@@ -173,7 +223,9 @@ class ModelEvaluator:
 
         return metric_results
 
-    def _safe_calculate_metric(self, metric: BaseMetric, resources: Dict[URLType, List[BaseResourceHandler]]):
+    def _safe_calculate_metric(
+        self, metric: BaseMetric, resources: Dict[URLType, List[BaseResourceHandler]]
+    ):
         """Safely calculate a metric with error handling"""
         try:
             return metric.calculate(resources)
@@ -181,18 +233,20 @@ class ModelEvaluator:
             self.logger.error(f"Error in metric calculation: {e}")
             return 0.0, 0
 
-    def _calculate_net_score(self, metric_results: Dict[str, Dict[str, Any]]) -> Tuple[float, int]:
+    def _calculate_net_score(
+        self, metric_results: Dict[str, Dict[str, Any]]
+    ) -> Tuple[float, int]:
         """Calculate weighted net score"""
         # Define weights based on Sarah's priorities
         weights = {
-            "license": 0.2,           # High priority - legal compliance
-            "performance_claims": 0.15, # High priority - proven performance
-            "ramp_up_time": 0.15,     # Important for adoption
-            "bus_factor": 0.1,        # Risk management
-            "size_score": 0.1,        # Deployment considerations
-            "dataset_and_code_score": 0.1, # Reproducibility
-            "dataset_quality": 0.1,   # Data quality matters
-            "code_quality": 0.1       # Maintainability
+            "license": 0.2,  # High priority - legal compliance
+            "performance_claims": 0.15,  # High priority - proven performance
+            "ramp_up_time": 0.15,  # Important for adoption
+            "bus_factor": 0.1,  # Risk management
+            "size_score": 0.1,  # Deployment considerations
+            "dataset_and_code_score": 0.1,  # Reproducibility
+            "dataset_quality": 0.1,  # Data quality matters
+            "code_quality": 0.1,  # Maintainability
         }
 
         weighted_sum = 0.0
@@ -217,6 +271,7 @@ class ModelEvaluator:
                 total_latency += latency
 
         net_score = weighted_sum / total_weight if total_weight > 0 else 0.0
+        net_score = round(net_score, 2)
 
         return net_score, total_latency
 
@@ -233,14 +288,18 @@ class ModelEvaluator:
         self.logger.info(f"Starting evaluation of URL file: {url_file_path}")
         try:
             results = []
-            with open(url_file_path, 'r') as f:
+            with open(url_file_path, "r") as f:
                 for line_num, line in enumerate(f, 1):
                     line = line.strip()
                     if line:
                         # Split each line by commas and filter out empty URLs
-                        line_urls = [url.strip() for url in line.split(',') if url.strip()]
+                        line_urls = [
+                            url.strip() for url in line.split(",") if url.strip()
+                        ]
                         if line_urls:
-                            self.logger.info(f"Processing line {line_num} with {len(line_urls)} URLs")
+                            self.logger.info(
+                                f"Processing line {line_num} with {len(line_urls)} URLs"
+                            )
                             # Evaluate each line's URLs as a group
                             line_results = self.evaluate_urls(line_urls)
                             results.extend(line_results)
@@ -262,8 +321,8 @@ class ModelEvaluator:
 
     def setup_logging(self) -> None:
         """Setup logging based on environment variables"""
-        log_file = os.environ.get('LOG_FILE')
-        log_level = int(os.environ.get('LOG_LEVEL', '0'))
+        log_file = os.environ.get("LOG_FILE")
+        log_level = int(os.environ.get("LOG_LEVEL", "0"))
 
         if log_level == 0:
             logging.disable(logging.CRITICAL)
@@ -286,28 +345,28 @@ class ModelEvaluator:
                     os.makedirs(log_dir, exist_ok=True)
 
                 # Test if we can write to the log file
-                with open(log_file, 'a') as f:
+                with open(log_file, "a") as f:
                     pass
 
                 logging.basicConfig(
                     filename=log_file,
                     level=level,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    force=True
+                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                    force=True,
                 )
             except (OSError, PermissionError) as e:
                 # Invalid log file path, fall back to console logging
                 print(f"Warning: Cannot write to log file '{log_file}': {e}")
                 logging.basicConfig(
                     level=level,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    force=True
+                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                    force=True,
                 )
         else:
             logging.basicConfig(
                 level=level,
-                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                force=True
+                format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                force=True,
             )
 
 
