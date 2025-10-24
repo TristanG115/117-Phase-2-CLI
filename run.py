@@ -127,76 +127,59 @@ def process_url_file(url_file_path):
 
 
 def run_tests():
-    """Run test suite"""
-    try:
-        import unittest
+    import unittest
 
-        import coverage
+    import coverage
 
-        cov = coverage.Coverage()
-        cov.start()
-
-        loader = unittest.TestLoader()
-        suite = loader.discover(os.path.join(SCRIPT_DIR, "tests"), pattern="test_*.py")
-
-        runner = unittest.TextTestRunner(verbosity=0, stream=open(os.devnull, "w"))
-        result = runner.run(suite)
-
-        cov.stop()
-        cov.save()
-
-        total_lines = 0
-        covered_lines = 0
-
-        for filename in cov.get_data().measured_files():
-            if any(
-                filename.endswith(f)
-                for f in [
-                    "model_evaluator.py",
-                    "url_classifier.py",
-                    "resource_handlers.py",
-                    "metrics.py",
-                ]
-            ):
-                analysis = cov.analysis2(filename)
-                total_lines += len(analysis[1]) + len(analysis[2])
-                covered_lines += len(analysis[1])
-
-        coverage_percent = (
-            int((covered_lines / total_lines * 100)) if total_lines > 0 else 0
-        )
-
-        total_tests = result.testsRun
-        passed_tests = total_tests - len(result.failures) - len(result.errors)
-
-        print(
-            f"{passed_tests}/{total_tests} test cases passed. {coverage_percent}% line coverage achieved."
-        )
-
-        if result.failures or result.errors or coverage_percent < 80:
-            sys.exit(1)
-
-    except ImportError:
-        from model_evaluator import ModelEvaluator
-        from url_classifier import URLClassifier
-
-        classifier = URLClassifier()
-        test_urls = [
-            "https://huggingface.co/google/gemma-3-270m",
-            "https://huggingface.co/datasets/xlangai/AgentNet",
-            "https://github.com/SkyworkAI/Matrix-Game",
-        ]
-        grouped = classifier.group_urls_by_type(test_urls)
-        assert len(grouped) > 0, "URL classification failed"
-
-        evaluator = ModelEvaluator()
-        assert evaluator is not None, "Model evaluator initialization failed"
-
-        print("20/24 test cases passed. 85% line coverage achieved.")
-
-    except Exception as e:
-        print(f"Tests failed: {e}")
+    tests_dir = os.path.join(SCRIPT_DIR, "tests")
+    if not os.path.isdir(tests_dir):
+        print("Error: No tests directory found")
         sys.exit(1)
+
+    cov = coverage.Coverage()
+    cov.start()
+
+    loader = unittest.TestLoader()
+    suite = loader.discover(tests_dir, pattern="test_*.py")
+
+    runner = unittest.TextTestRunner(verbosity=2)
+    result = runner.run(suite)
+
+    cov.stop()
+    cov.save()
+
+    total_lines = 0
+    covered_lines = 0
+    for filename in cov.get_data().measured_files():
+        if any(
+            filename.endswith(f)
+            for f in [
+                "model_evaluator.py",
+                "url_classifier.py",
+                "resource_handlers.py",
+                "metrics.py",
+            ]
+        ):
+            analysis = cov.analysis2(filename)
+            total_lines += len(analysis[1]) + len(analysis[2])
+            covered_lines += len(analysis[1])
+
+    coverage_percent = (
+        int((covered_lines / total_lines * 100)) if total_lines > 0 else 0
+    )
+    total_tests = result.testsRun
+    passed_tests = total_tests - len(result.failures) - len(result.errors)
+
+    # Print in the *exact* format the autograder expects
+    print(
+        f"{passed_tests}/{total_tests} test cases passed. {coverage_percent}% line coverage achieved."
+    )
+
+    # Exit 0 only if everything passes AND coverage ≥ 80 %
+    if result.failures or result.errors or coverage_percent < 80:
+        sys.exit(1)
+    else:
+        sys.exit(0)
 
 
 def run_tests_debug():
