@@ -1,0 +1,21 @@
+2025-10-24 01:34:38,182 INFO: Logging initialized successfully.
+2025-10-24 01:34:38,288 INFO: Fetched GitHub API data for SkyworkAI/Matrix-Game: stars=100, forks=0
+2025-10-24 01:34:38,289 INFO: Fetched HuggingFace API data for google/gemma-3-270m: downloads=1000, likes=50
+2025-10-24 01:34:38,291 INFO: Starting dataset quality metric calculation
+2025-10-24 01:34:38,291 INFO: Falling back to heuristic dataset quality evaluation
+2025-10-24 01:34:38,291 INFO: Heuristic dataset quality score=0.85, latency=0ms
+2025-10-24 01:34:38,293 INFO: Starting dataset quality metric calculation
+2025-10-24 01:34:38,293 WARNING: No dataset resources available
+2025-10-24 01:34:38,294 INFO: Starting evaluation of URL file: nonexistent_file.txt
+2025-10-24 01:34:38,294 ERROR: URL file not found: nonexistent_file.txt
+2025-10-24 01:34:38,295 INFO: Starting evaluation of URL file: /tmp/tmpyn5n1y9t.txt
+2025-10-24 01:34:38,295 INFO: Processing line 1 with 1 URLs
+2025-10-24 01:34:38,296 INFO: Fetched HuggingFace API data for google/gemma-3-270m: downloads=1000, likes=50
+2025-10-24 01:34:38,296 WARNING: No license found for google/gemma-3-270m
+2025-10-24 01:34:38,296 INFO: Model size calculated: 0.00 MB from 2 files
+2025-10-24 01:34:38,297 INFO: Documentation score for google/gemma-3-270m: 0.00
+2025-10-24 01:34:38,298 INFO: Starting dataset quality metric calculation
+2025-10-24 01:34:38,298 WARNING: No dataset resources available
+2025-10-24 01:34:38,298 INFO: Processing line 2 with 1 URLs
+2025-10-24 01:34:38,298 INFO: Processing line 3 with 1 URLs
+2025-10-24 01:34:38,298 INFO: Evaluation completed. Generated 1 results
