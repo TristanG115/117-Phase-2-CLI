@@ -19,6 +19,5 @@ handlers/__pycache__/dataset_handler.cpython-313.pyc
 handlers/__pycache__/code_handler.cpython-313.pyc
 __pycache__/test_model_evaluator.cpython-313.pyc
 .coverage
-cli.log
 sample_input.txt
 *.pyc

@@ -68,6 +68,7 @@ def validate_log_file() -> None:
 
 
 def install_dependencies():
+    """Install project dependencies from requirements.txt"""
     try:
         logging.info("Installing dependencies...")
         if not os.path.exists(REQUIREMENTS):
@@ -104,7 +105,7 @@ coverage==7.3.2
 
 
 def process_url_file(url_file_path):
-    """Process URL file and generate model evaluations"""
+    """Process URL file and generate model evaluations."""
     try:
         if not os.path.exists(url_file_path):
             print(f"Error: URL file '{url_file_path}' not found.")
@@ -112,7 +113,6 @@ def process_url_file(url_file_path):
 
         evaluator = ModelEvaluator()
         evaluator.setup_logging()
-
         results = evaluator.evaluate_from_file(url_file_path)
 
         if not results:
@@ -129,7 +129,6 @@ def process_url_file(url_file_path):
 def run_tests():
     """Run the test suite and report results in autograder-expected format."""
     import io
-    import sys
     import unittest
 
     import coverage
@@ -145,7 +144,6 @@ def run_tests():
     loader = unittest.TestLoader()
     suite = loader.discover(tests_dir, pattern="test_*.py")
 
-    # Run tests quietly but visibly enough for autograder
     buffer = io.StringIO()
     runner = unittest.TextTestRunner(stream=buffer, verbosity=1)
     result = runner.run(suite)
@@ -175,13 +173,12 @@ def run_tests():
     total_tests = result.testsRun
     passed_tests = total_tests - len(result.failures) - len(result.errors)
 
-    # *** Critical: single print line in plain stdout ***
+    # exact syntax required by autograder:
     sys.stdout.write(
         f"{passed_tests}/{total_tests} test cases passed. {coverage_percent}% line coverage achieved.\n"
     )
     sys.stdout.flush()
 
-    # Exit 0 only if fully passing and coverage >= 80
     if result.failures or result.errors or coverage_percent < 80:
         sys.exit(1)
     else:
@@ -189,13 +186,12 @@ def run_tests():
 
 
 def run_tests_debug():
-    """Run test suite with verbose output for debugging"""
+    """Run tests verbosely for manual debugging."""
     try:
         import unittest
 
         loader = unittest.TestLoader()
         suite = loader.discover(os.path.join(SCRIPT_DIR, "tests"), pattern="test_*.py")
-
         runner = unittest.TextTestRunner(verbosity=2)
         result = runner.run(suite)
 
@@ -207,16 +203,15 @@ def run_tests_debug():
 
         if result.failures:
             print("\nFAILURES:")
-            for test, traceback in result.failures:
-                print(f"\n{test}:\n{traceback}")
+            for test, tb in result.failures:
+                print(f"\n{test}:\n{tb}")
 
         if result.errors:
             print("\nERRORS:")
-            for test, traceback in result.errors:
-                print(f"\n{test}:\n{traceback}")
+            for test, tb in result.errors:
+                print(f"\n{test}:\n{tb}")
 
         sys.exit(0 if result.wasSuccessful() else 1)
-
     except Exception as e:
         print(f"Tests failed: {e}")
         sys.exit(1)
@@ -239,8 +234,7 @@ def main():
         validate_log_file()
 
     if cmd == "install":
-        success = install_dependencies()
-        sys.exit(0 if success else 1)
+        install_dependencies()
     elif cmd == "test":
         run_tests()
     elif cmd == "debug":

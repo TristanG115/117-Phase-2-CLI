@@ -1,6 +1,6 @@
-from typing import List, Dict
-from urllib.parse import urlparse
 from enum import Enum
+from typing import Dict, List
+from urllib.parse import urlparse
 
 
 class URLType(Enum):
