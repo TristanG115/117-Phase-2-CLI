@@ -127,6 +127,9 @@ def process_url_file(url_file_path):
 
 
 def run_tests():
+    """Run the test suite and report results in autograder-expected format."""
+    import io
+    import sys
     import unittest
 
     import coverage
@@ -142,7 +145,9 @@ def run_tests():
     loader = unittest.TestLoader()
     suite = loader.discover(tests_dir, pattern="test_*.py")
 
-    runner = unittest.TextTestRunner(verbosity=2)
+    # Run tests quietly but visibly enough for autograder
+    buffer = io.StringIO()
+    runner = unittest.TextTestRunner(stream=buffer, verbosity=1)
     result = runner.run(suite)
 
     cov.stop()
@@ -170,12 +175,13 @@ def run_tests():
     total_tests = result.testsRun
     passed_tests = total_tests - len(result.failures) - len(result.errors)
 
-    # Print in the *exact* format the autograder expects
-    print(
-        f"{passed_tests}/{total_tests} test cases passed. {coverage_percent}% line coverage achieved."
+    # *** Critical: single print line in plain stdout ***
+    sys.stdout.write(
+        f"{passed_tests}/{total_tests} test cases passed. {coverage_percent}% line coverage achieved.\n"
     )
+    sys.stdout.flush()
 
-    # Exit 0 only if everything passes AND coverage ≥ 80 %
+    # Exit 0 only if fully passing and coverage >= 80
     if result.failures or result.errors or coverage_percent < 80:
         sys.exit(1)
     else:
