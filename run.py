@@ -47,8 +47,8 @@ def validate_log_file() -> None:
             sys.stderr.write(f"Error: cannot write to log file {log_path}\n")
             sys.exit(1)
     else:
-        # Auto-create empty log file instead of hard failing
-        open(log_path, "a").close()
+        sys.stderr.write(f"Error: log file {log_path} does not exist\n")
+        sys.exit(1)
 
     level_str = os.getenv("LOG_LEVEL", "1")
     if level_str == "0":
@@ -106,23 +106,19 @@ coverage==7.3.2
 def process_url_file(url_file_path):
     """Process URL file and generate model evaluations"""
     try:
-        # Check if file exists
         if not os.path.exists(url_file_path):
             print(f"Error: URL file '{url_file_path}' not found.")
             sys.exit(1)
 
-        # Initialize evaluator
         evaluator = ModelEvaluator()
         evaluator.setup_logging()
 
-        # Evaluate URLs from file
         results = evaluator.evaluate_from_file(url_file_path)
 
         if not results:
             print("No model URLs found or processed successfully")
             sys.exit(1)
 
-        # Print results in NDJSON format
         evaluator.print_results_ndjson(results)
 
     except Exception as e:
@@ -174,10 +170,7 @@ def run_tests():
         passed_tests = total_tests - len(result.failures) - len(result.errors)
 
         print(
-            (
-                f"{passed_tests}/{total_tests} test cases passed. "
-                f"{coverage_percent}% line coverage achieved."
-            )
+            f"{passed_tests}/{total_tests} test cases passed. {coverage_percent}% line coverage achieved."
         )
 
         if result.failures or result.errors or coverage_percent < 80:
@@ -217,26 +210,21 @@ def run_tests_debug():
         runner = unittest.TextTestRunner(verbosity=2)
         result = runner.run(suite)
 
-        # Print summary
         print("\n" + "=" * 70)
         print(f"Tests run: {result.testsRun}")
         print(f"Failures: {len(result.failures)}")
         print(f"Errors: {len(result.errors)}")
         print("=" * 70)
 
-        # Print details of failures
         if result.failures:
             print("\nFAILURES:")
             for test, traceback in result.failures:
-                print(f"\n{test}:")
-                print(traceback)
+                print(f"\n{test}:\n{traceback}")
 
-        # Print details of errors
         if result.errors:
             print("\nERRORS:")
             for test, traceback in result.errors:
-                print(f"\n{test}:")
-                print(traceback)
+                print(f"\n{test}:\n{traceback}")
 
         sys.exit(0 if result.wasSuccessful() else 1)
 
@@ -257,7 +245,7 @@ def main():
 
     cmd = sys.argv[1]
 
-    if cmd != "install" and cmd != "debug":
+    if cmd not in ("install", "debug"):
         validate_github_token()
         validate_log_file()
 
