@@ -1,0 +1,93 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  ci:
+    name: Continuous Integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 mypy pytest coverage requests
+
+      - name: Lint code
+        run: flake8 .
+
+      - name: Type checking
+        run: mypy .
+
+      - name: Run tests with coverage
+        run: |
+          coverage run -m pytest
+          coverage report -m --fail-under=90
+          coverage xml
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  deploy:
+    name: Deploy to AWS Lambda
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+
+      - name: Package Lambda function
+        run: |
+          rm -rf package
+          mkdir package
+          pip install -r requirements.txt -t package/
+          cp -r *.py package/
+          cd package
+          zip -r ../function.zip .
+          cd ..
+
+      - name: Deploy Lambda function
+        run: |
+          aws lambda update-function-code \
+            --function-name fastapi_lambda_handler \
+            --zip-file fileb://function.zip
+
+      - name: Update API Gateway
+        run: |
+          aws apigateway create-deployment \
+            --rest-api-id <klmdmk4kfh> \
+            --stage-name prod
+
+      - name: Post-deployment smoke test
+        run: |
+          echo "Testing deployed API endpoints..."
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://<https://klmdmk4kfh.execute-api.us-east-2.amazonaws.com/ci-cd>/packages)
+          if [ "$RESPONSE" -ne 200 ]; then
+            echo "Smoke test failed: /packages endpoint returned $RESPONSE"
+            exit 1
+          else
+            echo "Smoke test passed: /packages endpoint returned $RESPONSE"
+          fi
