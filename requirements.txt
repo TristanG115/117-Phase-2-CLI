@@ -9,6 +9,7 @@ PyGithub>=1.55.0
 huggingface-hub>=0.10.0
 fastapi>=0.120.0
 uvicorn>=0.38.0
+boto3>=1.40.59
 
 # Dev/test tools
 flake8==7.0.0
