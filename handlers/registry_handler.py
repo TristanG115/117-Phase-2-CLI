@@ -1,4 +1,5 @@
 # handlers/registry_handler.py
+import hashlib
 import logging
 import re
 import sqlite3
@@ -14,15 +15,16 @@ def init_registry():
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS models (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            score REAL,
-            tags TEXT,
-            code_url TEXT,
-            dataset_url TEXT,
-            metadata_json TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        artifact_id TEXT UNIQUE,
+        name TEXT,
+        score REAL,
+        tags TEXT,
+        code_url TEXT,
+        dataset_url TEXT,
+        metadata_json TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
     """
     )
     conn.commit()
@@ -92,19 +94,20 @@ def search_models(query):
 def add_model(
     name, score, tags="", code_url="unknown", dataset_url="unknown", metadata_json="{}"
 ):
-    """Helper for ingest to add models to the registry."""
+    artifact_id = str(
+        abs(int(hashlib.sha256(name.encode()).hexdigest(), 16)) % (10**10)
+    )
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
     cur.execute(
         """
-        INSERT INTO models (name, score, tags, code_url, dataset_url, metadata_json)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """,
-        (name, score, tags, code_url, dataset_url, metadata_json),
+        INSERT OR IGNORE INTO models (artifact_id, name, score, tags, code_url, dataset_url, metadata_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (artifact_id, name, score, tags, code_url, dataset_url, metadata_json),
     )
     conn.commit()
     conn.close()
-    logging.info(f"Model {name} added to registry with score {score}")
 
 
 def reset_registry():
