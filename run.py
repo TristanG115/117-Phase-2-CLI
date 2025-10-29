@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import logging
 import os
 import subprocess
@@ -6,6 +7,7 @@ import sys
 
 import requests
 
+from handlers import ingest_handler, registry_handler
 from model_evaluator import ModelEvaluator
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -191,6 +193,10 @@ def main():
         print("  install       Install project dependencies")
         print("  test          Run test suite with coverage")
         print("  debug         Run tests with verbose output")
+        print("  ingest        Ingest a Hugging Face model into the registry")
+        print("  list          List all locally ingested models")
+        print("  search        Search local registry by model name or tags")
+        print("  reset         Clear all stored models and downloaded files")
         print("  <URL_FILE>    Process and evaluate URLs from file")
         sys.exit(1)
 
@@ -205,6 +211,36 @@ def main():
         run_tests()
     elif cmd == "debug":
         run_tests_debug()
+    elif cmd == "ingest":
+        if len(sys.argv) < 3:
+            print("Usage: ./run ingest <huggingface_model_url>")
+            sys.exit(1)
+        hf_url = sys.argv[2]
+        registry_handler.init_registry()
+        result = ingest_handler.ingest_model(hf_url)
+        print(json.dumps(result, indent=2))
+        sys.exit(0)
+
+    elif cmd == "list":
+        registry_handler.init_registry()
+        models = registry_handler.list_models()
+        print(json.dumps(models, indent=2))
+        sys.exit(0)
+
+    elif cmd == "search":
+        if len(sys.argv) < 3:
+            print("Usage: ./run search <query>")
+            sys.exit(1)
+        query = sys.argv[2]
+        registry_handler.init_registry()
+        results = registry_handler.search_models(query)
+        print(json.dumps(results, indent=2))
+        sys.exit(0)
+    elif cmd == "reset":
+        registry_handler.init_registry()
+        registry_handler.reset_registry()
+        print("System registry reset successfully.")
+        sys.exit(0)
     else:
         process_url_file(cmd)
 
