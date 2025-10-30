@@ -2,6 +2,7 @@ import gc
 import hashlib
 import json
 import logging
+import os
 import re
 from typing import Optional
 
@@ -25,10 +26,13 @@ app = FastAPI(
 
 # Setup templates
 try:
-    templates = Jinja2Templates(directory="templates")
-except Exception:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
+    templates = Jinja2Templates(directory=TEMPLATE_DIR)
+    logging.info(f"Loaded templates from: {TEMPLATE_DIR}")
+except Exception as e:
     templates = None
-    logging.warning("Could not load templates directory")
+    logging.warning(f"Could not load templates directory: {e}")
 
 # Configure logging
 logging.basicConfig(
