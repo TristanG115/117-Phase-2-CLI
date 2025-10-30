@@ -25,7 +25,7 @@ app = FastAPI(
 
 # Setup templates
 try:
-    templates = Jinja2Templates(directory=".")
+    templates = Jinja2Templates(directory="templates")
 except Exception:
     templates = None
     logging.warning("Could not load templates directory")
