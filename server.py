@@ -4,9 +4,12 @@ import json
 import re
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.templating import Jinja2Templates
 
 from handlers import registry_handler
+
+templates = Jinja2Templates(directory=".")
 
 app = FastAPI(title="117 Phase 2 - Trustworthy Model Registry")
 
@@ -361,3 +364,15 @@ async def artifact_by_regex(request: Request):
 def get_tracks():
     """Return the list of tracks this team has implemented."""
     return {"plannedTracks": ["Reliability track"]}
+
+
+# Frontend setup
+@app.get("/", response_class=HTMLResponse)
+def index(request: Request):
+    """Serve the main registry dashboard (index.html)."""
+    from handlers import registry_handler
+
+    models = registry_handler.list_models()
+    return templates.TemplateResponse(
+        "index.html", {"request": request, "models": models}
+    )
