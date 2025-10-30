@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
-    title = "Trustworthy Model Registry"
+    title = "Trustworthy Model Registry",
     version = "1.0.0"
 )
 
