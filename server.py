@@ -1,7 +1,9 @@
-# server.py
+import gc
 import hashlib
 import json
+import logging
 import re
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -9,83 +11,219 @@ from fastapi.templating import Jinja2Templates
 
 from handlers import registry_handler
 
-templates = Jinja2Templates(directory=".")
+# Garbage collection tuning
+gc.set_threshold(700, 10, 10)
 
-app = FastAPI(title="117 Phase 2 - Trustworthy Model Registry")
+# Initialize FastAPI app
+app = FastAPI(
+    title="ECE 461 Phase 2",
+    description="API for managing ML models, datasets, and code artifacts",
+    version="2.0.0",
+    docs_url="/docs",
+    redoc_url=None,
+)
+
+# Setup templates
+try:
+    templates = Jinja2Templates(directory=".")
+except Exception:
+    templates = None
+    logging.warning("Could not load templates directory")
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler("server.log"), logging.StreamHandler()],
+)
+
+logger = logging.getLogger(__name__)
 
 
-# === Helper functions ===
-def require_auth(_):
-    """Auth bypass for baseline testing (Reliability track)."""
-    return True
+@app.on_event("startup")
+async def startup_event():
+    """Initialize the registry database on server startup"""
+    try:
+        registry_handler.init_registry()
+        logger.info("Registry initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize registry: {e}")
+        raise
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on shutdown"""
+    logger.info("Server shutting down...")
+    gc.collect()
+
+
+def require_auth(token: str) -> bool:
+    """Auth validation for baseline testing"""
+    return bool(token and token.strip())
 
 
 def gen_id(name: str) -> int:
-    """Generate deterministic 10-digit artifact ID."""
+    """Generate deterministic 10-digit artifact ID from name"""
     return abs(int(hashlib.sha256(name.encode()).hexdigest(), 16)) % (10**10)
 
 
-# === POST /artifacts ===
+def _validate_query(query):
+    """Validate a single query object."""
+    if not isinstance(query, dict):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
+        )
+
+    name = query.get("name", "").lower()
+    types = query.get("types", [])
+
+    if not name or not isinstance(types, list) or len(types) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
+        )
+
+    return name, types
+
+
+def _build_artifact_results(queries, models):
+    """Build results list from queries and models."""
+    results = []
+    for q in queries:
+        name, types = _validate_query(q)
+        for m in models:
+            if name == "*" or name in m["name"].lower():
+                for artifact_type in types:
+                    results.append(
+                        {
+                            "name": m["name"],
+                            "id": gen_id(m["name"]),
+                            "type": artifact_type,
+                        }
+                    )
+    return results
+
+
 @app.post("/artifacts")
-async def get_artifacts(request: Request, offset: int = 1):
+async def get_artifacts(request: Request, offset: Optional[str] = None):
     """BASELINE: Return artifacts matching the given query list."""
-    require_auth(None)
+    """BASELINE: Return artifacts matching the given query list."""
+    auth_header = request.headers.get("X-Authorization")
+    if not auth_header:
+        raise HTTPException(
+            status_code=403,
+            detail="Authentication failed due to invalid or missing AuthenticationToken.",
+        )
+
+    require_auth(auth_header)
 
     try:
         queries = await request.json()
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
+        )
 
     if not isinstance(queries, list) or len(queries) == 0:
-        raise HTTPException(status_code=400, detail="Missing query list")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
+        )
+
+    if len(queries) > 100:
+        raise HTTPException(
+            status_code=400, detail="Too many queries. Maximum 100 queries per request."
+        )
 
     models = registry_handler.list_models()
-    results = []
+    results = _build_artifact_results(queries, models)
 
-    for q in queries:
-        name = q.get("name", "").lower()
-        types = q.get("types", [])
-        if not name or not isinstance(types, list):
-            raise HTTPException(status_code=400, detail="Malformed artifact_query")
+    if len(results) > 1000:
+        raise HTTPException(status_code=413, detail="Too many artifacts returned.")
 
-        for m in models:
-            if name == "*" or name in m["name"].lower():
-                results.append(
-                    {
-                        "name": m["name"],
-                        "id": gen_id(m["name"]),
-                        "type": types[0] if types else "model",
-                    }
-                )
+    current_offset = int(offset) if offset else 1
+    headers = {"offset": str(current_offset + 1)}
 
-    headers = {"offset": str(offset + 1)}
     return JSONResponse(content=results, headers=headers)
 
 
-# === DELETE /reset ===
 @app.delete("/reset")
-def reset_registry():
+def reset_registry(request: Request):
     """BASELINE: Reset registry to a clean state."""
-    require_auth(None)
+    auth_header = request.headers.get("X-Authorization")
+    if not auth_header:
+        raise HTTPException(
+            status_code=403,
+            detail="Authentication failed due to invalid or missing AuthenticationToken.",
+        )
+
+    if not require_auth(auth_header):
+        raise HTTPException(
+            status_code=401, detail="You do not have permission to reset the registry."
+        )
+
     registry_handler.reset_registry()
+    gc.collect()
     return {"status": "system reset successful"}
 
 
-# === GET /artifacts/{artifact_type}/{id} ===
 @app.get("/artifacts/{artifact_type}/{artifact_id}")
-def get_artifact(artifact_type: str, artifact_id: str):
+def get_artifact(artifact_type: str, artifact_id: str, request: Request):
     """BASELINE: Retrieve one artifact by id."""
-    require_auth(None)
+    auth_header = request.headers.get("X-Authorization")
+    if not auth_header:
+        raise HTTPException(
+            status_code=403,
+            detail="Authentication failed due to invalid or missing AuthenticationToken.",
+        )
+
+    require_auth(auth_header)
+
+    if artifact_type not in ["model", "dataset", "code"]:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_type or artifact_id "
+                "or it is formed improperly, or is invalid."
+            ),
+        )
 
     try:
         aid = int(artifact_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid artifact id")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_type or artifact_id "
+                "or it is formed improperly, or is invalid."
+            ),
+        )
 
     models = registry_handler.list_models()
     for m in models:
         if gen_id(m["name"]) == aid:
-            url = m["code_url"] if artifact_type == "code" else m["dataset_url"]
+            if artifact_type == "code":
+                url = m.get("code_url", "unknown")
+            elif artifact_type == "dataset":
+                url = m.get("dataset_url", "unknown")
+            else:
+                url = m.get("code_url", "unknown")
+
             return {
                 "metadata": {
                     "name": m["name"],
@@ -95,70 +233,172 @@ def get_artifact(artifact_type: str, artifact_id: str):
                 "data": {"url": url},
             }
 
-    raise HTTPException(status_code=404, detail="Artifact does not exist")
+    raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
 
-# === PUT /artifacts/{artifact_type}/{id} ===
-@app.put("/artifacts/{artifact_type}/{artifact_id}")
-async def update_artifact(artifact_type: str, artifact_id: str, request: Request):
-    """BASELINE: Update artifact content."""
-    require_auth(None)
-
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
-
-    metadata = body.get("metadata")
-    data = body.get("data")
+def _validate_update_request(metadata, data, artifact_type, artifact_id):
+    """Validate update request metadata and data."""
     if not metadata or not data:
-        raise HTTPException(status_code=400, detail="Missing metadata or data")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_type or artifact_id "
+                "or it is formed improperly, or is invalid."
+            ),
+        )
+
+    if "name" not in metadata or "id" not in metadata or "type" not in metadata:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_type or artifact_id "
+                "or it is formed improperly, or is invalid."
+            ),
+        )
+
+    if "url" not in data:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_type or artifact_id "
+                "or it is formed improperly, or is invalid."
+            ),
+        )
 
     if (
         str(metadata.get("id")) != str(artifact_id)
         or metadata.get("type") != artifact_type
     ):
-        raise HTTPException(status_code=400, detail="Metadata mismatch")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_type or artifact_id "
+                "or it is formed improperly, or is invalid."
+            ),
+        )
+
+
+def _update_model_urls(model, artifact_type, url):
+    """Update model URLs based on artifact type."""
+    if artifact_type == "code":
+        model["code_url"] = url
+    elif artifact_type == "dataset":
+        model["dataset_url"] = url
+    else:
+        model["code_url"] = url
+
+
+@app.put("/artifacts/{artifact_type}/{artifact_id}")
+async def update_artifact(artifact_type: str, artifact_id: str, request: Request):
+    """BASELINE: Update artifact content."""
+    auth_header = request.headers.get("X-Authorization")
+    if not auth_header:
+        raise HTTPException(
+            status_code=403,
+            detail="Authentication failed due to invalid or missing AuthenticationToken.",
+        )
+
+    require_auth(auth_header)
+
+    if artifact_type not in ["model", "dataset", "code"]:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_type or artifact_id "
+                "or it is formed improperly, or is invalid."
+            ),
+        )
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_type or artifact_id "
+                "or it is formed improperly, or is invalid."
+            ),
+        )
+
+    metadata = body.get("metadata")
+    data = body.get("data")
+
+    _validate_update_request(metadata, data, artifact_type, artifact_id)
 
     models = registry_handler.list_models()
     found = False
+
     for m in models:
         if gen_id(m["name"]) == int(artifact_id):
+            if m["name"] != metadata.get("name"):
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "There is missing field(s) in the artifact_type or "
+                        "artifact_id or it is formed improperly, or is invalid."
+                    ),
+                )
+
             found = True
-            if artifact_type == "code":
-                m["code_url"] = data.get("url", m["code_url"])
-            elif artifact_type == "dataset":
-                m["dataset_url"] = data.get("url", m["dataset_url"])
+            _update_model_urls(m, artifact_type, data.get("url"))
+
             registry_handler.add_model(
                 name=m["name"],
                 score=m["score"],
                 tags=m.get("tags", ""),
                 code_url=m.get("code_url", ""),
                 dataset_url=m.get("dataset_url", ""),
-                metadata_json=json.dumps(m),
+                metadata_json=m.get("metadata_json", "{}"),
             )
             break
 
     if not found:
-        raise HTTPException(status_code=404, detail="Artifact does not exist")
+        raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
     return {"status": "artifact updated successfully"}
 
 
-# === POST /artifact/{artifact_type} ===
 @app.post("/artifact/{artifact_type}")
 async def register_artifact(artifact_type: str, request: Request):
     """BASELINE: Register a new artifact by URL."""
-    require_auth(None)
+    auth_header = request.headers.get("X-Authorization")
+    if not auth_header:
+        raise HTTPException(
+            status_code=403,
+            detail="Authentication failed due to invalid or missing AuthenticationToken.",
+        )
+
+    require_auth(auth_header)
+
+    if artifact_type not in ["model", "dataset", "code"]:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_data or it is "
+                "formed improperly (must include a single url)."
+            ),
+        )
 
     try:
         body = await request.json()
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_data or it is "
+                "formed improperly (must include a single url)."
+            ),
+        )
 
     url = body.get("url")
     if not url or not isinstance(url, str):
-        raise HTTPException(status_code=400, detail="Missing url field")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_data or it is "
+                "formed improperly (must include a single url)."
+            ),
+        )
 
     name = url.rstrip("/").split("/")[-1]
     new_id = gen_id(name)
@@ -166,13 +406,13 @@ async def register_artifact(artifact_type: str, request: Request):
     models = registry_handler.list_models()
     for m in models:
         if gen_id(m["name"]) == new_id:
-            raise HTTPException(status_code=409, detail="Artifact exists already")
+            raise HTTPException(status_code=409, detail="Artifact exists already.")
 
     registry_handler.add_model(
         name=name,
         score=0.0,
         tags=artifact_type,
-        code_url=url if artifact_type == "code" else "unknown",
+        code_url=url if artifact_type in ["code", "model"] else "unknown",
         dataset_url=url if artifact_type == "dataset" else "unknown",
         metadata_json=json.dumps({"type": artifact_type}),
     )
@@ -184,28 +424,42 @@ async def register_artifact(artifact_type: str, request: Request):
     return JSONResponse(status_code=201, content=resp)
 
 
-# === GET /artifact/model/{id}/rate ===
 @app.get("/artifact/model/{artifact_id}/rate")
-def get_rating(artifact_id: str):
+def get_rating(artifact_id: str, request: Request):
     """BASELINE: Return metrics for this model artifact."""
-    require_auth(None)
+    auth_header = request.headers.get("X-Authorization")
+    if not auth_header:
+        raise HTTPException(
+            status_code=403,
+            detail="Authentication failed due to invalid or missing AuthenticationToken.",
+        )
+
+    require_auth(auth_header)
 
     try:
         aid = int(artifact_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid artifact id")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_id or it is "
+                "formed improperly, or is invalid."
+            ),
+        )
 
     models = registry_handler.list_models()
     for m in models:
         if gen_id(m["name"]) == aid:
             meta = json.loads(m.get("metadata_json", "{}"))
-            return (
-                meta
-                if meta
-                else {
+            if meta and any(
+                key in meta for key in ["net_score", "ramp_up_time", "bus_factor"]
+            ):
+                return meta
+            else:
+                return {
                     "name": m["name"],
                     "category": "MODEL",
-                    "net_score": m["score"],
+                    "net_score": m.get("score", 0),
                     "net_score_latency": 0,
                     "ramp_up_time": 0,
                     "ramp_up_time_latency": 0,
@@ -235,49 +489,101 @@ def get_rating(artifact_id: str):
                     },
                     "size_score_latency": 0,
                 }
-            )
 
-    raise HTTPException(status_code=404, detail="Artifact does not exist")
+    raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
 
-# === GET /artifact/{artifact_type}/{id}/cost ===
 @app.get("/artifact/{artifact_type}/{artifact_id}/cost")
-def get_cost(artifact_type: str, artifact_id: str, dependency: bool = False):
+def get_cost(
+    artifact_type: str, artifact_id: str, request: Request, dependency: bool = False
+):
     """BASELINE: Return total cost of the artifact."""
-    require_auth(None)
+    auth_header = request.headers.get("X-Authorization")
+    if not auth_header:
+        raise HTTPException(
+            status_code=403,
+            detail="Authentication failed due to invalid or missing AuthenticationToken.",
+        )
+
+    require_auth(auth_header)
+
+    if artifact_type not in ["model", "dataset", "code"]:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_type or artifact_id "
+                "or it is formed improperly, or is invalid."
+            ),
+        )
 
     try:
         aid = int(artifact_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid artifact id")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_type or artifact_id "
+                "or it is formed improperly, or is invalid."
+            ),
+        )
 
     models = registry_handler.list_models()
     for m in models:
         if gen_id(m["name"]) == aid:
-            base_cost = 412.5 if artifact_type == "model" else 100.0
+            if artifact_type == "model":
+                base_cost = 412.5
+            elif artifact_type == "dataset":
+                base_cost = 100.0
+            else:
+                base_cost = 100.0
+
             if dependency:
                 base_cost *= 1.2
+
             return {str(aid): {"total_cost": base_cost}}
 
-    raise HTTPException(status_code=404, detail="Artifact does not exist")
+    raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
 
-# === GET /artifact/model/{id}/lineage ===
 @app.get("/artifact/model/{artifact_id}/lineage")
-def get_lineage(artifact_id: str):
+def get_lineage(artifact_id: str, request: Request):
     """BASELINE: Retrieve lineage graph."""
-    require_auth(None)
+    auth_header = request.headers.get("X-Authorization")
+    if not auth_header:
+        raise HTTPException(
+            status_code=403,
+            detail="Authentication failed due to invalid or missing AuthenticationToken.",
+        )
+
+    require_auth(auth_header)
 
     try:
         aid = int(artifact_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid artifact id")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "The lineage graph cannot be computed because the artifact "
+                "metadata is missing or malformed."
+            ),
+        )
 
     models = registry_handler.list_models()
     for m in models:
         if gen_id(m["name"]) == aid:
-            dataset_name = m.get("dataset_url", "unknown").split("/")[-1]
+            dataset_url = m.get("dataset_url", "unknown")
+            if not dataset_url or dataset_url == "unknown":
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "The lineage graph cannot be computed because the "
+                        "artifact metadata is missing or malformed."
+                    ),
+                )
+
+            dataset_name = dataset_url.rstrip("/").split("/")[-1]
             dataset_id = gen_id(dataset_name)
+
             return {
                 "nodes": [
                     {"artifact_id": aid, "name": m["name"], "source": "config_json"},
@@ -296,56 +602,132 @@ def get_lineage(artifact_id: str):
                 ],
             }
 
-    raise HTTPException(status_code=404, detail="Artifact does not exist")
+    raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
 
-# === POST /artifact/model/{id}/license-check ===
+def _verify_artifact_exists(artifact_id, models):
+    """Check if artifact with given ID exists."""
+    for m in models:
+        if gen_id(m["name"]) == artifact_id:
+            return True
+    return False
+
+
+def _check_license_compatibility(github_url):
+    """Check license compatibility based on URL patterns."""
+    url_lower = github_url.lower()
+    if "apache" in url_lower or "google" in url_lower:
+        return True
+    elif "github" in url_lower:
+        return False
+    else:
+        raise HTTPException(
+            status_code=502,
+            detail="External license information could not be retrieved.",
+        )
+
+
 @app.post("/artifact/model/{artifact_id}/license-check")
 async def license_check(artifact_id: str, request: Request):
     """BASELINE: License compatibility analysis."""
-    require_auth(None)
+    auth_header = request.headers.get("X-Authorization")
+    if not auth_header:
+        raise HTTPException(
+            status_code=403,
+            detail="Authentication failed due to invalid or missing AuthenticationToken.",
+        )
+
+    require_auth(auth_header)
 
     try:
         body = await request.json()
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "The license check request is malformed or references an "
+                "unsupported usage context."
+            ),
+        )
 
     github_url = body.get("github_url")
     if not github_url or not isinstance(github_url, str):
-        raise HTTPException(status_code=400, detail="Missing github_url field")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "The license check request is malformed or references an "
+                "unsupported usage context."
+            ),
+        )
 
-    if "apache" in github_url.lower() or "google" in github_url.lower():
-        return JSONResponse(content=True)
-    elif "github" in github_url.lower():
-        return JSONResponse(content=False)
-    else:
-        raise HTTPException(status_code=502, detail="External license retrieval failed")
+    try:
+        aid = int(artifact_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=404, detail="The artifact or GitHub project could not be found."
+        )
+
+    models = registry_handler.list_models()
+    if not _verify_artifact_exists(aid, models):
+        raise HTTPException(
+            status_code=404, detail="The artifact or GitHub project could not be found."
+        )
+
+    result = _check_license_compatibility(github_url)
+    return JSONResponse(content=result)
 
 
-# === POST /artifact/byRegEx ===
 @app.post("/artifact/byRegEx")
 async def artifact_by_regex(request: Request):
     """BASELINE: Search artifacts using regex."""
-    require_auth(None)
+    auth_header = request.headers.get("X-Authorization")
+    if not auth_header:
+        raise HTTPException(
+            status_code=403,
+            detail="Authentication failed due to invalid or missing AuthenticationToken.",
+        )
+
+    require_auth(auth_header)
 
     try:
         body = await request.json()
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_regex or it is "
+                "formed improperly, or is invalid"
+            ),
+        )
 
     regex = body.get("regex")
     if not regex or not isinstance(regex, str):
-        raise HTTPException(status_code=400, detail="Missing regex field")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_regex or it is "
+                "formed improperly, or is invalid"
+            ),
+        )
 
     try:
         pattern = re.compile(regex)
     except re.error:
-        raise HTTPException(status_code=400, detail="Invalid regex pattern")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_regex or it is "
+                "formed improperly, or is invalid"
+            ),
+        )
 
     models = registry_handler.list_models()
     matches = []
     for m in models:
-        text = f"{m['name']} {m.get('tags', '')} {m.get('code_url', '')} {m.get('dataset_url', '')}"
+        text = (
+            f"{m['name']} {m.get('tags', '')} "
+            f"{m.get('code_url', '')} {m.get('dataset_url', '')}"
+        )
         if pattern.search(text):
             matches.append(
                 {"name": m["name"], "id": gen_id(m["name"]), "type": "model"}
@@ -353,26 +735,62 @@ async def artifact_by_regex(request: Request):
 
     if not matches:
         raise HTTPException(
-            status_code=404, detail="No artifact found under this regex"
+            status_code=404, detail="No artifact found under this regex."
         )
 
     return JSONResponse(content=matches)
 
 
-# === GET /tracks ===
 @app.get("/tracks")
 def get_tracks():
     """Return the list of tracks this team has implemented."""
-    return {"plannedTracks": ["Reliability track"]}
+    try:
+        return {"plannedTracks": ["Reliability track"]}
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "The system encountered an error while retrieving the "
+                "student's track information."
+            ),
+        )
 
 
-# Frontend setup
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
-    """Serve the main registry dashboard (index.html)."""
-    from handlers import registry_handler
+    """Serve the main registry dashboard."""
+    if not templates:
+        return HTMLResponse(
+            content="<h1>Registry API Server</h1><p>API docs at <a href='/docs'>/docs</a></p>"
+        )
 
-    models = registry_handler.list_models()
-    return templates.TemplateResponse(
-        "index.html", {"request": request, "models": models}
+    try:
+        models = registry_handler.list_models()
+        return templates.TemplateResponse(
+            "index.html", {"request": request, "models": models}
+        )
+    except Exception as e:
+        logger.error(f"Error loading dashboard: {e}")
+        return HTMLResponse(
+            content="<h1>Registry API Server</h1><p>API docs at <a href='/docs'>/docs</a></p>"
+        )
+
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for monitoring"""
+    return {"status": "healthy", "instance": "t2.micro"}
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        workers=1,
+        limit_concurrency=10,
+        timeout_keep_alive=30,
+        log_level="info",
     )
