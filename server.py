@@ -136,13 +136,18 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):
     else:
         require_auth(auth_header)
 
+    logger.info(f"DEBUG /artifacts: About to read body")
     try:
         body_bytes = await request.body()
-        logger.info(f"DEBUG /artifacts: Raw body = {body_bytes}")
+        logger.info(
+            f"DEBUG /artifacts: Raw body = {body_bytes[:500]}"
+        )  # First 500 bytes
         queries = json.loads(body_bytes)
         logger.info(f"DEBUG /artifacts: Parsed queries = {queries}")
     except json.JSONDecodeError as e:
-        logger.error(f"DEBUG /artifacts: JSON parse error: {e}")
+        logger.error(
+            f"DEBUG /artifacts: JSON parse error: {e}, body was: {body_bytes[:200]}"
+        )
         raise HTTPException(
             status_code=400,
             detail=(
@@ -151,7 +156,7 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):
             ),
         )
     except Exception as e:
-        logger.error(f"DEBUG /artifacts: Unexpected error: {e}")
+        logger.error(f"DEBUG /artifacts: Unexpected error: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=400,
             detail=(
