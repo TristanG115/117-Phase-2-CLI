@@ -137,8 +137,21 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):
         require_auth(auth_header)
 
     try:
-        queries = await request.json()
-    except Exception:
+        body_bytes = await request.body()
+        logger.info(f"DEBUG /artifacts: Raw body = {body_bytes}")
+        queries = json.loads(body_bytes)
+        logger.info(f"DEBUG /artifacts: Parsed queries = {queries}")
+    except json.JSONDecodeError as e:
+        logger.error(f"DEBUG /artifacts: JSON parse error: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
+        )
+    except Exception as e:
+        logger.error(f"DEBUG /artifacts: Unexpected error: {e}")
         raise HTTPException(
             status_code=400,
             detail=(
