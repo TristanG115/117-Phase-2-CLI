@@ -168,11 +168,6 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):
 
     if not auth_header:
         logger.warning(f"DEBUG: No X-Authorization header - allowing for baseline")
-        # For baseline/non-security tracks, allow requests without auth
-        # raise HTTPException(
-        #     status_code=403,
-        #     detail="Authentication failed due to invalid or missing AuthenticationToken.",
-        # )
     else:
         require_auth(auth_header)
 
@@ -832,7 +827,7 @@ async def artifact_by_regex(request: Request):
 def get_tracks():
     """Return the list of tracks this team has implemented."""
     try:
-        return {"plannedTracks": ["High-assurance track"]}
+        return {"plannedTracks": ["High assurance track"]}
     except Exception:
         raise HTTPException(
             status_code=500,
