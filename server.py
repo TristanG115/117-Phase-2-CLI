@@ -749,7 +749,7 @@ async def artifact_by_regex(request: Request):
 def get_tracks():
     """Return the list of tracks this team has implemented."""
     try:
-        return {"plannedTracks": ["Reliability track"]}
+        return ["Reliability track"]
     except Exception:
         raise HTTPException(
             status_code=500,
