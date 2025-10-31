@@ -444,6 +444,10 @@ def ingest_model(
 
     # Infer URLs
     code_url, dataset_url = infer_links_from_hf(hf_url, show_card=show_card)
+    
+    # Re-extract metadata to get README text
+    api = HfApi()
+    metadata_dict, card_text = _extract_metadata(model_id, api)
 
     # Optionally validate URLs
     if validate_urls:
@@ -462,8 +466,10 @@ def ingest_model(
     # Ensure required metrics
     _ensure_required_metrics(result)
 
-    # CRITICAL FIX: Add type to metadata
-    result["type"] = "model"
+    if card_text:
+        # Truncate to avoid huge metadata, but keep enough for search
+        result['readme'] = card_text[:10000]  # First 10k chars of README
+    result['type'] = 'model'  # Ensure type is set
 
     # Check threshold
     if not _check_threshold(result, min_score):
@@ -510,7 +516,7 @@ def ingest_dataset(
     """
     # Extract dataset name from URL
     dataset_name = dataset_url.rstrip("/").split("/")[-1]
-
+    
     # Create scorecard for dataset with appropriate metrics
     result = {
         "type": "dataset",
@@ -522,10 +528,10 @@ def ingest_dataset(
         "tree_score": -1,
         "dataset_and_code_score": 0.75,
     }
-
+    
     # Create tags
     tags = "dataset"
-
+    
     # Add to registry using add_artifact for proper type handling
     artifact_id = registry_handler.add_artifact(
         name=dataset_name,
@@ -536,7 +542,7 @@ def ingest_dataset(
         dataset_url=dataset_url,
         metadata=result,
     )
-
+    
     return {
         "status": "success",
         "artifact_id": artifact_id,
@@ -562,7 +568,7 @@ def ingest_code(
     """
     # Extract repository name from URL
     code_name = code_url.rstrip("/").split("/")[-1]
-
+    
     # Create scorecard for code with appropriate metrics
     result = {
         "type": "code",
@@ -574,10 +580,10 @@ def ingest_code(
         "tree_score": -1,
         "dataset_and_code_score": 0.75,
     }
-
+    
     # Create tags
     tags = "code"
-
+    
     # Add to registry using add_artifact for proper type handling
     artifact_id = registry_handler.add_artifact(
         name=code_name,
@@ -588,7 +594,7 @@ def ingest_code(
         code_url=code_url,
         metadata=result,
     )
-
+    
     return {
         "status": "success",
         "artifact_id": artifact_id,
