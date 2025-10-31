@@ -749,7 +749,7 @@ async def artifact_by_regex(request: Request):
 def get_tracks():
     """Return the list of tracks this team has implemented."""
     try:
-        return ["Reliability track"]
+        return {"plannedTracks": ["Performance track"]}
     except Exception:
         raise HTTPException(
             status_code=500,
@@ -782,8 +782,8 @@ def index(request: Request):
 
 @app.get("/health")
 def health_check():
-    """Health check endpoint for monitoring"""
-    return {"status": "healthy", "instance": "t2.micro"}
+    """Heartbeat check (BASELINE) - Returns 200 when reachable"""
+    return {}
 
 
 if __name__ == "__main__":
