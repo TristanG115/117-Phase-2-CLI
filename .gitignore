@@ -21,3 +21,8 @@ __pycache__/test_model_evaluator.cpython-313.pyc
 .coverage
 sample_input.txt
 *.pyc
+.env
+*.env
+evaluation_results.ndjson
+packages_db.json
+evaluation.log

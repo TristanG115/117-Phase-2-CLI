@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Packages Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { 
+            padding-top: 20px; 
+            background-color: #f8f9fa; 
+        }
+        .score-badge { 
+            font-weight: bold; 
+            padding: 0.25rem 0.5rem; 
+            border-radius: 0.25rem; 
+        }
+        .score-high { 
+            background-color: #d4edda; 
+            color: #155724; 
+        }
+        .score-medium { 
+            background-color: #fff3cd; 
+            color: #856404; 
+        }
+        .score-low { 
+            background-color: #f8d7da; 
+            color: #721c24; 
+        }
+        .card { 
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075); 
+        }
+        .table-hover tbody tr:hover {
+            background-color: #f1f3f5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col">
+                <h1 class="display-4">📦 Model Packages Dashboard</h1>
+                <p class="lead">Search and evaluate machine learning models</p>
+            </div>
+        </div>
+        
+        <!-- Search Bar -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Search Packages</h5>
+                <div class="row g-3">
+                    <div class="col-md-10">
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="searchInput" 
+                            placeholder="Search by package name..."
+                            aria-label="Search packages">
+                    </div>
+                    <div class="col-md-2">
+                        <button 
+                            class="btn btn-primary w-100" 
+                            onclick="searchPackages()">
+                            Search
+                        </button>
+                    </div>
+                </div>
+                <small class="text-muted">Try searching for "bert", "gpt", or any model name</small>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-center bg-primary text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Packages</h5>
+                        <h2 id="totalCount">{{ total_packages }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center bg-success text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">Displayed</h5>
+                        <h2 id="displayedCount">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center bg-info text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">Average Score</h5>
+                        <h2 id="avgScore">-</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Packages Table -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Packages List</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Net Score</th>
+                                <th>License</th>
+                                <th>Performance</th>
+                                <th>Ramp-up</th>
+                                <th>Bus Factor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="packagesTable">
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+
+        /**
+         * Get CSS class for score badge based on value
+         */
+        function getScoreBadge(score) {
+            const scoreClass = score >= 0.7 ? 'score-high' : 
+                             score >= 0.4 ? 'score-medium' : 'score-low';
+            return `<span class="score-badge ${scoreClass}">${score.toFixed(2)}</span>`;
+        }
+
+        /**
+         * Load packages from API with optional name filter
+         */
+        async function loadPackages(searchName = null) {
+            try {
+                let url = `${API_URL}/packages?limit=100`;
+                if (searchName) {
+                    url += `&name=${encodeURIComponent(searchName)}`;
+                }
+
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const packages = await response.json();
+
+                const tbody = document.getElementById('packagesTable');
+                
+                if (packages.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">
+                                <p class="mb-0">No packages found.</p>
+                                <small>Run evaluation first: python model_evaluator.py test_urls.txt > evaluation_results.ndjson</small>
+                            </td>
+                        </tr>
+                    `;
+                    document.getElementById('displayedCount').textContent = '0';
+                    document.getElementById('avgScore').textContent = '-';
+                    return;
+                }
+
+                // Render table rows
+                tbody.innerHTML = packages.map(pkg => `
+                    <tr>
+                        <td><strong>${escapeHtml(pkg.name)}</strong></td>
+                        <td><span class="badge bg-secondary">${escapeHtml(pkg.category)}</span></td>
+                        <td>${getScoreBadge(pkg.net_score)}</td>
+                        <td>${getScoreBadge(pkg.license)}</td>
+                        <td>${getScoreBadge(pkg.performance_claims)}</td>
+                        <td>${getScoreBadge(pkg.ramp_up_time)}</td>
+                        <td>${getScoreBadge(pkg.bus_factor)}</td>
+                    </tr>
+                `).join('');
+
+                // Update statistics
+                document.getElementById('displayedCount').textContent = packages.length;
+                const avgScore = packages.reduce((sum, pkg) => sum + pkg.net_score, 0) / packages.length;
+                document.getElementById('avgScore').textContent = avgScore.toFixed(2);
+
+            } catch (error) {
+                console.error('Error loading packages:', error);
+                document.getElementById('packagesTable').innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center text-danger">
+                            <p class="mb-0">Error loading packages</p>
+                            <small>${escapeHtml(error.message)}</small>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        /**
+         * Search packages by name
+         */
+        function searchPackages() {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            loadPackages(searchTerm || null);
+        }
+
+        /**
+         * Escape HTML to prevent XSS
+         */
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Search on Enter key press
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchPackages();
+            }
+        });
+
+        // Load packages when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPackages();
+        });
+    </script>
+</body>
+</html>

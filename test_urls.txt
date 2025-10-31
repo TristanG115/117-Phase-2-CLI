@@ -1,0 +1,3 @@
+https://huggingface.co/google-bert/bert-base-uncased
+https://huggingface.co/datasets/bookcorpus/bookcorpus
+https://github.com/google-research/bert
