@@ -105,8 +105,18 @@ def _validate_query(query):
 def _build_artifact_results(queries, models):
     """Build results list from queries and models."""
     results = []
-    for q in queries:
-        name, types = _validate_query(q)
+    print(
+        f"DEBUG _build: Processing {len(queries)} queries against {len(models)} models",
+        flush=True,
+    )
+    for i, q in enumerate(queries):
+        print(f"DEBUG _build: Query {i}: {q}", flush=True)
+        try:
+            name, types = _validate_query(q)
+            print(f"DEBUG _build: Validated - name={name}, types={types}", flush=True)
+        except Exception as e:
+            print(f"DEBUG _build: Validation failed: {e}", flush=True)
+            raise
         for m in models:
             if name == "*" or name in m["name"].lower():
                 for artifact_type in types:
@@ -175,6 +185,10 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):
         )
 
     if not isinstance(queries, list) or len(queries) == 0:
+        print(
+            f"DEBUG: queries validation failed - type: {type(queries)}, len: {len(queries) if isinstance(queries, list) else 'N/A'}",
+            flush=True,
+        )
         raise HTTPException(
             status_code=400,
             detail=(
@@ -188,8 +202,13 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):
             status_code=400, detail="Too many queries. Maximum 100 queries per request."
         )
 
+    print(f"DEBUG: About to call list_models()", flush=True)
     models = registry_handler.list_models()
+    print(f"DEBUG: Got {len(models)} models", flush=True)
+
+    print(f"DEBUG: About to build results", flush=True)
     results = _build_artifact_results(queries, models)
+    print(f"DEBUG: Built {len(results)} results", flush=True)
 
     if len(results) > 1000:
         raise HTTPException(status_code=413, detail="Too many artifacts returned.")
