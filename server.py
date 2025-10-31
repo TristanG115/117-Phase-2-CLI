@@ -878,11 +878,12 @@ def index(request: Request):
 
 
 @app.get("/health")
-def health_check():
+async def health_check():
     """Heartbeat check (BASELINE) - Returns 200 when reachable"""
     print("DEBUG /health: Health check called", flush=True)
     logger.info("Health check called")
-    return {}
+    # Return a simple valid JSON response
+    return JSONResponse(status_code=200, content={})
 
 
 # Add root endpoint in case autograder checks that
