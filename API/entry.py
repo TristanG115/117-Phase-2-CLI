@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from .routes import router as models_router
 
 app = FastAPI(
     title = "Trustworthy Model Registry",
@@ -12,6 +13,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+app.include_router(models_router)
 
 @app.get("/")
 def root(): return {"message": "Trustworthy Model Registry API is running."}

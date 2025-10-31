@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 from botocore.exceptions import ClientError
 
-
 class DynamoDB:
     # Handles all DynamoDB operations for the Trustworthy Model Registry
 

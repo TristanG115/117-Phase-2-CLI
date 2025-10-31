@@ -38,7 +38,7 @@ class S3Storage:
         try:
             self.s3.upload_fileobj(file_obj, self.bucket_name, key)
         except ClientError as e:
-            raise HTTPException(status_code=500, detail=f"S3 upload failed: {e}")
+            raise HTTPException(status_code = 500, detail = f"S3 upload failed: {e}")
 
         return {"message": f"File successfully uploaded to s3://{self.bucket_name}/{key}"}
 
@@ -48,8 +48,8 @@ class S3Storage:
             url = self.s3.generate_presigned_url(
                 "get_object",
                 Params={"Bucket": self.bucket_name, "Key": key},
-                ExpiresIn=expiration,
+                ExpiresIn = expiration,
             )
         except ClientError as e:
-            raise HTTPException(status_code=500, detail=f"Could not generate download URL: {e}")
+            raise HTTPException(status_code = 500, detail = f"Could not generate download URL: {e}")
         return url
