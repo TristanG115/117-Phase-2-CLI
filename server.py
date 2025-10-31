@@ -86,7 +86,7 @@ def _validate_query(query):
     name = query.get("name", "").lower()
     types = query.get("types", [])
 
-    if not name or not isinstance(types, list) or len(types) == 0:
+    if not name or not isinstance(types, list):
         raise HTTPException(
             status_code=400,
             detail=(
@@ -94,6 +94,10 @@ def _validate_query(query):
                 "formed improperly, or is invalid."
             ),
         )
+
+    # If types is empty, default to all types
+    if len(types) == 0:
+        types = ["model", "dataset", "code"]
 
     return name, types
 
