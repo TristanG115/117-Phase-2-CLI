@@ -120,8 +120,12 @@ def _build_artifact_results(queries, models):
 async def get_artifacts(request: Request, offset: Optional[str] = None):
     """BASELINE: Return artifacts matching the given query list."""
     """BASELINE: Return artifacts matching the given query list."""
+    # DEBUG: Log all headers to see what autograder sends
+    logger.info(f"DEBUG /artifacts: Headers = {dict(request.headers)}")
+
     auth_header = request.headers.get("X-Authorization")
     if not auth_header:
+        logger.warning(f"DEBUG: No X-Authorization header found")
         raise HTTPException(
             status_code=403,
             detail="Authentication failed due to invalid or missing AuthenticationToken.",
