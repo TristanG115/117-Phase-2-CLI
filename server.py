@@ -24,6 +24,32 @@ app = FastAPI(
     redoc_url=None,
 )
 
+
+# Overall request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    # Log request details
+    client_ip = request.client.host if request.client else "unknown"
+    method = request.method
+    path = request.url.path
+    headers = dict(request.headers)
+
+    print(f"\n{'='*60}", flush=True)
+    print(f"REQUEST: {method} {path}", flush=True)
+    print(f"Client IP: {client_ip}", flush=True)
+    print(f"Headers: {headers}", flush=True)
+    logger.info(f"REQUEST: {method} {path} from {client_ip}")
+
+    # Process request
+    response = await call_next(request)
+
+    print(f"RESPONSE: {response.status_code}", flush=True)
+    print(f"{'='*60}\n", flush=True)
+    logger.info(f"RESPONSE: {method} {path} -> {response.status_code}")
+
+    return response
+
+
 # Setup templates
 try:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -840,6 +866,8 @@ def index(request: Request):
 @app.get("/health")
 def health_check():
     """Heartbeat check (BASELINE) - Returns 200 when reachable"""
+    print("DEBUG /health: Health check called", flush=True)
+    logger.info("Health check called")
     return {}
 
 
