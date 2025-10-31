@@ -605,7 +605,6 @@ def reset_registry():
     conn.commit()
     conn.close()
 
-    # Optional: also clear downloaded model folders
     import shutil
 
     downloads_dir = Path("downloaded_models")
