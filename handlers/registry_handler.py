@@ -539,6 +539,7 @@ def list_models(limit=50, offset=0):
             "code_url": a["code_url"],
             "dataset_url": a["dataset_url"],
             "created_at": a["created_at"],
+            "metadata_json": a.get("metadata_json", "{}"),
         }
         for a in artifacts
     ]
@@ -559,6 +560,7 @@ def search_models(query):
             "code_url": a["code_url"],
             "dataset_url": a["dataset_url"],
             "created_at": a["created_at"],
+            "metadata_json": a.get("metadata_json", "{}"),
         }
         for a in artifacts
     ]

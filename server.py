@@ -128,11 +128,11 @@ def _validate_query(query):
     return name, types
 
 
-def _build_artifact_results(queries, models):
-    """Build results list from queries and models."""
+def _build_artifact_results(queries, artifacts):
+    """Build results list from queries and artifacts."""
     results = []
     print(
-        f"DEBUG _build: Processing {len(queries)} queries against {len(models)} models",
+        f"DEBUG _build: Processing {len(queries)} queries against {len(artifacts)} artifacts",
         flush=True,
     )
     for i, q in enumerate(queries):
@@ -143,36 +143,48 @@ def _build_artifact_results(queries, models):
         except Exception as e:
             print(f"DEBUG _build: Validation failed: {e}", flush=True)
             raise
-        for m in models:
-            # Get the actual type of this artifact from metadata
-            try:
-                metadata = json.loads(m.get("metadata_json", "{}"))
-                actual_type = metadata.get("type", "model")
+        for a in artifacts:
+            # Get the actual type of this artifact
+            # First try from the artifact_type column in database
+            actual_type = a.get("artifact_type", "model")
+
+            # If not set or is default, try from metadata_json
+            if not actual_type or actual_type == "model":
+                try:
+                    metadata = json.loads(a.get("metadata_json", "{}"))
+                    metadata_type = metadata.get("type")
+                    if metadata_type:
+                        actual_type = metadata_type
+                    print(
+                        f"DEBUG _build: Artifact {a['name']} has type {actual_type} (from metadata)",
+                        flush=True,
+                    )
+                except Exception as e:
+                    print(f"DEBUG _build: Error parsing metadata: {e}", flush=True)
+                    actual_type = a.get("artifact_type", "model")
+            else:
                 print(
-                    f"DEBUG _build: Model {m['name']} has type {actual_type}",
+                    f"DEBUG _build: Artifact {a['name']} has type {actual_type} (from db)",
                     flush=True,
                 )
-            except Exception as e:
-                print(f"DEBUG _build: Error parsing metadata: {e}", flush=True)
-                actual_type = "model"
 
             # Check if name matches
-            if name == "*" or name in m["name"].lower():
+            if name == "*" or name in a["name"].lower():
                 # Check if the artifact's actual type is in the requested types
                 if actual_type in types:
                     print(
-                        f"DEBUG _build: Adding {m['name']} as {actual_type}", flush=True
+                        f"DEBUG _build: Adding {a['name']} as {actual_type}", flush=True
                     )
                     results.append(
                         {
-                            "name": m["name"],
-                            "id": gen_id(m["name"]),
+                            "name": a["name"],
+                            "id": gen_id(a["name"]),
                             "type": actual_type,
                         }
                     )
                 else:
                     print(
-                        f"DEBUG _build: Skipping {m['name']} - type {actual_type} not in {types}",
+                        f"DEBUG _build: Skipping {a['name']} - type {actual_type} not in {types}",
                         flush=True,
                     )
     return results
@@ -180,7 +192,6 @@ def _build_artifact_results(queries, models):
 
 @app.post("/artifacts")
 async def get_artifacts(request: Request, offset: Optional[str] = None):
-    """BASELINE: Return artifacts matching the given query list."""
     """BASELINE: Return artifacts matching the given query list."""
     # DEBUG: Log all headers to see what autograder sends
     logger.info(f"DEBUG /artifacts: All headers = {dict(request.headers)}")
@@ -245,12 +256,13 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):
             status_code=400, detail="Too many queries. Maximum 100 queries per request."
         )
 
-    print(f"DEBUG: About to call list_models()", flush=True)
-    models = registry_handler.list_models()
-    print(f"DEBUG: Got {len(models)} models", flush=True)
+    print(f"DEBUG: About to call list_artifacts()", flush=True)
+    # FIXED: Use list_artifacts() instead of list_models() to get all artifact types
+    artifacts = registry_handler.list_artifacts()
+    print(f"DEBUG: Got {len(artifacts)} artifacts", flush=True)
 
     print(f"DEBUG: About to build results", flush=True)
-    results = _build_artifact_results(queries, models)
+    results = _build_artifact_results(queries, artifacts)
     print(f"DEBUG: Built {len(results)} results", flush=True)
 
     if len(results) > 1000:
@@ -286,11 +298,8 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-
         logger.warning(f"No auth header - allowing for baseline")
-
     else:
-
         require_auth(auth_header)
 
     if artifact_type not in ["model", "dataset", "code"]:
@@ -313,24 +322,25 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):
             ),
         )
 
-    models = registry_handler.list_models()
-    for m in models:
-        if gen_id(m["name"]) == aid:
-            if artifact_type == "code":
-                url = m.get("code_url", "unknown")
-            elif artifact_type == "dataset":
-                url = m.get("dataset_url", "unknown")
-            else:
-                url = m.get("code_url", "unknown")
+    artifact = registry_handler.get_artifact_by_id(str(aid), artifact_type)
 
-            return {
-                "metadata": {
-                    "name": m["name"],
-                    "id": aid,
-                    "type": artifact_type,
-                },
-                "data": {"url": url},
-            }
+    if artifact:
+        # Determine URL based on artifact type
+        if artifact_type == "code":
+            url = artifact.get("code_url", artifact.get("url", "unknown"))
+        elif artifact_type == "dataset":
+            url = artifact.get("dataset_url", artifact.get("url", "unknown"))
+        else:  # model
+            url = artifact.get("url", artifact.get("code_url", "unknown"))
+
+        return {
+            "metadata": {
+                "name": artifact["name"],
+                "id": aid,
+                "type": artifact_type,
+            },
+            "data": {"url": url},
+        }
 
     raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
@@ -377,14 +387,17 @@ def _validate_update_request(metadata, data, artifact_type, artifact_id):
         )
 
 
-def _update_model_urls(model, artifact_type, url):
-    """Update model URLs based on artifact type."""
+def _update_artifact_urls(artifact, artifact_type, url):
+    """Update artifact URLs based on artifact type."""
     if artifact_type == "code":
-        model["code_url"] = url
+        artifact["code_url"] = url
+        artifact["url"] = url
     elif artifact_type == "dataset":
-        model["dataset_url"] = url
-    else:
-        model["code_url"] = url
+        artifact["dataset_url"] = url
+        artifact["url"] = url
+    else:  # model
+        artifact["code_url"] = url
+        artifact["url"] = url
 
 
 @app.put("/artifacts/{artifact_type}/{artifact_id}")
@@ -393,11 +406,8 @@ async def update_artifact(artifact_type: str, artifact_id: str, request: Request
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-
         logger.warning(f"No auth header - allowing for baseline")
-
     else:
-
         require_auth(auth_header)
 
     if artifact_type not in ["model", "dataset", "code"]:
@@ -425,35 +435,30 @@ async def update_artifact(artifact_type: str, artifact_id: str, request: Request
 
     _validate_update_request(metadata, data, artifact_type, artifact_id)
 
-    models = registry_handler.list_models()
-    found = False
+    artifact = registry_handler.get_artifact_by_id(str(int(artifact_id)), artifact_type)
 
-    for m in models:
-        if gen_id(m["name"]) == int(artifact_id):
-            if m["name"] != metadata.get("name"):
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        "There is missing field(s) in the artifact_type or "
-                        "artifact_id or it is formed improperly, or is invalid."
-                    ),
-                )
-
-            found = True
-            _update_model_urls(m, artifact_type, data.get("url"))
-
-            registry_handler.add_model(
-                name=m["name"],
-                score=m["score"],
-                tags=m.get("tags", ""),
-                code_url=m.get("code_url", ""),
-                dataset_url=m.get("dataset_url", ""),
-                metadata_json=m.get("metadata_json", "{}"),
-            )
-            break
-
-    if not found:
+    if not artifact:
         raise HTTPException(status_code=404, detail="Artifact does not exist.")
+
+    if artifact["name"] != metadata.get("name"):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_type or "
+                "artifact_id or it is formed improperly, or is invalid."
+            ),
+        )
+
+    # Update URLs
+    _update_artifact_urls(artifact, artifact_type, data.get("url"))
+
+    # Update in registry
+    registry_handler.update_artifact(
+        str(int(artifact_id)),
+        url=data.get("url"),
+        code_url=artifact.get("code_url", "unknown"),
+        dataset_url=artifact.get("dataset_url", "unknown"),
+    )
 
     return {"status": "artifact updated successfully"}
 
@@ -502,18 +507,20 @@ async def register_artifact(artifact_type: str, request: Request):
     name = url.rstrip("/").split("/")[-1]
     new_id = gen_id(name)
 
-    models = registry_handler.list_models()
-    for m in models:
-        if gen_id(m["name"]) == new_id:
+    artifacts = registry_handler.list_artifacts()
+    for a in artifacts:
+        if gen_id(a["name"]) == new_id:
             raise HTTPException(status_code=409, detail="Artifact exists already.")
 
-    registry_handler.add_model(
+    artifact_id = registry_handler.add_artifact(
         name=name,
+        artifact_type=artifact_type,
         score=0.0,
+        url=url,
         tags=artifact_type,
         code_url=url if artifact_type in ["code", "model"] else "unknown",
         dataset_url=url if artifact_type == "dataset" else "unknown",
-        metadata_json=json.dumps({"type": artifact_type}),
+        metadata={"type": artifact_type},  # Note: metadata not metadata_json
     )
 
     resp = {
@@ -529,11 +536,8 @@ def get_rating(artifact_id: str, request: Request):
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-
         logger.warning(f"No auth header - allowing for baseline")
-
     else:
-
         require_auth(auth_header)
 
     try:
@@ -547,19 +551,19 @@ def get_rating(artifact_id: str, request: Request):
             ),
         )
 
-    models = registry_handler.list_models()
-    for m in models:
-        if gen_id(m["name"]) == aid:
-            meta = json.loads(m.get("metadata_json", "{}"))
+    artifacts = registry_handler.list_artifacts()
+    for a in artifacts:
+        if gen_id(a["name"]) == aid:
+            meta = json.loads(a.get("metadata_json", "{}"))
             if meta and any(
                 key in meta for key in ["net_score", "ramp_up_time", "bus_factor"]
             ):
                 return meta
             else:
                 return {
-                    "name": m["name"],
+                    "name": a["name"],
                     "category": "MODEL",
-                    "net_score": m.get("score", 0),
+                    "net_score": a.get("score", 0),
                     "net_score_latency": 0,
                     "ramp_up_time": 0,
                     "ramp_up_time_latency": 0,
@@ -601,11 +605,8 @@ def get_cost(
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-
         logger.warning(f"No auth header - allowing for baseline")
-
     else:
-
         require_auth(auth_header)
 
     if artifact_type not in ["model", "dataset", "code"]:
@@ -628,9 +629,9 @@ def get_cost(
             ),
         )
 
-    models = registry_handler.list_models()
-    for m in models:
-        if gen_id(m["name"]) == aid:
+    artifacts = registry_handler.list_artifacts()
+    for a in artifacts:
+        if gen_id(a["name"]) == aid:
             if artifact_type == "model":
                 base_cost = 412.5
             elif artifact_type == "dataset":
@@ -652,11 +653,8 @@ def get_lineage(artifact_id: str, request: Request):
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-
         logger.warning(f"No auth header - allowing for baseline")
-
     else:
-
         require_auth(auth_header)
 
     try:
@@ -670,10 +668,10 @@ def get_lineage(artifact_id: str, request: Request):
             ),
         )
 
-    models = registry_handler.list_models()
-    for m in models:
-        if gen_id(m["name"]) == aid:
-            dataset_url = m.get("dataset_url", "unknown")
+    artifacts = registry_handler.list_artifacts()
+    for a in artifacts:
+        if gen_id(a["name"]) == aid:
+            dataset_url = a.get("dataset_url", "unknown")
             if not dataset_url or dataset_url == "unknown":
                 raise HTTPException(
                     status_code=400,
@@ -688,7 +686,7 @@ def get_lineage(artifact_id: str, request: Request):
 
             return {
                 "nodes": [
-                    {"artifact_id": aid, "name": m["name"], "source": "config_json"},
+                    {"artifact_id": aid, "name": a["name"], "source": "config_json"},
                     {
                         "artifact_id": dataset_id,
                         "name": dataset_name,
@@ -707,10 +705,10 @@ def get_lineage(artifact_id: str, request: Request):
     raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
 
-def _verify_artifact_exists(artifact_id, models):
+def _verify_artifact_exists(artifact_id, artifacts):
     """Check if artifact with given ID exists."""
-    for m in models:
-        if gen_id(m["name"]) == artifact_id:
+    for a in artifacts:
+        if gen_id(a["name"]) == artifact_id:
             return True
     return False
 
@@ -735,11 +733,8 @@ async def license_check(artifact_id: str, request: Request):
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-
         logger.warning(f"No auth header - allowing for baseline")
-
     else:
-
         require_auth(auth_header)
 
     try:
@@ -770,8 +765,8 @@ async def license_check(artifact_id: str, request: Request):
             status_code=404, detail="The artifact or GitHub project could not be found."
         )
 
-    models = registry_handler.list_models()
-    if not _verify_artifact_exists(aid, models):
+    artifacts = registry_handler.list_artifacts()
+    if not _verify_artifact_exists(aid, artifacts):
         raise HTTPException(
             status_code=404, detail="The artifact or GitHub project could not be found."
         )
@@ -786,11 +781,8 @@ async def artifact_by_regex(request: Request):
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-
         logger.warning(f"No auth header - allowing for baseline")
-
     else:
-
         require_auth(auth_header)
 
     try:
@@ -825,16 +817,25 @@ async def artifact_by_regex(request: Request):
             ),
         )
 
-    models = registry_handler.list_models()
+    artifacts = registry_handler.list_artifacts()
     matches = []
-    for m in models:
+    for a in artifacts:
         text = (
-            f"{m['name']} {m.get('tags', '')} "
-            f"{m.get('code_url', '')} {m.get('dataset_url', '')}"
+            f"{a['name']} {a.get('tags', '')} "
+            f"{a.get('code_url', '')} {a.get('dataset_url', '')}"
         )
         if pattern.search(text):
+            # Get actual type from artifact_type or metadata
+            actual_type = a.get("artifact_type", "model")
+            if not actual_type or actual_type == "model":
+                try:
+                    metadata = json.loads(a.get("metadata_json", "{}"))
+                    actual_type = metadata.get("type", "model")
+                except Exception:
+                    actual_type = "model"
+
             matches.append(
-                {"name": m["name"], "id": gen_id(m["name"]), "type": "model"}
+                {"name": a["name"], "id": gen_id(a["name"]), "type": actual_type}
             )
 
     if not matches:
@@ -869,9 +870,10 @@ def index(request: Request):
         )
 
     try:
-        models = registry_handler.list_models()
+        # Use list_artifacts for dashboard to show all types
+        artifacts = registry_handler.list_artifacts()
         return templates.TemplateResponse(
-            "index.html", {"request": request, "models": models}
+            "index.html", {"request": request, "models": artifacts}
         )
     except Exception as e:
         logger.error(f"Error loading dashboard: {e}")
