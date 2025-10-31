@@ -144,14 +144,36 @@ def _build_artifact_results(queries, models):
             print(f"DEBUG _build: Validation failed: {e}", flush=True)
             raise
         for m in models:
+            # Get the actual type of this artifact from metadata
+            try:
+                metadata = json.loads(m.get("metadata_json", "{}"))
+                actual_type = metadata.get("type", "model")
+                print(
+                    f"DEBUG _build: Model {m['name']} has type {actual_type}",
+                    flush=True,
+                )
+            except Exception as e:
+                print(f"DEBUG _build: Error parsing metadata: {e}", flush=True)
+                actual_type = "model"
+
+            # Check if name matches
             if name == "*" or name in m["name"].lower():
-                for artifact_type in types:
+                # Check if the artifact's actual type is in the requested types
+                if actual_type in types:
+                    print(
+                        f"DEBUG _build: Adding {m['name']} as {actual_type}", flush=True
+                    )
                     results.append(
                         {
                             "name": m["name"],
                             "id": gen_id(m["name"]),
-                            "type": artifact_type,
+                            "type": actual_type,
                         }
+                    )
+                else:
+                    print(
+                        f"DEBUG _build: Skipping {m['name']} - type {actual_type} not in {types}",
+                        flush=True,
                     )
     return results
 
