@@ -1,6 +1,9 @@
+import json
+import os
 import unittest
 from unittest.mock import Mock, patch
 
+from handlers import ingest_handler, registry_handler
 from resource_handlers import CodeHandler, DatasetHandler, ModelHandler
 
 
@@ -58,3 +61,96 @@ class TestResourceHandlers(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestRegistryAndIngest(unittest.TestCase):
+    """Tests for registry database logic and model ingestion"""
+
+    def setUp(self):
+        # Ensure a clean registry
+        if os.path.exists("registry.db"):
+            os.remove("registry.db")
+        registry_handler.init_registry()
+
+    def tearDown(self):
+        if os.path.exists("registry.db"):
+            os.remove("registry.db")
+
+    def test_registry_add_and_list(self):
+        """Test 11: Add, list, and reset registry"""
+        registry_handler.add_model(
+            name="test-model",
+            score=0.9,
+            tags="test",
+            code_url="https://github.com/example/repo",
+            dataset_url="https://huggingface.co/datasets/example/data",
+            metadata_json=json.dumps({"key": "value"}),
+        )
+        models = registry_handler.list_models()
+        self.assertTrue(len(models) == 1)
+        self.assertEqual(models[0]["name"], "test-model")
+
+        # Reset should clear registry
+        registry_handler.reset_registry()
+        models = registry_handler.list_models()
+        self.assertEqual(models, [])
+
+    @patch("handlers.ingest_handler.snapshot_download")
+    @patch("handlers.ingest_handler.subprocess.check_output")
+    @patch("handlers.ingest_handler.infer_links_from_hf")
+    @patch("handlers.ingest_handler.add_model")
+    def test_ingest_model_success(
+        self, mock_add_model, mock_infer, mock_subproc, mock_download
+    ):
+        """Test 12: Successful model ingestion"""
+        mock_download.return_value = None
+        mock_infer.return_value = (
+            "https://github.com/example/repo",
+            "https://huggingface.co/datasets/example/data",
+        )
+
+        # Mock scoring output
+        fake_score = {
+            "name": "bert-base-uncased",
+            "category": "MODEL",
+            "net_score": 0.87,
+            "dataset_and_code_score": 1.0,
+            "dataset_quality": 1.0,
+            "code_quality": 0.9,
+            "license": 1.0,
+        }
+        mock_subproc.return_value = json.dumps(fake_score)
+
+        result = ingest_handler.ingest_model(
+            "https://huggingface.co/google/bert-base-uncased"
+        )
+        self.assertIn("status", result)
+        self.assertEqual(result["status"], "success")
+        mock_add_model.assert_called_once()
+
+    @patch("handlers.ingest_handler.snapshot_download")
+    @patch("handlers.ingest_handler.subprocess.check_output")
+    @patch("handlers.ingest_handler.infer_links_from_hf")
+    def test_ingest_model_fails_threshold(
+        self, mock_infer, mock_subproc, mock_download
+    ):
+        """Test 13: Ingestion fails if score too low"""
+        mock_download.return_value = None
+        mock_infer.return_value = ("unknown", "unknown")
+
+        fake_score = {
+            "name": "bert-base-uncased",
+            "category": "MODEL",
+            "net_score": 0.3,
+            "dataset_and_code_score": 0.2,
+            "dataset_quality": 0.1,
+            "code_quality": 0.1,
+            "license": 1.0,
+        }
+        mock_subproc.return_value = json.dumps(fake_score)
+
+        result = ingest_handler.ingest_model(
+            "https://huggingface.co/google/bert-base-uncased"
+        )
+        self.assertIn("error", result)
+        self.assertIn("Model did not meet threshold criteria.", result["error"])
