@@ -864,9 +864,23 @@ def index(request: Request):
 
 
 @app.get("/health", status_code=200)
-def health_check():
+def health_check(request: Request):
     """Heartbeat check (BASELINE) - Returns 200 when reachable."""
-    logger.info("Health check called")
+    print("=" * 60, flush=True)
+    print("DEBUG /health: Health endpoint called", flush=True)
+
+    # Log request details
+    print(
+        f"Client IP: {request.client.host if request.client else 'unknown'}", flush=True
+    )
+    print(f"Method: {request.method}", flush=True)
+    print(f"Path: {request.url.path}", flush=True)
+    print(f"Headers: {dict(request.headers)}", flush=True)
+    print("=" * 60, flush=True)
+
+    logger.info("DEBUG /health: Health check called successfully")
+
+    # Return no body, only 200 OK
     return Response(status_code=200)
 
 
