@@ -6,7 +6,7 @@ import os
 import re
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
@@ -877,11 +877,13 @@ def index(request: Request):
         )
 
 
-@app.get("/health", status_code=200)
-def health_check():
-    """Heartbeat check (BASELINE) - Returns 200 when reachable."""
+@app.get("/health")
+async def health_check():
+    """Heartbeat check (BASELINE) - Returns 200 when reachable"""
+    print("DEBUG /health: Health check called", flush=True)
     logger.info("Health check called")
-    return Response(status_code=200)
+    # Return a simple valid JSON response
+    return JSONResponse(status_code=200, content={})
 
 
 # Add root endpoint in case autograder checks that
