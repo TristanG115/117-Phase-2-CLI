@@ -147,7 +147,7 @@ def _build_artifact_results(queries, artifacts):
             # Get the actual type of this artifact
             # First try from the artifact_type column in database
             actual_type = a.get("artifact_type", "model")
-
+            
             # If not set or is default, try from metadata_json
             if not actual_type or actual_type == "model":
                 try:
@@ -323,7 +323,7 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):
         )
 
     artifact = registry_handler.get_artifact_by_id(str(aid), artifact_type)
-
+    
     if artifact:
         # Determine URL based on artifact type
         if artifact_type == "code":
@@ -436,10 +436,10 @@ async def update_artifact(artifact_type: str, artifact_id: str, request: Request
     _validate_update_request(metadata, data, artifact_type, artifact_id)
 
     artifact = registry_handler.get_artifact_by_id(str(int(artifact_id)), artifact_type)
-
+    
     if not artifact:
         raise HTTPException(status_code=404, detail="Artifact does not exist.")
-
+    
     if artifact["name"] != metadata.get("name"):
         raise HTTPException(
             status_code=400,
@@ -514,7 +514,7 @@ async def register_artifact(artifact_type: str, request: Request):
 
     artifact_id = registry_handler.add_artifact(
         name=name,
-        artifact_type=artifact_type,
+        artifact_type=artifact_type, 
         score=0.0,
         url=url,
         tags=artifact_type,
@@ -807,7 +807,7 @@ async def artifact_by_regex(request: Request):
         )
 
     try:
-        pattern = re.compile(regex)
+        pattern = re.compile(regex, re.IGNORECASE)
     except re.error:
         raise HTTPException(
             status_code=400,
@@ -817,26 +817,51 @@ async def artifact_by_regex(request: Request):
             ),
         )
 
+    # Use list_artifacts() to search all artifacts
     artifacts = registry_handler.list_artifacts()
     matches = []
+    seen = set() 
+    
     for a in artifacts:
-        text = (
-            f"{a['name']} {a.get('tags', '')} "
-            f"{a.get('code_url', '')} {a.get('dataset_url', '')}"
-        )
+        artifact_id = gen_id(a["name"])
+        
+        # Skip if we've already added this artifact
+        if artifact_id in seen:
+            continue
+        
+        metadata = {}
+        try:
+            metadata = json.loads(a.get("metadata_json", "{}"))
+        except Exception:
+            pass
+        
+        # Build comprehensive search text from all fields
+        metadata_text = " ".join(str(v) for v in metadata.values() if v)
+        
+        # Include all possible searchable fields
+        search_fields = [
+            a.get("name", ""),
+            a.get("tags", ""),
+            a.get("code_url", ""),
+            a.get("dataset_url", ""),
+            a.get("url", ""),
+            metadata_text
+        ]
+        
+        text = " ".join(str(field) for field in search_fields if field)
+        
         if pattern.search(text):
             # Get actual type from artifact_type or metadata
             actual_type = a.get("artifact_type", "model")
             if not actual_type or actual_type == "model":
-                try:
-                    metadata = json.loads(a.get("metadata_json", "{}"))
-                    actual_type = metadata.get("type", "model")
-                except Exception:
-                    actual_type = "model"
-
-            matches.append(
-                {"name": a["name"], "id": gen_id(a["name"]), "type": actual_type}
-            )
+                actual_type = metadata.get("type", "model")
+            
+            seen.add(artifact_id)
+            matches.append({
+                "name": a["name"],
+                "id": artifact_id,
+                "type": actual_type
+            })
 
     if not matches:
         raise HTTPException(
