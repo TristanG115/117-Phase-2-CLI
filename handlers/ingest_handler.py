@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import tempfile
+import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -474,7 +475,12 @@ def ingest_model(
     # Check threshold
     if not _check_threshold(result, min_score):
         logging.warning(f"Model {model_id} failed threshold check: {result}")
-        return {"error": "Model did not meet threshold criteria.", "scorecard": result}
+        return {
+            "status": "failed",
+            "error": "Model did not meet threshold criteria.",
+            "scorecard": result,
+        }
+
 
     # Create tags
     tags = ",".join([url for url in [code_url, dataset_url] if url != "unknown"])
@@ -626,3 +632,9 @@ def batch_ingest(url_list: List[str], min_score: float = 0.5) -> List[Dict[str, 
             results.append({"error": str(e), "url": url})
 
     return results
+
+# -----------------------------------------------------------------------------
+# Compatibility alias for old tests
+# -----------------------------------------------------------------------------
+add_model = registry_handler.add_model  # ✅ allows test mocks like patch("handlers.ingest_handler.add_model")
+

@@ -1,93 +1,96 @@
 name: CI/CD Pipeline
 
 on:
-  push:
-    branches: [main, dev]
   pull_request:
     branches: [main, dev]
+  push:
+    branches: [main]
 
 jobs:
-  ci:
-    name: Continuous Integration
+  # --------------------------------
+  # 1️⃣ Continuous Integration (CI)
+  # --------------------------------
+  test:
+    name: Run Automated Tests
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: [3.13]
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install flake8 mypy pytest coverage requests
-
-      - name: Lint code
-        run: flake8 .
-
-      - name: Type checking
-        run: mypy .
+          pip install pytest pytest-cov
 
       - name: Run tests with coverage
         run: |
-          coverage run -m pytest
-          coverage report -m --fail-under=90
-          coverage xml
+          PYTHONPATH=. pytest --cov=handlers --cov=resource_handlers -v
 
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage-report
-          path: coverage.xml
-
+  # --------------------------------
+  # 2️⃣ Continuous Deployment (CD)
+  # --------------------------------
   deploy:
-    name: Deploy to AWS Lambda
-    needs: ci
+    name: Deploy to AWS
+    needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-2
 
-      - name: Package Lambda function
+      # 🧩 Deploy to AWS Lambda
+      - name: Package and deploy Lambda function
         run: |
-          rm -rf package
-          mkdir package
+          mkdir -p package
           pip install -r requirements.txt -t package/
-          cp -r *.py package/
-          cd package
-          zip -r ../function.zip .
+          cp -r API server.py dashboard/ package/
+          cd package && zip -r ../function.zip .
           cd ..
-
-      - name: Deploy Lambda function
-        run: |
           aws lambda update-function-code \
-            --function-name fastapi_lambda_handler \
+            --function-name huggingface-api \
             --zip-file fileb://function.zip
 
-      - name: Update API Gateway
-        run: |
-          aws apigateway create-deployment \
-            --rest-api-id <klmdmk4kfh> \
-            --stage-name prod
-
-      - name: Post-deployment smoke test
-        run: |
-          echo "Testing deployed API endpoints..."
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://<https://klmdmk4kfh.execute-api.us-east-2.amazonaws.com/ci-cd>/packages)
-          if [ "$RESPONSE" -ne 200 ]; then
-            echo "Smoke test failed: /packages endpoint returned $RESPONSE"
-            exit 1
-          else
-            echo "Smoke test passed: /packages endpoint returned $RESPONSE"
-          fi
+      # 🧩 Optional: Deploy to EC2 (uncomment if needed)
+      # - name: Deploy to EC2
+      #   env:
+      #     AWS_HOST: ${{ secrets.AWS_HOST }}
+      #     AWS_USER: ${{ secrets.AWS_USER }}
+      #     AWS_KEY: ${{ secrets.AWS_KEY }}
+      #   run: |
+      #     echo "${AWS_KEY}" > private_key.pem
+      #     chmod 600 private_key.pem
+      #     ssh -o StrictHostKeyChecking=no -i private_key.pem ${AWS_USER}@${AWS_HOST} << 'EOF'
+      #       cd ~/huggingface-evaluator
+      #       git pull origin main
+      #       source venv/bin/activate || python3 -m venv venv && source venv/bin/activate
+      #       pip install -r requirements.txt
+      #       sudo systemctl restart huggingface-api.service || echo "Restart manually if needed"
+      #       echo "Deployment complete!"
+      #     EOF

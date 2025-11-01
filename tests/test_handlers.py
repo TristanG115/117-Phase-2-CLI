@@ -95,12 +95,12 @@ class TestRegistryAndIngest(unittest.TestCase):
         models = registry_handler.list_models()
         self.assertEqual(models, [])
 
-    @patch("handlers.ingest_handler.snapshot_download")
-    @patch("handlers.ingest_handler.subprocess.check_output")
+    @patch("handlers.ingest_handler.registry_handler.add_model")
+    @patch("handlers.ingest_handler.score_model_with_evaluator")
     @patch("handlers.ingest_handler.infer_links_from_hf")
-    @patch("handlers.ingest_handler.add_model")
+    @patch("handlers.ingest_handler.snapshot_download")
     def test_ingest_model_success(
-        self, mock_add_model, mock_infer, mock_subproc, mock_download
+        self, mock_download, mock_infer, mock_score, mock_add_model
     ):
         """Test 12: Successful model ingestion"""
         mock_download.return_value = None
@@ -109,7 +109,7 @@ class TestRegistryAndIngest(unittest.TestCase):
             "https://huggingface.co/datasets/example/data",
         )
 
-        # Mock scoring output
+        # Include all required metrics
         fake_score = {
             "name": "bert-base-uncased",
             "category": "MODEL",
@@ -118,14 +118,23 @@ class TestRegistryAndIngest(unittest.TestCase):
             "dataset_quality": 1.0,
             "code_quality": 0.9,
             "license": 1.0,
+            "reproducibility": 0.9,
+            "reviewedness": 0.9,
+            "tree_score": 0.9,
         }
-        mock_subproc.return_value = json.dumps(fake_score)
+        mock_score.return_value = fake_score
+        mock_add_model.return_value = "artifact123"
 
         result = ingest_handler.ingest_model(
             "https://huggingface.co/google/bert-base-uncased"
         )
+
         self.assertIn("status", result)
         self.assertEqual(result["status"], "success")
+        self.assertEqual(result["artifact_id"], "artifact123")
+        self.assertEqual(result["model"], "bert-base-uncased")
+        self.assertEqual(result["score"], 0.87)
+        self.assertEqual(result["metrics"], fake_score)
         mock_add_model.assert_called_once()
 
     @patch("handlers.ingest_handler.snapshot_download")
