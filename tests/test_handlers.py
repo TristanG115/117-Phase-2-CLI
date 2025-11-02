@@ -77,7 +77,7 @@ class TestRegistryAndIngest(unittest.TestCase):
             os.remove("registry.db")
 
     def test_registry_add_and_list(self):
-        """Test 11: Add, list, and reset registry"""
+        """Test: Add, list, and reset registry"""
         registry_handler.add_model(
             name="test-model",
             score=0.9,
@@ -95,14 +95,14 @@ class TestRegistryAndIngest(unittest.TestCase):
         models = registry_handler.list_models()
         self.assertEqual(models, [])
 
+    @patch("handlers.registry_handler.add_model")
     @patch("handlers.ingest_handler.snapshot_download")
     @patch("handlers.ingest_handler.subprocess.check_output")
     @patch("handlers.ingest_handler.infer_links_from_hf")
-    @patch("handlers.ingest_handler.add_model")
     def test_ingest_model_success(
-        self, mock_add_model, mock_infer, mock_subproc, mock_download
+        self, mock_infer, mock_subproc, mock_download, mock_add_model
     ):
-        """Test 12: Successful model ingestion"""
+        """Test: Successful model ingestion"""
         mock_download.return_value = None
         mock_infer.return_value = (
             "https://github.com/example/repo",
@@ -134,7 +134,7 @@ class TestRegistryAndIngest(unittest.TestCase):
     def test_ingest_model_fails_threshold(
         self, mock_infer, mock_subproc, mock_download
     ):
-        """Test 13: Ingestion fails if score too low"""
+        """Test: Ingestion fails if score too low"""
         mock_download.return_value = None
         mock_infer.return_value = ("unknown", "unknown")
 
