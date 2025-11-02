@@ -837,7 +837,6 @@ async def artifact_by_regex(request: Request):
         
         # Build comprehensive search text from all fields
         metadata_text = " ".join(str(v) for v in metadata.values() if v)
-        
         # Include all possible searchable fields
         search_fields = [
             a.get("name", ""),
@@ -847,15 +846,12 @@ async def artifact_by_regex(request: Request):
             a.get("url", ""),
             metadata_text
         ]
-        
         text = " ".join(str(field) for field in search_fields if field)
-        
         if pattern.search(text):
             # Get actual type from artifact_type or metadata
             actual_type = a.get("artifact_type", "model")
             if not actual_type or actual_type == "model":
                 actual_type = metadata.get("type", "model")
-            
             seen.add(artifact_id)
             matches.append({
                 "name": a["name"],
