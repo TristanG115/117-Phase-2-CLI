@@ -1,7 +1,9 @@
-from typing import Tuple, Dict, List, Any
 import time
-from .base_metric import BaseMetric
+from typing import Any, Dict, List, Tuple
+
 from url_classifier import URLType
+
+from .base_metric import BaseMetric
 
 
 class SizeScoreMetric(BaseMetric):

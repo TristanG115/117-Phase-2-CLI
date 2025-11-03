@@ -7,12 +7,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from metrics import METRIC_CLASSES
 from metrics.base_metric import BaseMetric
-from resource_handlers import (
-    BaseResourceHandler,
-    CodeHandler,
-    DatasetHandler,
-    ModelHandler,
-)
+from resource_handlers import (BaseResourceHandler, CodeHandler,
+                               DatasetHandler, ModelHandler)
 from url_classifier import URLClassifier, URLType
 
 

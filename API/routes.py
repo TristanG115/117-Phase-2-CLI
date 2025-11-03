@@ -1,9 +1,14 @@
 from __future__ import annotations
+
+import os
+import tempfile
+import zipfile
+
 from fastapi import APIRouter, HTTPException, UploadFile
 from fastapi.responses import FileResponse
-import tempfile, os, zipfile
-from .storage import S3Storage
+
 from .dynamo import DynamoDB
+from .storage import S3Storage
 
 router = APIRouter(prefix="/models", tags=["Models"])
 s3 = S3Storage()

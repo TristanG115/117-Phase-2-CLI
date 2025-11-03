@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from .routes import router as models_router
 
 app = FastAPI(title="Trustworthy Model Registry", version="1.0.0")

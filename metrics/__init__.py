@@ -7,10 +7,10 @@ from .code_quality_metric import CodeQualityMetric
 from .dataset_and_code_score_metric import DatasetAndCodeScoreMetric
 from .dataset_quality_metric import DatasetQualityMetric
 from .license_metric import LicenseMetric
+from .metrics import METRIC_CLASSES
 from .performance_claims_metric import PerformanceClaimsMetric
 from .ramp_up_time_metric import RampUpTimeMetric
 from .size_score_metric import SizeScoreMetric
-from .metrics import METRIC_CLASSES
 
 # Export all classes and constants
 __all__ = [
