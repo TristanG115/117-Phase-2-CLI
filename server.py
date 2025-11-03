@@ -821,23 +821,18 @@ async def artifact_by_regex(request: Request):
     artifacts = registry_handler.list_artifacts()
     matches = []
     seen = set() 
-    
     for a in artifacts:
         artifact_id = gen_id(a["name"])
-        
         # Skip if we've already added this artifact
         if artifact_id in seen:
             continue
-        
         metadata = {}
         try:
             metadata = json.loads(a.get("metadata_json", "{}"))
         except Exception:
             pass
-        
         # Build comprehensive search text from all fields
         metadata_text = " ".join(str(v) for v in metadata.values() if v)
-        
         # Include all possible searchable fields
         search_fields = [
             a.get("name", ""),

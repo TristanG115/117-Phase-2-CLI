@@ -10,6 +10,7 @@ jobs:
   ci:
     name: Continuous Integration
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -23,10 +24,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install flake8 mypy pytest coverage requests
+          pip install flake8 isort black mypy pytest coverage requests
 
       - name: Lint code
         run: flake8 .
+
+      - name: Check import order
+        run: isort . --check-only
+
+      - name: Check formatting
+        run: black --check --line-length 120 .
 
       - name: Type checking
         run: mypy .
@@ -35,59 +42,32 @@ jobs:
         run: |
           coverage run -m pytest
           coverage report -m --fail-under=90
-          coverage xml
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage-report
-          path: coverage.xml
 
   deploy:
-    name: Deploy to AWS Lambda
+    name: Deploy to EC2
     needs: ci
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2
-
-      - name: Package Lambda function
+      - name: Copy SSH key from secret
         run: |
-          rm -rf package
-          mkdir package
-          pip install -r requirements.txt -t package/
-          cp -r *.py package/
-          cd package
-          zip -r ../function.zip .
-          cd ..
+          echo "${{ secrets.EC2_SSH_KEY }}" > ec2-key-pair.pem
+          chmod 400 ec2-key-pair.pem
 
-      - name: Deploy Lambda function
+      - name: Deploy code to EC2
         run: |
-          aws lambda update-function-code \
-            --function-name fastapi_lambda_handler \
-            --zip-file fileb://function.zip
-
-      - name: Update API Gateway
-        run: |
-          aws apigateway create-deployment \
-            --rest-api-id <klmdmk4kfh> \
-            --stage-name prod
-
-      - name: Post-deployment smoke test
-        run: |
-          echo "Testing deployed API endpoints..."
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://<https://klmdmk4kfh.execute-api.us-east-2.amazonaws.com/ci-cd>/packages)
-          if [ "$RESPONSE" -ne 200 ]; then
-            echo "Smoke test failed: /packages endpoint returned $RESPONSE"
-            exit 1
-          else
-            echo "Smoke test passed: /packages endpoint returned $RESPONSE"
-          fi
+          ssh -i ec2-key-pair.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            cd /home/ec2-user
+            if [ ! -d "117-Phase-2-CLI" ]; then
+              git clone https://github.com/TristanG115/117-Phase-2-CLI.git
+            fi
+            cd 117-Phase-2-CLI
+            git pull origin main
+            echo "Restarting app..."
+            pkill -f "python3 main.py" || true
+            nohup python3 main.py > app.log 2>&1 &
+          EOF
