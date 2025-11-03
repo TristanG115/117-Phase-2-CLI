@@ -14,14 +14,14 @@ from .metrics import METRIC_CLASSES
 
 # Export all classes and constants
 __all__ = [
-    'BaseMetric',
-    'BusFactorMetric',
-    'CodeQualityMetric',
-    'DatasetAndCodeScoreMetric',
-    'DatasetQualityMetric',
-    'LicenseMetric',
-    'PerformanceClaimsMetric',
-    'RampUpTimeMetric',
-    'SizeScoreMetric',
-    'METRIC_CLASSES'
+    "BaseMetric",
+    "BusFactorMetric",
+    "CodeQualityMetric",
+    "DatasetAndCodeScoreMetric",
+    "DatasetQualityMetric",
+    "LicenseMetric",
+    "PerformanceClaimsMetric",
+    "RampUpTimeMetric",
+    "SizeScoreMetric",
+    "METRIC_CLASSES",
 ]

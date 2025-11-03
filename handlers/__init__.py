@@ -4,4 +4,4 @@ from .dataset_handler import DatasetHandler
 from .code_handler import CodeHandler
 
 # Export all classes
-__all__ = ['BaseResourceHandler', 'ModelHandler', 'DatasetHandler', 'CodeHandler']
+__all__ = ["BaseResourceHandler", "ModelHandler", "DatasetHandler", "CodeHandler"]

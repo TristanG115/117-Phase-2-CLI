@@ -42,9 +42,7 @@ class DatasetHandler(BaseResourceHandler):
                 )
                 return data
             else:
-                self.logger.warning(
-                    f"HuggingFace dataset API returned {response.status_code} for {self.dataset_id}"
-                )
+                self.logger.warning(f"HuggingFace dataset API returned {response.status_code} for {self.dataset_id}")
         except Exception as e:
             self.logger.error(f"Error fetching dataset API data: {e}")
 
@@ -56,15 +54,11 @@ class DatasetHandler(BaseResourceHandler):
             return self._readme_content
 
         try:
-            readme_url = (
-                f"https://huggingface.co/datasets/{self.dataset_id}/raw/main/README.md"
-            )
+            readme_url = f"https://huggingface.co/datasets/{self.dataset_id}/raw/main/README.md"
             response = requests.get(readme_url, timeout=10)
             if response.status_code == 200:
                 self._readme_content = response.text
-                self.logger.debug(
-                    f"Fetched README for dataset {self.dataset_id}, length={len(self._readme_content)}"
-                )
+                self.logger.debug(f"Fetched README for dataset {self.dataset_id}, length={len(self._readme_content)}")
                 return self._readme_content
         except Exception as e:
             self.logger.error(f"Error fetching dataset README: {e}")
@@ -78,16 +72,10 @@ class DatasetHandler(BaseResourceHandler):
         tags = api_data.get("tags", [])
 
         eval_indicators = ["evaluation", "benchmark", "test", "eval"]
-        is_eval = any(
-            indicator in str(tag).lower()
-            for tag in tags
-            for indicator in eval_indicators
-        )
+        is_eval = any(indicator in str(tag).lower() for tag in tags for indicator in eval_indicators)
 
         if is_eval:
-            self.logger.info(
-                f"Dataset {self.dataset_id} identified as evaluation dataset"
-            )
+            self.logger.info(f"Dataset {self.dataset_id} identified as evaluation dataset")
 
         return is_eval
 
@@ -157,9 +145,7 @@ class DatasetHandler(BaseResourceHandler):
 
         final_score = min(score, 1.0)
         self._cache_set("quality_score", final_score)
-        self.logger.info(
-            f"Dataset quality score for {self.dataset_id}: {final_score:.2f}"
-        )
+        self.logger.info(f"Dataset quality score for {self.dataset_id}: {final_score:.2f}")
         return final_score
 
     def get_license_score(self) -> float:
@@ -171,9 +157,7 @@ class DatasetHandler(BaseResourceHandler):
         if license_value:
             score = self._parse_license_identifier(license_value)
             if score > 0:
-                self.logger.info(
-                    f"Dataset license for {self.dataset_id}: {license_value} (score={score})"
-                )
+                self.logger.info(f"Dataset license for {self.dataset_id}: {license_value} (score={score})")
                 return score
 
         # Check cardData
@@ -193,9 +177,7 @@ class DatasetHandler(BaseResourceHandler):
                 license_name = tag.replace("license:", "").strip()
                 score = self._parse_license_identifier(license_name)
                 if score > 0:
-                    self.logger.info(
-                        f"Dataset license in tags for {self.dataset_id}: {license_name} (score={score})"
-                    )
+                    self.logger.info(f"Dataset license in tags for {self.dataset_id}: {license_name} (score={score})")
                     return score
 
         self.logger.warning(f"No license found for dataset {self.dataset_id}")
@@ -248,9 +230,7 @@ class DatasetHandler(BaseResourceHandler):
 
         final_score = min(score, 1.0)
         self._cache_set("doc_score", final_score)
-        self.logger.info(
-            f"Dataset documentation score for {self.dataset_id}: {final_score:.2f}"
-        )
+        self.logger.info(f"Dataset documentation score for {self.dataset_id}: {final_score:.2f}")
         return final_score
 
     def get_contributor_count(self) -> int:

@@ -11,12 +11,12 @@ from .code_quality_metric import CodeQualityMetric
 
 # Metric registry for easy access
 METRIC_CLASSES = {
-    'license': LicenseMetric,
-    'size_score': SizeScoreMetric,
-    'ramp_up_time': RampUpTimeMetric,
-    'bus_factor': BusFactorMetric,
-    'performance_claims': PerformanceClaimsMetric,
-    'dataset_and_code_score': DatasetAndCodeScoreMetric,
-    'dataset_quality': DatasetQualityMetric,
-    'code_quality': CodeQualityMetric
+    "license": LicenseMetric,
+    "size_score": SizeScoreMetric,
+    "ramp_up_time": RampUpTimeMetric,
+    "bus_factor": BusFactorMetric,
+    "performance_claims": PerformanceClaimsMetric,
+    "dataset_and_code_score": DatasetAndCodeScoreMetric,
+    "dataset_quality": DatasetQualityMetric,
+    "code_quality": CodeQualityMetric,
 }

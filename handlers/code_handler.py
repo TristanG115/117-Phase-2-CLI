@@ -57,9 +57,7 @@ class CodeHandler(BaseResourceHandler):
             elif response.status_code == 404:
                 self.logger.warning(f"GitHub repository not found: {self.repo_path}")
             else:
-                self.logger.warning(
-                    f"GitHub API returned {response.status_code} for {self.repo_path}"
-                )
+                self.logger.warning(f"GitHub API returned {response.status_code} for {self.repo_path}")
         except Exception as e:
             self.logger.error(f"Error fetching GitHub API data: {e}")
 
@@ -88,14 +86,10 @@ class CodeHandler(BaseResourceHandler):
                 tree = tree_data.get("tree", [])
                 self._repo_tree = tree
                 self._cache_set("repo_tree", tree)
-                self.logger.info(
-                    f"Fetched repository tree for {self.repo_path}: {len(tree)} items"
-                )
+                self.logger.info(f"Fetched repository tree for {self.repo_path}: {len(tree)} items")
                 return tree
             else:
-                self.logger.warning(
-                    f"GitHub tree API returned {response.status_code} for {self.repo_path}"
-                )
+                self.logger.warning(f"GitHub tree API returned {response.status_code} for {self.repo_path}")
         except Exception as e:
             self.logger.error(f"Error fetching repository tree: {e}")
 
@@ -261,9 +255,7 @@ class CodeHandler(BaseResourceHandler):
             if spdx_id and spdx_id != "NOASSERTION":
                 score = self._parse_license_identifier(spdx_id)
                 if score > 0:
-                    self.logger.info(
-                        f"License for {self.repo_path}: {spdx_id} (score={score})"
-                    )
+                    self.logger.info(f"License for {self.repo_path}: {spdx_id} (score={score})")
                     return score
 
         self.logger.warning(f"No license found for {self.repo_path}")
@@ -321,9 +313,7 @@ class CodeHandler(BaseResourceHandler):
 
         try:
             contributors_url = f"https://api.github.com/repos/{self.repo_path}/contributors?per_page=100"
-            response = requests.get(
-                contributors_url, headers=self._get_headers(), timeout=10
-            )
+            response = requests.get(contributors_url, headers=self._get_headers(), timeout=10)
 
             if response.status_code == 200:
                 contributors = response.json()
