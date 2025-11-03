@@ -5,6 +5,7 @@ import logging
 import os
 import re
 from typing import Optional
+from urllib.parse import unquote, urlparse
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -131,6 +132,8 @@ def _validate_query(query):
 def _build_artifact_results(queries, artifacts):
     """Build results list from queries and artifacts."""
     results = []
+    seen_ids = set()  # Track seen artifact IDs to avoid duplicates
+
     print(
         f"DEBUG _build: Processing {len(queries)} queries against {len(artifacts)} artifacts",
         flush=True,
@@ -143,25 +146,29 @@ def _build_artifact_results(queries, artifacts):
         except Exception as e:
             print(f"DEBUG _build: Validation failed: {e}", flush=True)
             raise
-        for a in artifacts:
-            # Get the actual type of this artifact
-            # First try from the artifact_type column in database
-            actual_type = a.get("artifact_type", "model")
 
-            # If not set or is default, try from metadata_json
-            if not actual_type or actual_type == "model":
+        for a in artifacts:
+            artifact_id = gen_id(a["name"])
+
+            # Skip if we've already added this artifact
+            if artifact_id in seen_ids:
+                continue
+
+            # Get the actual type of this artifact - prefer database column
+            actual_type = a.get("artifact_type")
+
+            # If not set in database, try from metadata_json
+            if not actual_type:
                 try:
                     metadata = json.loads(a.get("metadata_json", "{}"))
-                    metadata_type = metadata.get("type")
-                    if metadata_type:
-                        actual_type = metadata_type
+                    actual_type = metadata.get("type", "model")
                     print(
                         f"DEBUG _build: Artifact {a['name']} has type {actual_type} (from metadata)",
                         flush=True,
                     )
                 except Exception as e:
                     print(f"DEBUG _build: Error parsing metadata: {e}", flush=True)
-                    actual_type = a.get("artifact_type", "model")
+                    actual_type = "model"
             else:
                 print(
                     f"DEBUG _build: Artifact {a['name']} has type {actual_type} (from db)",
@@ -169,20 +176,28 @@ def _build_artifact_results(queries, artifacts):
                 )
 
             # Check if name matches
-            if name == "*" or name in a["name"].lower():
-                # Check if the artifact's actual type is in the requested types
-                if actual_type in types:
+            name_matches = (name == "*") or (name in a["name"].lower())
+
+            # Check if the artifact's actual type is in the requested types
+            type_matches = actual_type in types
+
+            if name_matches and type_matches:
+                print(f"DEBUG _build: Adding {a['name']} as {actual_type}", flush=True)
+                results.append(
+                    {
+                        "name": a["name"],
+                        "id": artifact_id,
+                        "type": actual_type,
+                    }
+                )
+                seen_ids.add(artifact_id)
+            else:
+                if not name_matches:
                     print(
-                        f"DEBUG _build: Adding {a['name']} as {actual_type}", flush=True
+                        f"DEBUG _build: Skipping {a['name']} - name '{name}' not in '{a['name'].lower()}'",
+                        flush=True,
                     )
-                    results.append(
-                        {
-                            "name": a["name"],
-                            "id": gen_id(a["name"]),
-                            "type": actual_type,
-                        }
-                    )
-                else:
+                if not type_matches:
                     print(
                         f"DEBUG _build: Skipping {a['name']} - type {actual_type} not in {types}",
                         flush=True,
@@ -322,7 +337,25 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):
             ),
         )
 
-    artifact = registry_handler.get_artifact_by_id(str(aid), artifact_type)
+    # Search through all artifacts to find the one with matching ID
+    artifacts = registry_handler.list_artifacts()
+    artifact = None
+
+    for a in artifacts:
+        calculated_id = gen_id(a["name"])
+        if calculated_id == aid:
+            # Verify the type matches - prefer artifact_type from database
+            actual_type = a.get("artifact_type")
+            if not actual_type:
+                try:
+                    metadata = json.loads(a.get("metadata_json", "{}"))
+                    actual_type = metadata.get("type", "model")
+                except Exception:
+                    actual_type = "model"
+
+            if actual_type == artifact_type:
+                artifact = a
+                break
 
     if artifact:
         # Determine URL based on artifact type
@@ -513,7 +546,31 @@ async def register_artifact(artifact_type: str, request: Request):
             ),
         )
 
-    name = url.rstrip("/").split("/")[-1]
+    # Improved URL parsing to handle edge cases
+    try:
+        # Remove trailing slashes and query parameters
+        url_clean = url.rstrip("/")
+        parsed = urlparse(url_clean)
+        path = parsed.path.rstrip("/")
+
+        # Extract name from path
+        if path:
+            name = path.split("/")[-1]
+            # Decode URL encoding
+            name = unquote(name)
+        else:
+            # Fallback if no path
+            name = parsed.netloc or "unknown"
+
+        # Ensure name is not empty
+        if not name or name.strip() == "":
+            name = url_clean.split("/")[-1] or "artifact"
+
+    except Exception as e:
+        logger.error(f"URL parsing error for {url}: {e}")
+        # Fallback to simple parsing
+        name = url.rstrip("/").split("/")[-1]
+
     new_id = gen_id(name)
 
     artifacts = registry_handler.list_artifacts()
@@ -855,9 +912,9 @@ async def artifact_by_regex(request: Request):
         text = " ".join(str(field) for field in search_fields if field)
 
         if pattern.search(text):
-            # Get actual type from artifact_type or metadata
-            actual_type = a.get("artifact_type", "model")
-            if not actual_type or actual_type == "model":
+            # Get actual type - prefer artifact_type from database
+            actual_type = a.get("artifact_type")
+            if not actual_type:
                 actual_type = metadata.get("type", "model")
 
             seen.add(artifact_id)
