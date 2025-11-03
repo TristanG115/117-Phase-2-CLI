@@ -131,8 +131,10 @@ def _validate_query(query):
 
 def _build_artifact_results(queries, artifacts):
     """Build results list from queries and artifacts."""
+    import re
+
     results = []
-    seen_ids = set()  # Track seen artifact IDs to avoid duplicates
+    seen_ids = set()
 
     print(
         f"DEBUG _build: Processing {len(queries)} queries against {len(artifacts)} artifacts",
@@ -148,45 +150,50 @@ def _build_artifact_results(queries, artifacts):
             print(f"DEBUG _build: Validation failed: {e}", flush=True)
             raise
 
+        # Compile regex if valid
+        try:
+            pattern = re.compile(name, re.IGNORECASE)
+        except re.error:
+            pattern = None
+
         for a in artifacts:
             artifact_id = gen_id(a["name"])
-
-            # Skip duplicates
             if artifact_id in seen_ids:
                 continue
 
             # Normalize artifact type
-            actual_type = a.get("artifact_type") or json.loads(
-                a.get("metadata_json", "{}")
-            ).get("type", "model")
-            actual_type = str(actual_type).lower()
+            metadata_field = a.get("metadata_json") or a.get("metadata") or "{}"
+            if isinstance(metadata_field, dict):
+                meta_type = metadata_field.get("type", "model")
+            else:
+                try:
+                    meta_type = json.loads(metadata_field).get("type", "model")
+                except Exception:
+                    meta_type = "model"
 
-            print(
-                f"DEBUG _build: Artifact {a['name']} has normalized type {actual_type}",
-                flush=True,
+            actual_type = (a.get("artifact_type") or meta_type or "model").lower()
+
+            artifact_name = a["name"].lower()
+
+            # Name match: regex, substring, or wildcard
+            name_matches = (
+                name == "*"
+                or (pattern and pattern.search(artifact_name))
+                or name in artifact_name
+                or artifact_name in name
             )
 
-            # Properly check for name containment
-            artifact_name = a["name"].lower()
-            name_matches = name == "*" or name in artifact_name or artifact_name in name
-
-            # Check type match
             type_matches = actual_type in [t.lower() for t in types]
 
             if name_matches and type_matches:
-                print(f"DEBUG _build: Adding {a['name']} as {actual_type}", flush=True)
                 results.append(
-                    {
-                        "name": a["name"],
-                        "id": artifact_id,
-                        "type": actual_type,
-                    }
+                    {"name": a["name"], "id": artifact_id, "type": actual_type}
                 )
                 seen_ids.add(artifact_id)
             else:
                 if not name_matches:
                     print(
-                        f"DEBUG _build: Skipping {a['name']} - name '{name}' not in '{a['name'].lower()}'",
+                        f"DEBUG _build: Skipping {a['name']} - name '{name}' not in '{artifact_name}'",
                         flush=True,
                     )
                 if not type_matches:
@@ -322,9 +329,8 @@ def reset_registry(request: Request):
 def get_artifact(artifact_type: str, artifact_id: str, request: Request):
     """BASELINE: Retrieve one artifact by id."""
     auth_header = request.headers.get("X-Authorization")
-
     if not auth_header:
-        logger.warning(f"No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
@@ -348,45 +354,47 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):
             ),
         )
 
-    # Search through all artifacts to find the one with matching ID
     artifacts = registry_handler.list_artifacts()
     artifact = None
 
     for a in artifacts:
         calculated_id = gen_id(a["name"])
         if calculated_id == aid:
-            # Verify the type matches - prefer artifact_type from database
-            actual_type = a.get("artifact_type")
-            if not actual_type:
+            # Normalize type from metadata
+            metadata_field = a.get("metadata") or a.get("metadata_json") or {}
+            if isinstance(metadata_field, dict):
+                meta_type = metadata_field.get("type", "model")
+            else:
                 try:
-                    metadata = json.loads(a.get("metadata_json", "{}"))
-                    actual_type = metadata.get("type", "model")
+                    meta_type = json.loads(metadata_field).get("type", "model")
                 except Exception:
-                    actual_type = "model"
+                    meta_type = "model"
+            actual_type = (a.get("artifact_type") or meta_type).lower()
 
             if actual_type == artifact_type:
                 artifact = a
                 break
 
-    if artifact:
-        # Determine URL based on artifact type
-        if artifact_type == "code":
-            url = artifact.get("code_url", artifact.get("url", "unknown"))
-        elif artifact_type == "dataset":
-            url = artifact.get("dataset_url", artifact.get("url", "unknown"))
-        else:  # model
-            url = artifact.get("url", artifact.get("code_url", "unknown"))
+    if not artifact:
+        raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
-        return {
-            "metadata": {
-                "name": artifact["name"],
-                "id": aid,
-                "type": artifact_type,
-            },
-            "data": {"url": url},
-        }
+    if artifact_type == "code":
+        url = artifact.get("code_url", artifact.get("url", "unknown"))
+    elif artifact_type == "dataset":
+        url = artifact.get("dataset_url", artifact.get("url", "unknown"))
+    else:
+        url = artifact.get("url", artifact.get("code_url", "unknown"))
 
-    raise HTTPException(status_code=404, detail="Artifact does not exist.")
+    return JSONResponse(
+        {
+            "id": aid,
+            "name": artifact["name"],
+            "type": artifact_type,
+            "url": url,
+            "score": float(artifact.get("score", 0.0)),
+        },
+        status_code=200,
+    )
 
 
 @app.get("/artifact/{artifact_type}/{artifact_id}")
@@ -521,9 +529,7 @@ async def register_artifact(artifact_type: str, request: Request):
     """BASELINE: Register a new artifact by URL."""
     auth_header = request.headers.get("X-Authorization")
     if not auth_header:
-        logger.warning(
-            f"DEBUG /artifact/{{type}}: No auth header - allowing for baseline"
-        )
+        logger.warning("DEBUG /artifact/{type}: No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
@@ -557,40 +563,35 @@ async def register_artifact(artifact_type: str, request: Request):
             ),
         )
 
-    # Improved URL parsing to handle edge cases
+    # --- Robust name extraction ---
     try:
-        # Robust name extraction for edge-case URLs
         url_clean = url.rstrip("/")
         parsed = urlparse(url_clean)
         path = parsed.path.rstrip("/")
 
         try:
             name = unquote(path.split("/")[-1] or parsed.netloc or "artifact")
-
-            # Handle cases like "https://github.com/org" (no repo segment)
             if not name.strip() or name in ("www", "github", "huggingface", "co"):
                 name = parsed.netloc.split(".")[0] or "artifact"
-
         except Exception as e:
             logger.error(f"URL parsing error for {url}: {e}")
             name = url.rstrip("/").split("/")[-1] or "artifact"
 
-        # Normalize casing for deterministic IDs
         name = name.lower()
-
     except Exception as e:
         logger.error(f"URL parsing error for {url}: {e}")
-        # Fallback to simple parsing
-        name = url.rstrip("/").split("/")[-1]
+        name = url.rstrip("/").split("/")[-1] or "artifact"
 
     new_id = gen_id(name)
 
+    # --- Prevent duplicates ---
     artifacts = registry_handler.list_artifacts()
     for a in artifacts:
         if gen_id(a["name"]) == new_id:
             raise HTTPException(status_code=409, detail="Artifact exists already.")
 
-    artifact_id = registry_handler.add_artifact(
+    # --- Add artifact to registry (metadata only) ---
+    registry_handler.add_artifact(
         name=name,
         artifact_type=artifact_type,
         score=0.0,
@@ -598,12 +599,15 @@ async def register_artifact(artifact_type: str, request: Request):
         tags=artifact_type,
         code_url=url if artifact_type in ["code", "model"] else "unknown",
         dataset_url=url if artifact_type == "dataset" else "unknown",
-        metadata={"type": artifact_type},  # Note: metadata not metadata_json
+        metadata={"type": artifact_type},
     )
 
     resp = {
-        "metadata": {"name": name, "id": new_id, "type": artifact_type},
-        "data": {"url": url},
+        "id": new_id,
+        "name": name,
+        "type": artifact_type,
+        "url": url,
+        "score": 0.0,
     }
     return JSONResponse(status_code=201, content=resp)
 
