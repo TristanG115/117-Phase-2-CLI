@@ -147,7 +147,7 @@ def _build_artifact_results(queries, artifacts):
             # Get the actual type of this artifact
             # First try from the artifact_type column in database
             actual_type = a.get("artifact_type", "model")
-            
+
             # If not set or is default, try from metadata_json
             if not actual_type or actual_type == "model":
                 try:
@@ -323,7 +323,7 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):
         )
 
     artifact = registry_handler.get_artifact_by_id(str(aid), artifact_type)
-    
+
     if artifact:
         # Determine URL based on artifact type
         if artifact_type == "code":
@@ -343,6 +343,15 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):
         }
 
     raise HTTPException(status_code=404, detail="Artifact does not exist.")
+
+
+@app.get("/artifact/{artifact_type}/{artifact_id}")
+def get_artifact_singular(artifact_type: str, artifact_id: str, request: Request):
+    """
+    Singular endpoint alias for autograder compatibility.
+    Maps to the same logic as /artifacts/{type}/{id}
+    """
+    return get_artifact(artifact_type, artifact_id, request)
 
 
 def _validate_update_request(metadata, data, artifact_type, artifact_id):
@@ -436,10 +445,10 @@ async def update_artifact(artifact_type: str, artifact_id: str, request: Request
     _validate_update_request(metadata, data, artifact_type, artifact_id)
 
     artifact = registry_handler.get_artifact_by_id(str(int(artifact_id)), artifact_type)
-    
+
     if not artifact:
         raise HTTPException(status_code=404, detail="Artifact does not exist.")
-    
+
     if artifact["name"] != metadata.get("name"):
         raise HTTPException(
             status_code=400,
@@ -514,7 +523,7 @@ async def register_artifact(artifact_type: str, request: Request):
 
     artifact_id = registry_handler.add_artifact(
         name=name,
-        artifact_type=artifact_type, 
+        artifact_type=artifact_type,
         score=0.0,
         url=url,
         tags=artifact_type,
@@ -820,7 +829,7 @@ async def artifact_by_regex(request: Request):
     # Use list_artifacts() to search all artifacts
     artifacts = registry_handler.list_artifacts()
     matches = []
-    seen = set() 
+    seen = set()
     for a in artifacts:
         artifact_id = gen_id(a["name"])
         # Skip if we've already added this artifact
@@ -840,23 +849,19 @@ async def artifact_by_regex(request: Request):
             a.get("code_url", ""),
             a.get("dataset_url", ""),
             a.get("url", ""),
-            metadata_text
+            metadata_text,
         ]
-        
+
         text = " ".join(str(field) for field in search_fields if field)
-        
+
         if pattern.search(text):
             # Get actual type from artifact_type or metadata
             actual_type = a.get("artifact_type", "model")
             if not actual_type or actual_type == "model":
                 actual_type = metadata.get("type", "model")
-            
+
             seen.add(artifact_id)
-            matches.append({
-                "name": a["name"],
-                "id": artifact_id,
-                "type": actual_type
-            })
+            matches.append({"name": a["name"], "id": artifact_id, "type": actual_type})
 
     if not matches:
         raise HTTPException(
