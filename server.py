@@ -285,6 +285,17 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):
         f"DEBUG: Returning {len(results)} results with offset header {headers}",
         flush=True,
     )
+
+    # --- TEMP DEBUG LOGGING BLOCK ---
+    print("\n===== DEBUG /artifacts FINAL STATE =====", flush=True)
+    print(f"Queries received ({len(queries)}): {queries}", flush=True)
+    print(f"Total artifacts loaded: {len(artifacts)}", flush=True)
+    print(f"Results built ({len(results)}):", flush=True)
+    for r in results[:10]:
+        print(f"  → {r}", flush=True)
+    print(f"Offset header: {headers}", flush=True)
+    print("========================================\n", flush=True)
+
     return JSONResponse(content=results, headers=headers, status_code=200)
 
 
