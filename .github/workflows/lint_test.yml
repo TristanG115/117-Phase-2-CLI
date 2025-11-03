@@ -23,8 +23,9 @@ jobs:
       - name: Check formatting with Black
         run: black --check --line-length 120 .
 
-      - name: Run flake8 on src directory
-        run: flake8 src/
+      - name: Run Flake 8 on project files
+        run: flake8 handlers metrics .
+
 
   test:
     name: Run Tests
