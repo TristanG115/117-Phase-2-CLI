@@ -167,7 +167,8 @@ def _build_artifact_results(queries, artifacts):
             )
 
             # Properly check for name containment
-            name_matches = (name == "*") or (name in a["name"].lower())
+            artifact_name = a["name"].lower()
+            name_matches = name == "*" or name in artifact_name or artifact_name in name
 
             # Check type match
             type_matches = actual_type in [t.lower() for t in types]
