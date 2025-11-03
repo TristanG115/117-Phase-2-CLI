@@ -175,8 +175,8 @@ def _build_artifact_results(queries, artifacts):
                     flush=True,
                 )
 
-            # Check if name matches
-            name_matches = (name == "*") or (name in a["name"].lower())
+            # Check if name matches - artifact name should be in the query
+            name_matches = (name == "*") or (a["name"].lower() in name)
 
             # Check if the artifact's actual type is in the requested types
             type_matches = actual_type in types
