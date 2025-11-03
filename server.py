@@ -138,6 +138,7 @@ def _build_artifact_results(queries, artifacts):
         f"DEBUG _build: Processing {len(queries)} queries against {len(artifacts)} artifacts",
         flush=True,
     )
+
     for i, q in enumerate(queries):
         print(f"DEBUG _build: Query {i}: {q}", flush=True)
         try:
@@ -150,36 +151,26 @@ def _build_artifact_results(queries, artifacts):
         for a in artifacts:
             artifact_id = gen_id(a["name"])
 
-            # Skip if we've already added this artifact
+            # Skip duplicates
             if artifact_id in seen_ids:
                 continue
 
-            # Get the actual type of this artifact - prefer database column
-            actual_type = a.get("artifact_type")
+            # Normalize artifact type
+            actual_type = a.get("artifact_type") or json.loads(
+                a.get("metadata_json", "{}")
+            ).get("type", "model")
+            actual_type = str(actual_type).lower()
 
-            # If not set in database, try from metadata_json
-            if not actual_type:
-                try:
-                    metadata = json.loads(a.get("metadata_json", "{}"))
-                    actual_type = metadata.get("type", "model")
-                    print(
-                        f"DEBUG _build: Artifact {a['name']} has type {actual_type} (from metadata)",
-                        flush=True,
-                    )
-                except Exception as e:
-                    print(f"DEBUG _build: Error parsing metadata: {e}", flush=True)
-                    actual_type = "model"
-            else:
-                print(
-                    f"DEBUG _build: Artifact {a['name']} has type {actual_type} (from db)",
-                    flush=True,
-                )
+            print(
+                f"DEBUG _build: Artifact {a['name']} has normalized type {actual_type}",
+                flush=True,
+            )
 
-            # Check if name matches - artifact name should be in the query
-            name_matches = (name == "*") or (a["name"].lower() in name)
+            # Properly check for name containment
+            name_matches = (name == "*") or (name in a["name"].lower())
 
-            # Check if the artifact's actual type is in the requested types
-            type_matches = actual_type in types
+            # Check type match
+            type_matches = actual_type in [t.lower() for t in types]
 
             if name_matches and type_matches:
                 print(f"DEBUG _build: Adding {a['name']} as {actual_type}", flush=True)
@@ -202,25 +193,27 @@ def _build_artifact_results(queries, artifacts):
                         f"DEBUG _build: Skipping {a['name']} - type {actual_type} not in {types}",
                         flush=True,
                     )
+
+    print(f"DEBUG _build: Returning {len(results)} total results", flush=True)
     return results
 
 
 @app.post("/artifacts")
 async def get_artifacts(request: Request, offset: Optional[str] = None):
     """BASELINE: Return artifacts matching the given query list."""
-    # DEBUG: Log all headers to see what autograder sends
     logger.info(f"DEBUG /artifacts: All headers = {dict(request.headers)}")
 
     auth_header = request.headers.get("X-Authorization")
     logger.info(f"DEBUG /artifacts: X-Authorization value = {repr(auth_header)}")
 
     if not auth_header:
-        logger.warning(f"DEBUG: No X-Authorization header - allowing for baseline")
+        logger.warning("DEBUG: No X-Authorization header - allowing for baseline")
     else:
         require_auth(auth_header)
 
     print("DEBUG /artifacts: About to read body", flush=True)
-    logger.info(f"DEBUG /artifacts: About to read body")
+    logger.info("DEBUG /artifacts: About to read body")
+
     try:
         body_bytes = await request.body()
         print(f"DEBUG /artifacts: Raw body = {body_bytes[:500]}", flush=True)
@@ -230,9 +223,7 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):
         logger.info(f"DEBUG /artifacts: Parsed queries = {queries}")
     except json.JSONDecodeError as e:
         print(f"DEBUG /artifacts: JSON parse error: {e}", flush=True)
-        logger.error(
-            f"DEBUG /artifacts: JSON parse error: {e}, body was: {body_bytes[:200]}"
-        )
+        logger.error(f"DEBUG /artifacts: JSON parse error: {e}")
         raise HTTPException(
             status_code=400,
             detail=(
@@ -253,9 +244,14 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):
             ),
         )
 
-    if not isinstance(queries, list) or len(queries) == 0:
+    # Handle both dict and list inputs
+    if not isinstance(queries, list):
+        queries = [queries]
+
+    # Validate structure
+    if any(not isinstance(q, dict) for q in queries) or len(queries) == 0:
         print(
-            f"DEBUG: queries validation failed - type: {type(queries)}, len: {len(queries) if isinstance(queries, list) else 'N/A'}",
+            f"DEBUG: queries validation failed - type: {type(queries)}, len: {len(queries)}",
             flush=True,
         )
         raise HTTPException(
@@ -271,12 +267,11 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):
             status_code=400, detail="Too many queries. Maximum 100 queries per request."
         )
 
-    print(f"DEBUG: About to call list_artifacts()", flush=True)
-    # FIXED: Use list_artifacts() instead of list_models() to get all artifact types
+    print("DEBUG: About to call list_artifacts()", flush=True)
     artifacts = registry_handler.list_artifacts()
     print(f"DEBUG: Got {len(artifacts)} artifacts", flush=True)
 
-    print(f"DEBUG: About to build results", flush=True)
+    print("DEBUG: About to build results", flush=True)
     results = _build_artifact_results(queries, artifacts)
     print(f"DEBUG: Built {len(results)} results", flush=True)
 
@@ -286,7 +281,11 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):
     current_offset = int(offset) if offset else 1
     headers = {"offset": str(current_offset + 1)}
 
-    return JSONResponse(content=results, headers=headers)
+    print(
+        f"DEBUG: Returning {len(results)} results with offset header {headers}",
+        flush=True,
+    )
+    return JSONResponse(content=results, headers=headers, status_code=200)
 
 
 @app.delete("/reset")
@@ -548,23 +547,24 @@ async def register_artifact(artifact_type: str, request: Request):
 
     # Improved URL parsing to handle edge cases
     try:
-        # Remove trailing slashes and query parameters
+        # Robust name extraction for edge-case URLs
         url_clean = url.rstrip("/")
         parsed = urlparse(url_clean)
         path = parsed.path.rstrip("/")
 
-        # Extract name from path
-        if path:
-            name = path.split("/")[-1]
-            # Decode URL encoding
-            name = unquote(name)
-        else:
-            # Fallback if no path
-            name = parsed.netloc or "unknown"
+        try:
+            name = unquote(path.split("/")[-1] or parsed.netloc or "artifact")
 
-        # Ensure name is not empty
-        if not name or name.strip() == "":
-            name = url_clean.split("/")[-1] or "artifact"
+            # Handle cases like "https://github.com/org" (no repo segment)
+            if not name.strip() or name in ("www", "github", "huggingface", "co"):
+                name = parsed.netloc.split(".")[0] or "artifact"
+
+        except Exception as e:
+            logger.error(f"URL parsing error for {url}: {e}")
+            name = url.rstrip("/").split("/")[-1] or "artifact"
+
+        # Normalize casing for deterministic IDs
+        name = name.lower()
 
     except Exception as e:
         logger.error(f"URL parsing error for {url}: {e}")
