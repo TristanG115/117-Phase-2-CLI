@@ -296,6 +296,16 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):
     print(f"Offset header: {headers}", flush=True)
     print("========================================\n", flush=True)
 
+    # ADDITIONAL DETAILED LOGGING FOR DEBUGGING
+    logger.info(f"===== ARTIFACTS QUERY RESULTS =====")
+    logger.info(f"Query: {queries}")
+    logger.info(
+        f"Returning {len(results)} results from {len(artifacts)} total artifacts"
+    )
+    for idx, r in enumerate(results):
+        logger.info(f"  Result {idx}: name={r['name']}, id={r['id']}, type={r['type']}")
+    logger.info(f"=====================================")
+
     return JSONResponse(content=results, headers=headers, status_code=200)
 
 
@@ -326,6 +336,8 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):
         logger.warning(f"No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
+
+    logger.info(f"GET ARTIFACT REQUEST: type={artifact_type}, id={artifact_id}")
 
     if artifact_type not in ["model", "dataset", "code"]:
         raise HTTPException(
