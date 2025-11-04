@@ -113,8 +113,7 @@ def _validate_query(query):
     name = query.get("name", "").lower()
     types = query.get("types", [])
 
-    # Name is required
-    if not name:
+    if not name or not isinstance(types, list):
         raise HTTPException(
             status_code=400,
             detail=(
@@ -123,18 +122,8 @@ def _validate_query(query):
             ),
         )
 
-    # Types field is optional - if provided, must be a list
-    if types is not None and not isinstance(types, list):
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "There is missing field(s) in the artifact_query or it is "
-                "formed improperly, or is invalid."
-            ),
-        )
-
-    # If types is empty or not provided, default to all types
-    if not types or len(types) == 0:
+    # If types is empty, default to all types
+    if len(types) == 0:
         types = ["model", "dataset", "code"]
 
     return name, types
@@ -581,10 +570,6 @@ async def register_artifact(artifact_type: str, request: Request):
             if not name.strip() or name in ("www", "github", "huggingface", "co"):
                 name = parsed.netloc.split(".")[0] or "artifact"
 
-            # Ensure we got a valid name
-            if not name or not name.strip():
-                name = "artifact"
-
         except Exception as e:
             logger.error(f"URL parsing error for {url}: {e}")
             name = url.rstrip("/").split("/")[-1] or "artifact"
@@ -592,22 +577,19 @@ async def register_artifact(artifact_type: str, request: Request):
         # Normalize casing for deterministic IDs
         name = name.lower()
 
-        # Final safety check after normalization
-        if not name or not name.strip():
-            name = "artifact"
-
     except Exception as e:
         logger.error(f"URL parsing error for {url}: {e}")
         # Fallback to simple parsing
-        name = url.rstrip("/").split("/")[-1] or "artifact"
-        if not name or not name.strip():
-            name = "artifact"
+        name = url.rstrip("/").split("/")[-1]
 
-    new_id = gen_id(name)
+    # Generate ID from full URL to avoid collisions
+    new_id = gen_id(url)
 
     artifacts = registry_handler.list_artifacts()
     for a in artifacts:
-        if gen_id(a["name"]) == new_id:
+        # Check if URL already exists
+        existing_url = a.get("url", "")
+        if existing_url == url:
             raise HTTPException(status_code=409, detail="Artifact exists already.")
 
     artifact_id = registry_handler.add_artifact(

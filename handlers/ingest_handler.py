@@ -566,55 +566,42 @@ def ingest_code(
     Returns:
         Dictionary with ingestion status, score, and metadata
     """
-    try:
-        # Validate URL
-        if not code_url or not isinstance(code_url, str):
-            return {"error": "Invalid code URL provided"}
+    # Extract repository name from URL
+    code_name = code_url.rstrip("/").split("/")[-1]
 
-        # Extract repository name from URL
-        code_name = code_url.rstrip("/").split("/")[-1]
+    # Create scorecard for code with appropriate metrics
+    result = {
+        "type": "code",
+        "net_score": 0.75,
+        "dataset_quality": -1,
+        "code_quality": 0.75,
+        "reproducibility": -1,
+        "reviewedness": -1,
+        "tree_score": -1,
+        "dataset_and_code_score": 0.75,
+    }
 
-        # Handle empty name (edge case URLs)
-        if not code_name or not code_name.strip():
-            code_name = "code-artifact"
+    # Create tags
+    tags = "code"
 
-        # Create scorecard for code with appropriate metrics
-        result = {
-            "type": "code",
-            "net_score": 0.75,
-            "dataset_quality": -1,
-            "code_quality": 0.75,
-            "reproducibility": -1,
-            "reviewedness": -1,
-            "tree_score": -1,
-            "dataset_and_code_score": 0.75,
-        }
+    # Add to registry using add_artifact for proper type handling
+    artifact_id = registry_handler.add_artifact(
+        name=code_name,
+        artifact_type="code",
+        score=result.get("net_score", 0.0),
+        url=code_url,
+        tags=tags,
+        code_url=code_url,
+        metadata=result,
+    )
 
-        # Create tags
-        tags = "code"
-
-        # Add to registry using add_artifact for proper type handling
-        artifact_id = registry_handler.add_artifact(
-            name=code_name,
-            artifact_type="code",
-            score=result.get("net_score", 0.0),
-            url=code_url,
-            tags=tags,
-            code_url=code_url,
-            metadata=result,
-        )
-
-        return {
-            "status": "success",
-            "artifact_id": artifact_id,
-            "code": code_name,
-            "score": result.get("net_score", 0.0),
-            "metrics": result,
-        }
-
-    except Exception as e:
-        logging.error(f"Error ingesting code from {code_url}: {e}")
-        return {"error": f"Failed to ingest code: {str(e)}"}
+    return {
+        "status": "success",
+        "artifact_id": artifact_id,
+        "code": code_name,
+        "score": result.get("net_score", 0.0),
+        "metrics": result,
+    }
 
 
 def batch_ingest(url_list: List[str], min_score: float = 0.5) -> List[Dict[str, Any]]:
