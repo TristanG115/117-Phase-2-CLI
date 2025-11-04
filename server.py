@@ -582,14 +582,15 @@ async def register_artifact(artifact_type: str, request: Request):
         # Fallback to simple parsing
         name = url.rstrip("/").split("/")[-1]
 
-    # Generate ID from full URL to avoid collisions
-    new_id = gen_id(url)
+    new_id = gen_id(name)
 
     artifacts = registry_handler.list_artifacts()
     for a in artifacts:
-        # Check if URL already exists
-        existing_url = a.get("url", "")
-        if existing_url == url:
+        # Check for duplicate by URL (exact match)
+        if a.get("url") == url:
+            raise HTTPException(status_code=409, detail="Artifact exists already.")
+        # Also check for duplicate by name+type
+        if gen_id(a["name"]) == new_id and a.get("artifact_type") == artifact_type:
             raise HTTPException(status_code=409, detail="Artifact exists already.")
 
     artifact_id = registry_handler.add_artifact(
