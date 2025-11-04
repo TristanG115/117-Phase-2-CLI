@@ -444,7 +444,7 @@ def ingest_model(
 
     # Infer URLs
     code_url, dataset_url = infer_links_from_hf(hf_url, show_card=show_card)
-    
+
     # Re-extract metadata to get README text
     api = HfApi()
     metadata_dict, card_text = _extract_metadata(model_id, api)
@@ -468,8 +468,8 @@ def ingest_model(
 
     if card_text:
         # Truncate to avoid huge metadata, but keep enough for search
-        result['readme'] = card_text[:10000]  # First 10k chars of README
-    result['type'] = 'model'  # Ensure type is set
+        result["readme"] = card_text[:10000]  # First 10k chars of README
+    result["type"] = "model"  # Ensure type is set
 
     # Check threshold
     if not _check_threshold(result, min_score):
@@ -516,7 +516,7 @@ def ingest_dataset(
     """
     # Extract dataset name from URL
     dataset_name = dataset_url.rstrip("/").split("/")[-1]
-    
+
     # Create scorecard for dataset with appropriate metrics
     result = {
         "type": "dataset",
@@ -528,10 +528,10 @@ def ingest_dataset(
         "tree_score": -1,
         "dataset_and_code_score": 0.75,
     }
-    
+
     # Create tags
     tags = "dataset"
-    
+
     # Add to registry using add_artifact for proper type handling
     artifact_id = registry_handler.add_artifact(
         name=dataset_name,
@@ -542,7 +542,7 @@ def ingest_dataset(
         dataset_url=dataset_url,
         metadata=result,
     )
-    
+
     return {
         "status": "success",
         "artifact_id": artifact_id,
@@ -566,42 +566,55 @@ def ingest_code(
     Returns:
         Dictionary with ingestion status, score, and metadata
     """
-    # Extract repository name from URL
-    code_name = code_url.rstrip("/").split("/")[-1]
-    
-    # Create scorecard for code with appropriate metrics
-    result = {
-        "type": "code",
-        "net_score": 0.75,
-        "dataset_quality": -1,
-        "code_quality": 0.75,
-        "reproducibility": -1,
-        "reviewedness": -1,
-        "tree_score": -1,
-        "dataset_and_code_score": 0.75,
-    }
-    
-    # Create tags
-    tags = "code"
-    
-    # Add to registry using add_artifact for proper type handling
-    artifact_id = registry_handler.add_artifact(
-        name=code_name,
-        artifact_type="code",
-        score=result.get("net_score", 0.0),
-        url=code_url,
-        tags=tags,
-        code_url=code_url,
-        metadata=result,
-    )
-    
-    return {
-        "status": "success",
-        "artifact_id": artifact_id,
-        "code": code_name,
-        "score": result.get("net_score", 0.0),
-        "metrics": result,
-    }
+    try:
+        # Validate URL
+        if not code_url or not isinstance(code_url, str):
+            return {"error": "Invalid code URL provided"}
+
+        # Extract repository name from URL
+        code_name = code_url.rstrip("/").split("/")[-1]
+
+        # Handle empty name (edge case URLs)
+        if not code_name or not code_name.strip():
+            code_name = "code-artifact"
+
+        # Create scorecard for code with appropriate metrics
+        result = {
+            "type": "code",
+            "net_score": 0.75,
+            "dataset_quality": -1,
+            "code_quality": 0.75,
+            "reproducibility": -1,
+            "reviewedness": -1,
+            "tree_score": -1,
+            "dataset_and_code_score": 0.75,
+        }
+
+        # Create tags
+        tags = "code"
+
+        # Add to registry using add_artifact for proper type handling
+        artifact_id = registry_handler.add_artifact(
+            name=code_name,
+            artifact_type="code",
+            score=result.get("net_score", 0.0),
+            url=code_url,
+            tags=tags,
+            code_url=code_url,
+            metadata=result,
+        )
+
+        return {
+            "status": "success",
+            "artifact_id": artifact_id,
+            "code": code_name,
+            "score": result.get("net_score", 0.0),
+            "metrics": result,
+        }
+
+    except Exception as e:
+        logging.error(f"Error ingesting code from {code_url}: {e}")
+        return {"error": f"Failed to ingest code: {str(e)}"}
 
 
 def batch_ingest(url_list: List[str], min_score: float = 0.5) -> List[Dict[str, Any]]:
