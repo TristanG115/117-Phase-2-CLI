@@ -350,6 +350,7 @@ def reset_registry(request: Request):
 @app.get("/artifacts/{artifact_type}/{artifact_id}")
 def get_artifact(artifact_type: str, artifact_id: str, request: Request):
     """BASELINE: Retrieve one artifact by id."""
+    logger.info(f"=== GET /artifacts/{artifact_type}/{artifact_id} ===")
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
@@ -360,6 +361,7 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):
     logger.info(f"GET ARTIFACT REQUEST: type={artifact_type}, id={artifact_id}")
 
     if artifact_type not in ["model", "dataset", "code"]:
+        logger.error(f"Invalid artifact_type: {artifact_type}")
         raise HTTPException(
             status_code=400,
             detail=(
@@ -370,7 +372,9 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):
 
     try:
         aid = int(artifact_id)
+        logger.info(f"Parsed artifact_id as int: {aid}")
     except ValueError:
+        logger.error(f"Invalid artifact_id format: {artifact_id}")
         raise HTTPException(
             status_code=400,
             detail=(
@@ -381,17 +385,23 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):
 
     # Search through all artifacts to find the one with matching ID
     artifacts = registry_handler.list_artifacts()
+    logger.info(f"Total artifacts in registry: {len(artifacts)}")
     artifact = None
 
     for a in artifacts:
         calculated_id = gen_id(a["name"])
         if calculated_id == aid:
+            logger.info(f"Found matching ID: name={a['name']}, id={calculated_id}")
             # Use standardized type detection
             actual_type = _get_artifact_type(a)
+            logger.info(f"Artifact type: {actual_type}, requested type: {artifact_type}")
 
             if actual_type == artifact_type:
                 artifact = a
+                logger.info(f"Type matches! Returning artifact: {a['name']}")
                 break
+            else:
+                logger.warning(f"Type mismatch: artifact is {actual_type}, requested {artifact_type}")
 
     if artifact:
         # Determine URL based on artifact type
@@ -402,6 +412,7 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):
         else:  # model
             url = artifact.get("url", artifact.get("code_url", "unknown"))
 
+        logger.info(f"Returning artifact with url: {url}")
         return {
             "metadata": {
                 "name": artifact["name"],
@@ -411,6 +422,7 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):
             "data": {"url": url},
         }
 
+    logger.error(f"Artifact not found: id={aid}, type={artifact_type}")
     raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
 
@@ -426,6 +438,7 @@ def get_artifact_singular(artifact_type: str, artifact_id: str, request: Request
 @app.get("/artifact/byName/{name}")
 def get_artifact_by_name(name: str, request: Request):
     """NON-BASELINE: List artifact metadata for this name."""
+    logger.info(f"=== GET /artifact/byName/{name} ===")
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
@@ -437,6 +450,7 @@ def get_artifact_by_name(name: str, request: Request):
 
     # Get all artifacts
     artifacts = registry_handler.list_artifacts()
+    logger.info(f"Total artifacts in registry: {len(artifacts)}")
 
     # Find all artifacts with matching name (case-sensitive exact match)
     matches = []
@@ -445,13 +459,30 @@ def get_artifact_by_name(name: str, request: Request):
     for a in artifacts:
         if a["name"] == name:
             artifact_id = gen_id(a["name"])
+            logger.info(f"Found artifact with matching name: {name}, id={artifact_id}")
 
             # Skip if we've already added this ID
             if artifact_id in seen_ids:
+                logger.info(f"Skipping duplicate ID: {artifact_id}")
                 continue
 
             # Use standardized type detection
             actual_type = _get_artifact_type(a)
+            logger.info(f"Artifact type: {actual_type}")
+
+            matches.append({
+                "name": a["name"],
+                "id": str(artifact_id),
+                "type": actual_type
+            })
+            seen_ids.add(artifact_id)
+
+    if not matches:
+        logger.error(f"No artifacts found with name: {name}")
+        raise HTTPException(status_code=404, detail="No such artifact.")
+
+    logger.info(f"Found {len(matches)} artifacts with name '{name}'")
+    return JSONResponse(content=matches)
 
             matches.append(
                 {"name": a["name"], "id": str(artifact_id), "type": actual_type}
@@ -586,6 +617,7 @@ async def update_artifact(artifact_type: str, artifact_id: str, request: Request
 @app.post("/artifact/{artifact_type}")
 async def register_artifact(artifact_type: str, request: Request):
     """BASELINE: Register a new artifact by URL."""
+    logger.info(f"=== POST /artifact/{artifact_type} ===")
     auth_header = request.headers.get("X-Authorization")
     if not auth_header:
         logger.warning(
@@ -595,6 +627,7 @@ async def register_artifact(artifact_type: str, request: Request):
         require_auth(auth_header)
 
     if artifact_type not in ["model", "dataset", "code"]:
+        logger.error(f"Invalid artifact_type: {artifact_type}")
         raise HTTPException(
             status_code=400,
             detail=(
@@ -605,7 +638,9 @@ async def register_artifact(artifact_type: str, request: Request):
 
     try:
         body = await request.json()
-    except Exception:
+        logger.info(f"Request body: {body}")
+    except Exception as e:
+        logger.error(f"Failed to parse JSON: {e}")
         raise HTTPException(
             status_code=400,
             detail=(
@@ -616,6 +651,7 @@ async def register_artifact(artifact_type: str, request: Request):
 
     url = body.get("url")
     if not url or not isinstance(url, str):
+        logger.error(f"Invalid or missing URL: {url}")
         raise HTTPException(
             status_code=400,
             detail=(
@@ -651,16 +687,21 @@ async def register_artifact(artifact_type: str, request: Request):
         name = url.rstrip("/").split("/")[-1]
 
     new_id = gen_id(name)
+    logger.info(f"Parsed name from URL: {name}, generated ID: {new_id}")
 
     artifacts = registry_handler.list_artifacts()
+    logger.info(f"Checking for duplicates among {len(artifacts)} existing artifacts")
     for a in artifacts:
         # Check for duplicate by URL (exact match)
         if a.get("url") == url:
+            logger.warning(f"Duplicate URL found: {url}")
             raise HTTPException(status_code=409, detail="Artifact exists already.")
         # Also check for duplicate by name+type
         if gen_id(a["name"]) == new_id and a.get("artifact_type") == artifact_type:
+            logger.warning(f"Duplicate name+type found: name={name}, type={artifact_type}")
             raise HTTPException(status_code=409, detail="Artifact exists already.")
 
+    logger.info(f"Creating new artifact: name={name}, type={artifact_type}, id={new_id}")
     artifact_id = registry_handler.add_artifact(
         name=name,
         artifact_type=artifact_type,
@@ -672,8 +713,9 @@ async def register_artifact(artifact_type: str, request: Request):
         metadata={"type": artifact_type},  # Note: metadata not metadata_json
     )
 
+    logger.info(f"Successfully created artifact: {artifact_id}")
     resp = {
-        "metadata": {"name": name, "id": new_id, "type": artifact_type},
+        "metadata": {"name": name, "id": str(new_id), "type": artifact_type},
         "data": {"url": url},
     }
     return JSONResponse(status_code=201, content=resp)
