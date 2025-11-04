@@ -132,7 +132,7 @@ def _validate_query(query):
 def _build_artifact_results(queries, artifacts):
     """Build results list from queries and artifacts."""
     results = []
-    seen_artifacts = set()  # Track by (name, url) to avoid true duplicates
+    seen_ids = set()  # Track seen artifact IDs to avoid duplicates
 
     print(
         f"DEBUG _build: Processing {len(queries)} queries against {len(artifacts)} artifacts",
@@ -149,11 +149,15 @@ def _build_artifact_results(queries, artifacts):
             raise
 
         for a in artifacts:
-            artifact_id = gen_id(a["name"])
+            # Generate ID from artifact's internal ID if available, else from name
+            artifact_id_str = a.get("artifact_id", "")
+            if artifact_id_str:
+                artifact_id = int(artifact_id_str)
+            else:
+                artifact_id = gen_id(a["name"])
 
-            # Skip true duplicates (same name AND same URL)
-            artifact_key = (a["name"], a.get("url", ""))
-            if artifact_key in seen_artifacts:
+            # Skip duplicates based on actual artifact_id
+            if artifact_id in seen_ids:
                 continue
 
             # Normalize artifact type
@@ -182,7 +186,7 @@ def _build_artifact_results(queries, artifacts):
                         "type": actual_type,
                     }
                 )
-                seen_artifacts.add(artifact_key)
+                seen_ids.add(artifact_id)
             else:
                 if not name_matches:
                     print(
