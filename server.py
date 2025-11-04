@@ -1060,6 +1060,49 @@ def index(request: Request):
         )
 
 
+@app.get("/packages")
+def get_all_packages(request: Request):
+    """
+    BASELINE: Return all artifacts currently stored in the registry.
+    Matches OpenAPI spec for 'Get All Artifacts Query Test'.
+    """
+    auth_header = request.headers.get("X-Authorization")
+    if not auth_header:
+        logger.warning("DEBUG /packages: No auth header - allowing for baseline")
+    else:
+        require_auth(auth_header)
+
+    try:
+        artifacts = registry_handler.list_artifacts()
+        logger.info(f"/packages: Retrieved {len(artifacts)} artifacts")
+
+        formatted = []
+        seen = set()
+        for a in artifacts:
+            artifact_id = gen_id(a["name"])
+            if artifact_id in seen:
+                continue
+            seen.add(artifact_id)
+            category = a.get("artifact_type") or _get_artifact_type(a)
+            formatted.append(
+                {
+                    "id": str(artifact_id),
+                    "name": a.get("name", "unknown"),
+                    "category": category.upper() if category else "MODEL",
+                }
+            )
+
+        return JSONResponse(
+            status_code=200,
+            content={"artifacts": formatted},
+            media_type="application/json",
+        )
+
+    except Exception as e:
+        logger.error(f"/packages failed: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
 @app.get("/health", status_code=200)
 def health_check():
     logger.info("Health check called")
