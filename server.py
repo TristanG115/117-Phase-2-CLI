@@ -99,6 +99,29 @@ def gen_id(name: str) -> int:
     return abs(int(hashlib.sha256(name.encode()).hexdigest(), 16)) % (10**10)
 
 
+def _get_artifact_type(artifact: dict) -> str:
+    """
+    Get the artifact type in a standardized way.
+    Priority: artifact_type field > metadata.type > default to 'model'
+    """
+    # First try the artifact_type field (most reliable)
+    artifact_type = artifact.get("artifact_type")
+    if artifact_type:
+        return str(artifact_type).lower()
+
+    # Fall back to metadata
+    try:
+        metadata = json.loads(artifact.get("metadata_json", "{}"))
+        artifact_type = metadata.get("type")
+        if artifact_type:
+            return str(artifact_type).lower()
+    except Exception:
+        pass
+
+    # Default to model
+    return "model"
+
+
 def _validate_query(query):
     """Validate a single query object."""
     if not isinstance(query, dict):
@@ -155,11 +178,8 @@ def _build_artifact_results(queries, artifacts):
             if artifact_id in seen_ids:
                 continue
 
-            # Normalize artifact type
-            actual_type = a.get("artifact_type") or json.loads(
-                a.get("metadata_json", "{}")
-            ).get("type", "model")
-            actual_type = str(actual_type).lower()
+            # Use standardized type detection
+            actual_type = _get_artifact_type(a)
 
             print(
                 f"DEBUG _build: Artifact {a['name']} has normalized type {actual_type}",
@@ -177,7 +197,7 @@ def _build_artifact_results(queries, artifacts):
                 results.append(
                     {
                         "name": a["name"],
-                        "id": artifact_id,
+                        "id": str(artifact_id),
                         "type": actual_type,
                     }
                 )
@@ -366,14 +386,8 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):
     for a in artifacts:
         calculated_id = gen_id(a["name"])
         if calculated_id == aid:
-            # Verify the type matches - prefer artifact_type from database
-            actual_type = a.get("artifact_type")
-            if not actual_type:
-                try:
-                    metadata = json.loads(a.get("metadata_json", "{}"))
-                    actual_type = metadata.get("type", "model")
-                except Exception:
-                    actual_type = "model"
+            # Use standardized type detection
+            actual_type = _get_artifact_type(a)
 
             if actual_type == artifact_type:
                 artifact = a
@@ -391,7 +405,7 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):
         return {
             "metadata": {
                 "name": artifact["name"],
-                "id": aid,
+                "id": str(aid),
                 "type": artifact_type,
             },
             "data": {"url": url},
@@ -407,6 +421,48 @@ def get_artifact_singular(artifact_type: str, artifact_id: str, request: Request
     Maps to the same logic as /artifacts/{type}/{id}
     """
     return get_artifact(artifact_type, artifact_id, request)
+
+
+@app.get("/artifact/byName/{name}")
+def get_artifact_by_name(name: str, request: Request):
+    """NON-BASELINE: List artifact metadata for this name."""
+    auth_header = request.headers.get("X-Authorization")
+
+    if not auth_header:
+        logger.warning(f"No auth header - allowing for baseline")
+    else:
+        require_auth(auth_header)
+
+    logger.info(f"GET ARTIFACT BY NAME REQUEST: name={name}")
+
+    # Get all artifacts
+    artifacts = registry_handler.list_artifacts()
+
+    # Find all artifacts with matching name (case-sensitive exact match)
+    matches = []
+    seen_ids = set()
+
+    for a in artifacts:
+        if a["name"] == name:
+            artifact_id = gen_id(a["name"])
+
+            # Skip if we've already added this ID
+            if artifact_id in seen_ids:
+                continue
+
+            # Use standardized type detection
+            actual_type = _get_artifact_type(a)
+
+            matches.append(
+                {"name": a["name"], "id": str(artifact_id), "type": actual_type}
+            )
+            seen_ids.add(artifact_id)
+
+    if not matches:
+        raise HTTPException(status_code=404, detail="No such artifact.")
+
+    logger.info(f"Found {len(matches)} artifacts with name '{name}'")
+    return JSONResponse(content=matches)
 
 
 def _validate_update_request(metadata, data, artifact_type, artifact_id):
@@ -939,13 +995,13 @@ async def artifact_by_regex(request: Request):
         text = " ".join(str(field) for field in search_fields if field)
 
         if pattern.search(text):
-            # Get actual type - prefer artifact_type from database
-            actual_type = a.get("artifact_type")
-            if not actual_type:
-                actual_type = metadata.get("type", "model")
+            # Use standardized type detection
+            actual_type = _get_artifact_type(a)
 
             seen.add(artifact_id)
-            matches.append({"name": a["name"], "id": artifact_id, "type": actual_type})
+            matches.append(
+                {"name": a["name"], "id": str(artifact_id), "type": actual_type}
+            )
 
     if not matches:
         raise HTTPException(
