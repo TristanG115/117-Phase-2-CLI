@@ -1,7 +1,8 @@
 import unittest
 from unittest.mock import Mock
 
-from metrics import CodeQualityMetric, DatasetQualityMetric, LicenseMetric, SizeScoreMetric
+from metrics import (CodeQualityMetric, DatasetQualityMetric, LicenseMetric,
+                     SizeScoreMetric)
 from url_classifier import URLType
 
 
