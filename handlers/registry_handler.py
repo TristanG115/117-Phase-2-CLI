@@ -1,22 +1,22 @@
 import hashlib
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
-from API import dynamo
+from API.dynamo import DynamoDB
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # Initialize DynamoDB instance
-_db: Optional[Any] = None
+_db: Optional[DynamoDB] = None
 
 
-def _get_db() -> Any:
+def _get_db() -> DynamoDB:
     """Get or create DynamoDB instance (singleton pattern)"""
     global _db
     if _db is None:
-        _db = dynamo
+        _db = DynamoDB()
     return _db
 
 
