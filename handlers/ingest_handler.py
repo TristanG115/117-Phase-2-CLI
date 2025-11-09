@@ -163,9 +163,7 @@ def _extract_dataset_from_yaml(card_text: str) -> Optional[str]:
     Returns:
         Dataset name if found, None otherwise
     """
-    yaml_match = re.search(
-        r"datasets:\s*\n\s*-\s*([A-Za-z0-9_\-/]+)", card_text, re.MULTILINE
-    )
+    yaml_match = re.search(r"datasets:\s*\n\s*-\s*([A-Za-z0-9_\-/]+)", card_text, re.MULTILINE)
 
     if yaml_match:
         return yaml_match.group(1)
@@ -279,10 +277,7 @@ def infer_links_from_hf(hf_url: str, show_card: bool = False) -> Tuple[str, str]
     github_url = _extract_github_url(card_text)
     dataset_url = _extract_dataset_url(metadata, card_text)
 
-    logging.info(
-        f"[infer_links_from_hf] Inferred for {model_id}: "
-        f"code={github_url}, data={dataset_url}"
-    )
+    logging.info(f"[infer_links_from_hf] Inferred for {model_id}: " f"code={github_url}, data={dataset_url}")
 
     return github_url, dataset_url
 
@@ -307,10 +302,7 @@ def validate_url(url: str, url_type: str) -> bool:
         response = requests.head(url, timeout=5, allow_redirects=True)
 
         if response.status_code >= 400:
-            logging.warning(
-                f"{url_type} URL not accessible: {url} "
-                f"(status {response.status_code})"
-            )
+            logging.warning(f"{url_type} URL not accessible: {url} " f"(status {response.status_code})")
             return False
 
         return True
@@ -320,9 +312,7 @@ def validate_url(url: str, url_type: str) -> bool:
         return False
 
 
-def score_model_with_evaluator(
-    code_url: str, dataset_url: str, model_url: str
-) -> Dict[str, Any]:
+def score_model_with_evaluator(code_url: str, dataset_url: str, model_url: str) -> Dict[str, Any]:
     """
     Score a model using the Phase 1 ModelEvaluator system.
 
@@ -395,18 +385,12 @@ def _check_threshold(result: Dict[str, Any], min_score: float) -> bool:
         True if model passes threshold, False otherwise
     """
     non_latency_keys = [
-        k
-        for k in result.keys()
-        if not k.endswith("_latency") and isinstance(result.get(k), (int, float))
+        k for k in result.keys() if not k.endswith("_latency") and isinstance(result.get(k), (int, float))
     ]
 
     excluded_keys = ("net_score", "category", "size_score")
 
-    return all(
-        result[k] >= min_score
-        for k in non_latency_keys
-        if k not in excluded_keys and result[k] != -1
-    )
+    return all(result[k] >= min_score for k in non_latency_keys if k not in excluded_keys and result[k] != -1)
 
 
 def ingest_model(  # noqa: C901

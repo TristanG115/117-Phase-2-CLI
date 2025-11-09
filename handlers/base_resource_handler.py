@@ -46,9 +46,7 @@ class BaseResourceHandler(ABC):
             clone_cmd = ["git", "clone", clone_url, temp_dir]
 
             self.logger.info(f"Cloning repository: {clone_url}")
-            result = subprocess.run(
-                clone_cmd, capture_output=True, text=True, timeout=300
-            )
+            result = subprocess.run(clone_cmd, capture_output=True, text=True, timeout=300)
 
             if result.returncode != 0:
                 self.logger.error(f"Git clone failed: {result.stderr}")
