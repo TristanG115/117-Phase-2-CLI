@@ -2,9 +2,11 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, ec2]
   pull_request:
-    branches: [main, dev]
+    branches: [main, ec2]
+  workflow_dispatch: 
+
 
 jobs:
   ci:
