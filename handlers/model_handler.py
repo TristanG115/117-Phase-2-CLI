@@ -44,7 +44,9 @@ class ModelHandler(BaseResourceHandler):
                 )
                 return data
             else:
-                self.logger.warning(f"HuggingFace API returned {response.status_code} for {self.model_id}")
+                self.logger.warning(
+                    f"HuggingFace API returned {response.status_code} for {self.model_id}"
+                )
         except Exception as e:
             self.logger.error(f"Error fetching HF API data: {e}")
 
@@ -60,7 +62,9 @@ class ModelHandler(BaseResourceHandler):
             response = requests.get(readme_url, timeout=10)
             if response.status_code == 200:
                 self._readme_content = response.text
-                self.logger.debug(f"Fetched README for {self.model_id}, length={len(self._readme_content)}")
+                self.logger.debug(
+                    f"Fetched README for {self.model_id}, length={len(self._readme_content)}"
+                )
                 return self._readme_content
         except Exception as e:
             self.logger.error(f"Error fetching README: {e}")
@@ -84,12 +88,19 @@ class ModelHandler(BaseResourceHandler):
         for match in matches:
             url = f"https://github.com/{match}"
             # Filter out blob/tree/issues URLs
-            if "/blob/" not in url and "/tree/" not in url and "/issues" not in url and url not in seen:
+            if (
+                "/blob/" not in url
+                and "/tree/" not in url
+                and "/issues" not in url
+                and url not in seen
+            ):
                 github_urls.append(url)
                 seen.add(url)
 
         if github_urls:
-            self.logger.info(f"Found {len(github_urls)} GitHub URLs in README for {self.model_id}")
+            self.logger.info(
+                f"Found {len(github_urls)} GitHub URLs in README for {self.model_id}"
+            )
 
         return github_urls
 
@@ -100,7 +111,9 @@ class ModelHandler(BaseResourceHandler):
             return []
 
         # Pattern to match HuggingFace dataset URLs
-        dataset_pattern = r"https?://huggingface\.co/datasets/([a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+)"
+        dataset_pattern = (
+            r"https?://huggingface\.co/datasets/([a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+)"
+        )
         matches = re.findall(dataset_pattern, readme, re.IGNORECASE)
 
         dataset_urls = []
@@ -112,7 +125,9 @@ class ModelHandler(BaseResourceHandler):
                 seen.add(url)
 
         if dataset_urls:
-            self.logger.info(f"Found {len(dataset_urls)} dataset URLs in README for {self.model_id}")
+            self.logger.info(
+                f"Found {len(dataset_urls)} dataset URLs in README for {self.model_id}"
+            )
 
         return dataset_urls
 
@@ -219,11 +234,15 @@ class ModelHandler(BaseResourceHandler):
                     total_size += sz
                     probed += 1
             if probed:
-                self.logger.info(f"Resolved {probed} weight file sizes via HEAD for {self.model_id}")
+                self.logger.info(
+                    f"Resolved {probed} weight file sizes via HEAD for {self.model_id}"
+                )
 
         size_mb = total_size / (1024 * 1024) if total_size > 0 else 0.0
         self._cache_set("size_mb", size_mb)
-        self.logger.info(f"Model size calculated: {size_mb:.2f} MB (aggregated from API/tree/HEAD)")
+        self.logger.info(
+            f"Model size calculated: {size_mb:.2f} MB (aggregated from API/tree/HEAD)"
+        )
         return size_mb
 
     def has_performance_benchmarks(self) -> bool:
@@ -256,10 +275,14 @@ class ModelHandler(BaseResourceHandler):
                 "metric",
                 "results",
             ]
-            has_benchmark = any(keyword in readme_lower for keyword in benchmark_keywords)
+            has_benchmark = any(
+                keyword in readme_lower for keyword in benchmark_keywords
+            )
             self._cache_set("has_benchmarks", has_benchmark)
             if has_benchmark:
-                self.logger.info(f"Found benchmark keywords in README for {self.model_id}")
+                self.logger.info(
+                    f"Found benchmark keywords in README for {self.model_id}"
+                )
             return has_benchmark
 
         self._cache_set("has_benchmarks", False)
@@ -281,7 +304,9 @@ class ModelHandler(BaseResourceHandler):
         if license_value:
             score = self._parse_license_identifier(license_value)
             if score > 0:
-                self.logger.info(f"License found in API metadata for {self.model_id}: {license_value} (score={score})")
+                self.logger.info(
+                    f"License found in API metadata for {self.model_id}: {license_value} (score={score})"
+                )
                 self._cache_set("license_score", score)
                 return score
 
@@ -303,7 +328,9 @@ class ModelHandler(BaseResourceHandler):
                 license_name = tag.replace("license:", "").strip()
                 score = self._parse_license_identifier(license_name)
                 if score > 0:
-                    self.logger.info(f"License found in tags for {self.model_id}: {license_name} (score={score})")
+                    self.logger.info(
+                        f"License found in tags for {self.model_id}: {license_name} (score={score})"
+                    )
                     self._cache_set("license_score", score)
                     return score
 
@@ -330,7 +357,9 @@ class ModelHandler(BaseResourceHandler):
             # Fallback: Search README text
             score = self._parse_license_from_text(readme)
             if score > 0:
-                self.logger.info(f"License found in README text for {self.model_id} (score={score})")
+                self.logger.info(
+                    f"License found in README text for {self.model_id} (score={score})"
+                )
 
         self._cache_set("license_score", score)
         if score == 0:
@@ -362,7 +391,11 @@ class ModelHandler(BaseResourceHandler):
             score += 0.2
         if "example" in readme_lower or "code example" in readme_lower:
             score += 0.2
-        if "training" in readme_lower or "fine-tuning" in readme_lower or "fine-tune" in readme_lower:
+        if (
+            "training" in readme_lower
+            or "fine-tuning" in readme_lower
+            or "fine-tune" in readme_lower
+        ):
             score += 0.15
         if "installation" in readme_lower or "requirements" in readme_lower:
             score += 0.1

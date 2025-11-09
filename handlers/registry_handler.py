@@ -68,7 +68,9 @@ def add_artifact(
     )
 
 
-def get_artifact_by_id(artifact_id: str, artifact_type: Optional[str] = None) -> Optional[Dict]:
+def get_artifact_by_id(
+    artifact_id: str, artifact_type: Optional[str] = None
+) -> Optional[Dict]:
     """
     Get an artifact by ID.
     If artifact_type provided, validates the type matches.
@@ -216,7 +218,9 @@ def add_model(
     )
 
 
-def get_artifact_by_name(name: str, artifact_type: Optional[str] = None) -> Optional[Dict]:
+def get_artifact_by_name(
+    name: str, artifact_type: Optional[str] = None
+) -> Optional[Dict]:
     """
     Get an artifact by name instead of ID.
     Useful for looking up artifacts when you only have the name.

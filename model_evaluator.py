@@ -21,7 +21,9 @@ class ModelEvaluator:
         self.logger = logging.getLogger(__name__)
 
         # Initialize metrics
-        self.metrics = {name: metric_class() for name, metric_class in METRIC_CLASSES.items()}
+        self.metrics = {
+            name: metric_class() for name, metric_class in METRIC_CLASSES.items()
+        }
 
     def evaluate_urls(self, urls: List[str]) -> List[Dict[str, Any]]:
         """
@@ -103,7 +105,9 @@ class ModelEvaluator:
             # Extract just the model name part (e.g., "bert-base-uncased" from "google-bert/bert-base-uncased")
             model_id = model_handler.model_id or "unknown"
             if "/" in model_id:
-                model_name = model_id.split("/")[-1]  # Get the last part after the slash
+                model_name = model_id.split("/")[
+                    -1
+                ]  # Get the last part after the slash
             else:
                 model_name = model_id
 
@@ -124,25 +128,51 @@ class ModelEvaluator:
                 "category": "MODEL",
                 "net_score": net_score,
                 "net_score_latency": net_score_latency,
-                "ramp_up_time": round(metric_results.get("ramp_up_time", {}).get("score", 0.0), 2),
-                "ramp_up_time_latency": metric_results.get("ramp_up_time", {}).get("latency", 0),
-                "bus_factor": round(metric_results.get("bus_factor", {}).get("score", 0.0), 2),
-                "bus_factor_latency": metric_results.get("bus_factor", {}).get("latency", 0),
-                "performance_claims": round(metric_results.get("performance_claims", {}).get("score", 0.0), 2),
-                "performance_claims_latency": metric_results.get("performance_claims", {}).get("latency", 0),
-                "license": round(metric_results.get("license", {}).get("score", 0.0), 2),
+                "ramp_up_time": round(
+                    metric_results.get("ramp_up_time", {}).get("score", 0.0), 2
+                ),
+                "ramp_up_time_latency": metric_results.get("ramp_up_time", {}).get(
+                    "latency", 0
+                ),
+                "bus_factor": round(
+                    metric_results.get("bus_factor", {}).get("score", 0.0), 2
+                ),
+                "bus_factor_latency": metric_results.get("bus_factor", {}).get(
+                    "latency", 0
+                ),
+                "performance_claims": round(
+                    metric_results.get("performance_claims", {}).get("score", 0.0), 2
+                ),
+                "performance_claims_latency": metric_results.get(
+                    "performance_claims", {}
+                ).get("latency", 0),
+                "license": round(
+                    metric_results.get("license", {}).get("score", 0.0), 2
+                ),
                 "license_latency": metric_results.get("license", {}).get("latency", 0),
                 "size_score": size_score_dict,
-                "size_score_latency": metric_results.get("size_score", {}).get("latency", 0),
+                "size_score_latency": metric_results.get("size_score", {}).get(
+                    "latency", 0
+                ),
                 "dataset_and_code_score": round(
                     metric_results.get("dataset_and_code_score", {}).get("score", 0.0),
                     2,
                 ),
-                "dataset_and_code_score_latency": metric_results.get("dataset_and_code_score", {}).get("latency", 0),
-                "dataset_quality": round(metric_results.get("dataset_quality", {}).get("score", 0.0), 2),
-                "dataset_quality_latency": metric_results.get("dataset_quality", {}).get("latency", 0),
-                "code_quality": round(metric_results.get("code_quality", {}).get("score", 0.0), 2),
-                "code_quality_latency": metric_results.get("code_quality", {}).get("latency", 0),
+                "dataset_and_code_score_latency": metric_results.get(
+                    "dataset_and_code_score", {}
+                ).get("latency", 0),
+                "dataset_quality": round(
+                    metric_results.get("dataset_quality", {}).get("score", 0.0), 2
+                ),
+                "dataset_quality_latency": metric_results.get(
+                    "dataset_quality", {}
+                ).get("latency", 0),
+                "code_quality": round(
+                    metric_results.get("code_quality", {}).get("score", 0.0), 2
+                ),
+                "code_quality_latency": metric_results.get("code_quality", {}).get(
+                    "latency", 0
+                ),
             }
 
             return result
@@ -171,7 +201,9 @@ class ModelEvaluator:
 
                 # Always try to calculate the metric, even with partial/missing resources
                 # The metric implementations should handle missing resources gracefully
-                future = executor.submit(self._safe_calculate_metric, metric, available_resources)
+                future = executor.submit(
+                    self._safe_calculate_metric, metric, available_resources
+                )
                 future_to_metric[future] = metric_name
 
             # Collect results
@@ -186,7 +218,9 @@ class ModelEvaluator:
 
         return metric_results
 
-    def _safe_calculate_metric(self, metric: BaseMetric, resources: Dict[URLType, List[BaseResourceHandler]]):
+    def _safe_calculate_metric(
+        self, metric: BaseMetric, resources: Dict[URLType, List[BaseResourceHandler]]
+    ):
         """Safely calculate a metric with error handling"""
         try:
             return metric.calculate(resources)
@@ -194,7 +228,9 @@ class ModelEvaluator:
             self.logger.error(f"Error in metric calculation: {e}")
             return 0.0, 0
 
-    def _calculate_net_score(self, metric_results: Dict[str, Dict[str, Any]]) -> Tuple[float, int]:
+    def _calculate_net_score(
+        self, metric_results: Dict[str, Dict[str, Any]]
+    ) -> Tuple[float, int]:
         """Calculate weighted net score"""
         # Define weights based on Sarah's priorities
         weights = {
@@ -252,9 +288,13 @@ class ModelEvaluator:
                     line = line.strip()
                     if line:
                         # Split each line by commas and filter out empty URLs
-                        line_urls = [url.strip() for url in line.split(",") if url.strip()]
+                        line_urls = [
+                            url.strip() for url in line.split(",") if url.strip()
+                        ]
                         if line_urls:
-                            self.logger.info(f"Processing line {line_num} with {len(line_urls)} URLs")
+                            self.logger.info(
+                                f"Processing line {line_num} with {len(line_urls)} URLs"
+                            )
                             # Evaluate each line's URLs as a group
                             line_results = self.evaluate_urls(line_urls)
                             results.extend(line_results)

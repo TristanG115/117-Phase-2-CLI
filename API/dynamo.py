@@ -76,7 +76,12 @@ class DynamoDB:
                 result[key] = self._python_to_dynamo(value)
             elif isinstance(value, list):
                 result[key] = [
-                    (self._python_to_dynamo({"v": item})["v"] if isinstance(item, dict) else item) for item in value
+                    (
+                        self._python_to_dynamo({"v": item})["v"]
+                        if isinstance(item, dict)
+                        else item
+                    )
+                    for item in value
                 ]
             else:
                 result[key] = value
@@ -91,7 +96,10 @@ class DynamoDB:
             elif isinstance(value, dict):
                 result[key] = self._dynamo_to_python(value)
             elif isinstance(value, list):
-                result[key] = [self._dynamo_to_python(item) if isinstance(item, dict) else item for item in value]
+                result[key] = [
+                    self._dynamo_to_python(item) if isinstance(item, dict) else item
+                    for item in value
+                ]
             else:
                 result[key] = value
         return result
@@ -122,7 +130,9 @@ class DynamoDB:
                     GlobalSecondaryIndexes=[
                         {
                             "IndexName": "artifact_type-index",
-                            "KeySchema": [{"AttributeName": "artifact_type", "KeyType": "HASH"}],
+                            "KeySchema": [
+                                {"AttributeName": "artifact_type", "KeyType": "HASH"}
+                            ],
                             "Projection": {"ProjectionType": "ALL"},
                             "ProvisionedThroughput": {
                                 "ReadCapacityUnits": 5,
@@ -196,7 +206,9 @@ class DynamoDB:
             logger.error(f"Failed to add artifact: {e}")
             raise RuntimeError(f"Failed to insert artifact: {e}")
 
-    def get_artifact_by_id(self, artifact_id: str, artifact_type: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    def get_artifact_by_id(
+        self, artifact_id: str, artifact_type: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
         """
         Fetch an artifact by ID.
         If artifact_type provided, validates the type matches.
@@ -309,7 +321,9 @@ class DynamoDB:
             logger.error(f"Failed to list artifacts: {e}")
             return []
 
-    def search_artifacts(self, query: str, artifact_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    def search_artifacts(
+        self, query: str, artifact_type: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """
         Search artifacts by name or tags.
         Query can be:

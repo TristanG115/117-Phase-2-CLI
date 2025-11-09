@@ -32,7 +32,9 @@ class DatasetQualityMetric(BaseMetric):
             if quality_score is not None:
                 end_time = time.time()
                 latency_ms = int((end_time - start_time) * 1000)
-                self.logger.info(f"LLM-based dataset quality score={quality_score:.2f}, latency={latency_ms}ms")
+                self.logger.info(
+                    f"LLM-based dataset quality score={quality_score:.2f}, latency={latency_ms}ms"
+                )
                 return quality_score, latency_ms
 
         # Fallback to heuristic evaluation
@@ -41,7 +43,9 @@ class DatasetQualityMetric(BaseMetric):
 
         end_time = time.time()
         latency_ms = int((end_time - start_time) * 1000)
-        self.logger.info(f"Heuristic dataset quality score={quality_score:.2f}, latency={latency_ms}ms")
+        self.logger.info(
+            f"Heuristic dataset quality score={quality_score:.2f}, latency={latency_ms}ms"
+        )
 
         return quality_score, latency_ms
 
@@ -104,7 +108,9 @@ Respond with only a number between 0.0 and 1.0."""
                 return 0.0
 
         except Exception as e:
-            self.logger.error(f"Error during GenAI API call for dataset quality: {e}", exc_info=True)
+            self.logger.error(
+                f"Error during GenAI API call for dataset quality: {e}", exc_info=True
+            )
             return 0.0
 
     def _evaluate_dataset_quality(self, dataset: Any) -> float:  # noqa: C901

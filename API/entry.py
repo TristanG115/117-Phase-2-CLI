@@ -5,7 +5,9 @@ from .routes import router as models_router
 
 app = FastAPI(title="Trustworthy Model Registry", version="1.0.0")
 
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+)
 
 app.include_router(models_router)
 

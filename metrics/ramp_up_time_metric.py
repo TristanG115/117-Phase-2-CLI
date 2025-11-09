@@ -25,7 +25,11 @@ class RampUpTimeMetric(BaseMetric):
                     documentation_scores.append(doc_score)
 
         # Average documentation quality across all resources
-        final_score = sum(documentation_scores) / len(documentation_scores) if documentation_scores else 0.0
+        final_score = (
+            sum(documentation_scores) / len(documentation_scores)
+            if documentation_scores
+            else 0.0
+        )
 
         end_time = time.time()
         latency_ms = int((end_time - start_time) * 1000)

@@ -99,7 +99,9 @@ class TestRegistryAndIngest(unittest.TestCase):
     @patch("handlers.ingest_handler.snapshot_download")
     @patch("handlers.ingest_handler.subprocess.check_output")
     @patch("handlers.ingest_handler.infer_links_from_hf")
-    def test_ingest_model_success(self, mock_infer, mock_subproc, mock_download, mock_add_model):
+    def test_ingest_model_success(
+        self, mock_infer, mock_subproc, mock_download, mock_add_model
+    ):
         """Test: Successful model ingestion"""
         mock_download.return_value = None
         mock_infer.return_value = (
@@ -119,7 +121,9 @@ class TestRegistryAndIngest(unittest.TestCase):
         }
         mock_subproc.return_value = json.dumps(fake_score)
 
-        result = ingest_handler.ingest_model("https://huggingface.co/google/bert-base-uncased")
+        result = ingest_handler.ingest_model(
+            "https://huggingface.co/google/bert-base-uncased"
+        )
         self.assertIn("status", result)
         self.assertEqual(result["status"], "success")
         mock_add_model.assert_called_once()
@@ -127,7 +131,9 @@ class TestRegistryAndIngest(unittest.TestCase):
     @patch("handlers.ingest_handler.snapshot_download")
     @patch("handlers.ingest_handler.subprocess.check_output")
     @patch("handlers.ingest_handler.infer_links_from_hf")
-    def test_ingest_model_fails_threshold(self, mock_infer, mock_subproc, mock_download):
+    def test_ingest_model_fails_threshold(
+        self, mock_infer, mock_subproc, mock_download
+    ):
         """Test: Ingestion fails if score too low"""
         mock_download.return_value = None
         mock_infer.return_value = ("unknown", "unknown")
@@ -143,6 +149,8 @@ class TestRegistryAndIngest(unittest.TestCase):
         }
         mock_subproc.return_value = json.dumps(fake_score)
 
-        result = ingest_handler.ingest_model("https://huggingface.co/google/bert-base-uncased")
+        result = ingest_handler.ingest_model(
+            "https://huggingface.co/google/bert-base-uncased"
+        )
         self.assertIn("error", result)
         self.assertIn("Model did not meet threshold criteria.", result["error"])

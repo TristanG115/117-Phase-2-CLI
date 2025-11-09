@@ -61,12 +61,18 @@ def download_model(model_id: str):
             s3.s3.download_file(s3.bucket_name, s3_key, local_path)
 
             if not zipfile.is_zipfile(local_path):
-                raise HTTPException(status_code=400, detail="Downloaded file is not a valid ZIP")
+                raise HTTPException(
+                    status_code=400, detail="Downloaded file is not a valid ZIP"
+                )
 
-            return FileResponse(local_path, filename=f"{model_id}.zip", media_type="application/zip")
+            return FileResponse(
+                local_path, filename=f"{model_id}.zip", media_type="application/zip"
+            )
 
     except s3.s3.exceptions.NoSuchKey:
         raise HTTPException(status_code=404, detail="Model not found in storage")
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error downloading model: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error downloading model: {str(e)}"
+        )
