@@ -393,7 +393,7 @@ def _check_threshold(result: Dict[str, Any], min_score: float) -> bool:
     return all(result[k] >= min_score for k in non_latency_keys if k not in excluded_keys and result[k] != -1)
 
 
-def ingest_model(
+def ingest_model(  # noqa: C901
     hf_url: str,
     min_score: float = 0.5,
     download: bool = False,

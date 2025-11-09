@@ -1,4 +1,4 @@
-from .base_metric import BaseMetric
+# not used yet from .base_metric import BaseMetric
 from .bus_factor_metric import BusFactorMetric
 from .code_quality_metric import CodeQualityMetric
 from .dataset_and_code_score_metric import DatasetAndCodeScoreMetric

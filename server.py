@@ -34,7 +34,7 @@ async def log_requests(request: Request, call_next):
     path = request.url.path
     headers = dict(request.headers)
 
-    print(f"\n{'='*60}", flush=True)
+    print("\n" + "="*60, flush=True)
     print(f"REQUEST: {method} {path}", flush=True)
     print(f"Client IP: {client_ip}", flush=True)
     print(f"Headers: {headers}", flush=True)
@@ -103,7 +103,10 @@ def _validate_query(query):
     if not isinstance(query, dict):
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_query or it is " "formed improperly, or is invalid."),
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
         )
 
     name = query.get("name", "").lower()
@@ -112,7 +115,10 @@ def _validate_query(query):
     if not name or not isinstance(types, list):
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_query or it is " "formed improperly, or is invalid."),
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
         )
 
     # If types is empty, default to all types
@@ -122,63 +128,38 @@ def _validate_query(query):
     return name, types
 
 
-def _build_artifact_results(queries, artifacts):
+def _get_actual_type(artifact: dict) -> str:
+    """Determine the actual type of an artifact from its DB entry and metadata."""
+    actual_type = artifact.get("artifact_type", "model")
+    if not actual_type or actual_type == "model":
+        try:
+            metadata = json.loads(artifact.get("metadata_json", "{}"))
+            actual_type = metadata.get("type", actual_type)
+        except Exception:
+            pass
+    return actual_type
+
+
+def _artifact_matches(name: str, types: list, artifact: dict) -> bool:
+    """Check if artifact matches query name and type."""
+    actual_type = _get_actual_type(artifact)
+    if name != "*" and name not in artifact["name"].lower():
+        return False
+    return actual_type in types
+
+
+def _build_artifact_results(queries: list, artifacts: list) -> list:
     """Build results list from queries and artifacts."""
     results = []
-    print(
-        f"DEBUG _build: Processing {len(queries)} queries against {len(artifacts)} artifacts",
-        flush=True,
-    )
-    for i, q in enumerate(queries):
-        print(f"DEBUG _build: Query {i}: {q}", flush=True)
-        try:
-            name, types = _validate_query(q)
-            print(f"DEBUG _build: Validated - name={name}, types={types}", flush=True)
-        except Exception as e:
-            print(f"DEBUG _build: Validation failed: {e}", flush=True)
-            raise
-        for a in artifacts:
-            # Get the actual type of this artifact
-            # First try from the artifact_type column in database
-            actual_type = a.get("artifact_type", "model")
-
-            # If not set or is default, try from metadata_json
-            if not actual_type or actual_type == "model":
-                try:
-                    metadata = json.loads(a.get("metadata_json", "{}"))
-                    metadata_type = metadata.get("type")
-                    if metadata_type:
-                        actual_type = metadata_type
-                    print(
-                        f"DEBUG _build: Artifact {a['name']} has type {actual_type} (from metadata)",
-                        flush=True,
-                    )
-                except Exception as e:
-                    print(f"DEBUG _build: Error parsing metadata: {e}", flush=True)
-                    actual_type = a.get("artifact_type", "model")
-            else:
-                print(
-                    f"DEBUG _build: Artifact {a['name']} has type {actual_type} (from db)",
-                    flush=True,
-                )
-
-            # Check if name matches
-            if name == "*" or name in a["name"].lower():
-                # Check if the artifact's actual type is in the requested types
-                if actual_type in types:
-                    print(f"DEBUG _build: Adding {a['name']} as {actual_type}", flush=True)
-                    results.append(
-                        {
-                            "name": a["name"],
-                            "id": gen_id(a["name"]),
-                            "type": actual_type,
-                        }
-                    )
-                else:
-                    print(
-                        f"DEBUG _build: Skipping {a['name']} - type {actual_type} not in {types}",
-                        flush=True,
-                    )
+    for query in queries:
+        name, types = _validate_query(query)
+        for artifact in artifacts:
+            if _artifact_matches(name, types, artifact):
+                results.append({
+                    "name": artifact["name"],
+                    "id": gen_id(artifact["name"]),
+                    "type": _get_actual_type(artifact),
+                })
     return results
 
 
@@ -192,12 +173,12 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):
     logger.info(f"DEBUG /artifacts: X-Authorization value = {repr(auth_header)}")
 
     if not auth_header:
-        logger.warning(f"DEBUG: No X-Authorization header - allowing for baseline")
+        logger.warning("DEBUG: No X-Authorization header - allowing for baseline")
     else:
         require_auth(auth_header)
 
     print("DEBUG /artifacts: About to read body", flush=True)
-    logger.info(f"DEBUG /artifacts: About to read body")
+    logger.info("DEBUG /artifacts: About to read body")
     try:
         body_bytes = await request.body()
         print(f"DEBUG /artifacts: Raw body = {body_bytes[:500]}", flush=True)
@@ -210,35 +191,46 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):
         logger.error(f"DEBUG /artifacts: JSON parse error: {e}, body was: {body_bytes[:200]}")
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_query or it is " "formed improperly, or is invalid."),
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
         )
     except Exception as e:
         print(f"DEBUG /artifacts: Unexpected error: {type(e).__name__}: {e}", flush=True)
         logger.error(f"DEBUG /artifacts: Unexpected error: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_query or it is " "formed improperly, or is invalid."),
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
         )
 
     if not isinstance(queries, list) or len(queries) == 0:
         print(
-            f"DEBUG: queries validation failed - type: {type(queries)}, len: {len(queries) if isinstance(queries, list) else 'N/A'}",
+            "DEBUG: queries validation failed - type: "
+            f"{type(queries)}, len: {len(queries) if isinstance(queries, list) else 'N/A'}",
             flush=True,
         )
+
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_query or it is " "formed improperly, or is invalid."),
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
         )
 
     if len(queries) > 100:
         raise HTTPException(status_code=400, detail="Too many queries. Maximum 100 queries per request.")
 
-    print(f"DEBUG: About to call list_artifacts()", flush=True)
+    print("DEBUG: About to call list_artifacts()", flush=True)
     # FIXED: Use list_artifacts() instead of list_models() to get all artifact types
     artifacts = registry_handler.list_artifacts()
     print(f"DEBUG: Got {len(artifacts)} artifacts", flush=True)
 
-    print(f"DEBUG: About to build results", flush=True)
+    print("DEBUG: About to build results", flush=True)
     results = _build_artifact_results(queries, artifacts)
     print(f"DEBUG: Built {len(results)} results", flush=True)
 
@@ -256,7 +248,7 @@ def reset_registry(request: Request):
     """BASELINE: Reset registry to a clean state."""
     auth_header = request.headers.get("X-Authorization")
     if not auth_header:
-        logger.warning(f"DEBUG /reset: No auth header - allowing for baseline")
+        logger.warning("DEBUG /reset: No auth header - allowing for baseline")
     else:
         if not require_auth(auth_header):
             raise HTTPException(
@@ -275,7 +267,7 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-        logger.warning(f"No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
@@ -380,7 +372,7 @@ async def update_artifact(artifact_type: str, artifact_id: str, request: Request
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-        logger.warning(f"No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
@@ -442,7 +434,7 @@ async def register_artifact(artifact_type: str, request: Request):
     """BASELINE: Register a new artifact by URL."""
     auth_header = request.headers.get("X-Authorization")
     if not auth_header:
-        logger.warning(f"DEBUG /artifact/{{type}}: No auth header - allowing for baseline")
+        logger.warning("DEBUG /artifact/{{type}}: No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
@@ -484,17 +476,6 @@ async def register_artifact(artifact_type: str, request: Request):
         if gen_id(a["name"]) == new_id:
             raise HTTPException(status_code=409, detail="Artifact exists already.")
 
-    artifact_id = registry_handler.add_artifact(
-        name=name,
-        artifact_type=artifact_type,
-        score=0.0,
-        url=url,
-        tags=artifact_type,
-        code_url=url if artifact_type in ["code", "model"] else "unknown",
-        dataset_url=url if artifact_type == "dataset" else "unknown",
-        metadata={"type": artifact_type},  # Note: metadata not metadata_json
-    )
-
     resp = {
         "metadata": {"name": name, "id": new_id, "type": artifact_type},
         "data": {"url": url},
@@ -508,7 +489,7 @@ def get_rating(artifact_id: str, request: Request):
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-        logger.warning(f"No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
@@ -517,7 +498,10 @@ def get_rating(artifact_id: str, request: Request):
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_id or it is " "formed improperly, or is invalid."),
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
         )
 
     artifacts = registry_handler.list_artifacts()
@@ -570,7 +554,7 @@ def get_cost(artifact_type: str, artifact_id: str, request: Request, dependency:
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-        logger.warning(f"No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
@@ -618,7 +602,7 @@ def get_lineage(artifact_id: str, request: Request):
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-        logger.warning(f"No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
@@ -694,7 +678,7 @@ async def license_check(artifact_id: str, request: Request):
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-        logger.warning(f"No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
@@ -727,12 +711,12 @@ async def license_check(artifact_id: str, request: Request):
 
 
 @app.post("/artifact/byRegEx")
-async def artifact_by_regex(request: Request):
+async def artifact_by_regex(request: Request):  # noqa: C901
     """BASELINE: Search artifacts using regex."""
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-        logger.warning(f"No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 

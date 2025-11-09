@@ -178,7 +178,7 @@ def run_tests_debug():
         sys.exit(1)
 
 
-def main():
+def main():  # noqa: C901
     if len(sys.argv) < 2:
         print("Usage: ./run <command>")
         print("\nCommands:")

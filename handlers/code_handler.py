@@ -204,46 +204,80 @@ class CodeHandler(BaseResourceHandler):
         if not api_data:
             return 0.0
 
-        score = 0.0
-
-        # README (30%)
-        if api_data.get("has_readme"):
-            score += 0.3
-
-        # Stars - community validation (25%)
-        stars = api_data.get("stargazers_count", 0)
-        if stars > 1000:
-            score += 0.25
-        elif stars > 100:
-            score += 0.2
-        elif stars > 10:
-            score += 0.15
-        elif stars > 0:
-            score += 0.1
-
-        # Recent activity (20%)
-        updated_at = api_data.get("updated_at", "")
-        if "2025" in updated_at or "2024" in updated_at:
-            score += 0.2
-        elif "2023" in updated_at:
-            score += 0.1
-
-        # Tests (10%)
-        if self.has_tests():
-            score += 0.1
-
-        # CI/CD (10%)
-        if self.has_ci_cd():
-            score += 0.1
-
-        # Linting (5%)
-        if self.has_linting_config():
-            score += 0.05
+        score = (
+            self._readme_score(api_data)
+            + self._stars_score(api_data)
+            + self._recent_activity_score(api_data)
+            + self._infrastructure_score()
+        )
 
         final_score = min(score, 1.0)
         self._cache_set("code_quality_score", final_score)
         self.logger.info(f"Code quality score for {self.repo_path}: {final_score:.2f}")
         return final_score
+
+    def _readme_score(self, api_data: dict) -> float:
+        return 0.3 if api_data.get("has_readme") else 0.0
+
+    def _stars_score(self, api_data: dict) -> float:
+        stars = api_data.get("stargazers_count", 0)
+        if stars > 1000:
+            return 0.25
+        if stars > 100:
+            return 0.2
+        if stars > 10:
+            return 0.15
+        return 0.1 if stars > 0 else 0.0
+
+    def _recent_activity_score(self, api_data: dict) -> float:
+        updated_at = api_data.get("updated_at", "")
+        if "2025" in updated_at or "2024" in updated_at:
+            return 0.2
+        if "2023" in updated_at:
+            return 0.1
+        return 0.0
+
+    def _infrastructure_score(self) -> float:
+        """Combines tests, CI/CD, linting, formatting, coverage"""
+        subscores = [
+            0.1 if self.has_tests() else 0.0,
+            0.1 if self.has_ci_cd() else 0.0,
+            0.05 if self.has_linting_config() else 0.0,
+            0.05 if self.has_formatting_check() else 0.0,
+            0.05 if self.has_coverage_config() else 0.0,
+        ]
+        return sum(subscores)
+
+    def has_formatting_check(self) -> bool:
+        """Detect if repo uses Black, Ruff, or other formatters."""
+        tree = self.get_repo_tree()
+        format_files = [
+            ".black",
+            "pyproject.toml",
+            ".ruff.toml",
+            ".pre-commit-config.yaml",
+        ]
+        for item in tree:
+            path = item.get("path", "").lower()
+            if any(fmt in path for fmt in format_files):
+                self.logger.info(f"Found formatting config in {self.repo_path}")
+                return True
+        return False
+
+    def has_coverage_config(self) -> bool:
+        """Detect if repo includes coverage tracking."""
+        tree = self.get_repo_tree()
+        coverage_files = [
+            ".coveragerc",
+            "coverage.xml",
+            "coverage.json",
+        ]
+        for item in tree:
+            path = item.get("path", "").lower()
+            if any(cfg in path for cfg in coverage_files):
+                self.logger.info(f"Found coverage config in {self.repo_path}")
+                return True
+        return False
 
     def get_license_score(self) -> float:
         """Get license compatibility score from GitHub"""

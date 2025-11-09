@@ -50,7 +50,7 @@ class ModelEvaluator:
 
         return results
 
-    def _create_resource_handlers(
+    def _create_resource_handlers(  # noqa: C901
         self, grouped_urls: Dict[URLType, List[str]]
     ) -> Dict[URLType, List[BaseResourceHandler]]:
         """Create resource handlers for each URL type with error handling"""

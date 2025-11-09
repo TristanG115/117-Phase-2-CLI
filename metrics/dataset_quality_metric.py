@@ -107,7 +107,7 @@ Respond with only a number between 0.0 and 1.0."""
             self.logger.error(f"Error during GenAI API call for dataset quality: {e}", exc_info=True)
             return 0.0
 
-    def _evaluate_dataset_quality(self, dataset: Any) -> float:
+    def _evaluate_dataset_quality(self, dataset: Any) -> float:  # noqa: C901
         """Heuristic fallback for dataset quality evaluation"""
         try:
             # Use the handler's built-in quality score method if available

@@ -1,4 +1,3 @@
-# NEW CODE
 from typing import Any, Dict, List
 from urllib.parse import urlparse
 
@@ -79,75 +78,142 @@ class DatasetHandler(BaseResourceHandler):
 
         return is_eval
 
+    # Quality Score
     def get_quality_score(self) -> float:
-        """
-        Evaluate dataset quality comprehensively.
-        This now includes README strength as a first-class signal (objective, no special-casing),
-        which better distinguishes high-quality, well-documented datasets.
-        """
+        """Evaluate dataset quality comprehensively"""
         cached = self._cache_get("quality_score")
         if cached is not None:
             return cached
 
         api_data = self.get_huggingface_api_data()
-        score = 0.0
-
-        # Documentation quality (card—structured metadata)
-        card_data = api_data.get("cardData", {})
-        if card_data:
-            score += 0.25
-            # Structured dataset info indicates stronger metadata discipline
-            if card_data.get("dataset_info"):
-                score += 0.1
-
-        # Description quality
-        description = api_data.get("description", "")
-        if len(description) > 200:
-            score += 0.15
-        elif len(description) > 100:
-            score += 0.1
-        elif len(description) > 50:
-            score += 0.05
-
-        # README strength
-        readme = self.get_readme_content()
-        if len(readme) > 1000:
-            score += 0.10
-        elif len(readme) > 500:
-            score += 0.05
-
-        # Downloads (popularity = quality proxy)
-        downloads = api_data.get("downloads", 0)
-        if downloads > 10000:
-            score += 0.2
-        elif downloads > 1000:
-            score += 0.15
-        elif downloads > 100:
-            score += 0.1
-        elif downloads > 10:
-            score += 0.05
-
-        # Tags (well-categorized)
-        tags = api_data.get("tags", [])
-        if len(tags) > 5:
-            score += 0.15
-        elif len(tags) > 2:
-            score += 0.1
-        elif len(tags) > 0:
-            score += 0.05
-
-        # Files/siblings (multiple configs = versatile)
-        siblings = api_data.get("siblings", [])
-        if len(siblings) > 5:
-            score += 0.15
-        elif len(siblings) > 1:
-            score += 0.1
+        score = (
+            self._quality_doc_score(api_data)
+            + self._quality_description_score(api_data)
+            + self._quality_readme_score()
+            + self._quality_downloads_score(api_data)
+            + self._quality_tags_score(api_data)
+            + self._quality_siblings_score(api_data)
+        )
 
         final_score = min(score, 1.0)
         self._cache_set("quality_score", final_score)
         self.logger.info(f"Dataset quality score for {self.dataset_id}: {final_score:.2f}")
         return final_score
 
+    def _quality_doc_score(self, api_data: dict) -> float:
+        card_data = api_data.get("cardData", {})
+        score = 0.0
+        if card_data:
+            score += 0.25
+            if card_data.get("dataset_info"):
+                score += 0.1
+        return score
+
+    def _quality_description_score(self, api_data: dict) -> float:
+        description = api_data.get("description", "")
+        if len(description) > 200:
+            return 0.15
+        if len(description) > 100:
+            return 0.1
+        if len(description) > 50:
+            return 0.05
+        return 0.0
+
+    def _quality_readme_score(self) -> float:
+        readme = self.get_readme_content()
+        if len(readme) > 1000:
+            return 0.10
+        if len(readme) > 500:
+            return 0.05
+        return 0.0
+
+    def _quality_downloads_score(self, api_data: dict) -> float:
+        downloads = api_data.get("downloads", 0)
+        if downloads > 10000:
+            return 0.2
+        if downloads > 1000:
+            return 0.15
+        if downloads > 100:
+            return 0.1
+        if downloads > 10:
+            return 0.05
+        return 0.0
+
+    def _quality_tags_score(self, api_data: dict) -> float:
+        tags = api_data.get("tags", [])
+        if len(tags) > 5:
+            return 0.15
+        if len(tags) > 1:
+            return 0.1
+        return 0.0
+
+    def _quality_siblings_score(self, api_data: dict) -> float:
+        siblings = api_data.get("siblings", [])
+        if len(siblings) > 5:
+            return 0.15
+        if len(siblings) > 1:
+            return 0.1
+        return 0.0
+
+    # Documentation Score
+    def get_documentation_score(self) -> float:
+        """Evaluate documentation quality comprehensively"""
+        cached = self._cache_get("doc_score")
+        if cached is not None:
+            return cached
+
+        api_data = self.get_huggingface_api_data()
+        readme = self.get_readme_content()
+
+        score = (
+            self._doc_readme_score(readme)
+            + self._doc_card_data_score(api_data)
+            + self._doc_description_score(api_data)
+            + self._doc_tags_score(api_data)
+            + self._doc_structured_info_score(api_data)
+        )
+
+        final_score = min(score, 1.0)
+        self._cache_set("doc_score", final_score)
+        self.logger.info(f"Dataset documentation score for {self.dataset_id}: {final_score:.2f}")
+        return final_score
+
+    def _doc_readme_score(self, readme: str) -> float:
+        if len(readme) > 1000:
+            return 0.3
+        if len(readme) > 500:
+            return 0.2
+        if len(readme) > 100:
+            return 0.1
+        return 0.0
+
+    def _doc_card_data_score(self, api_data: dict) -> float:
+        return 0.2 if api_data.get("cardData") else 0.0
+
+    def _doc_description_score(self, api_data: dict) -> float:
+        description = api_data.get("description", "")
+        desc_len = len(description)
+        if desc_len > 200:
+            return 0.2
+        if desc_len > 100:
+            return 0.15
+        if desc_len > 50:
+            return 0.1
+        return 0.0
+
+    def _doc_tags_score(self, api_data: dict) -> float:
+        tags = api_data.get("tags", [])
+        if len(tags) > 3:
+            return 0.15
+        if len(tags) > 0:
+            return 0.05
+        return 0.0
+
+    def _doc_structured_info_score(self, api_data: dict) -> float:
+        card_data = api_data.get("cardData", {})
+        return 0.15 if card_data.get("dataset_info") else 0.0
+
+    # License
     def get_license_score(self) -> float:
         """Get license compatibility score from API metadata"""
         api_data = self.get_huggingface_api_data()
@@ -183,89 +249,34 @@ class DatasetHandler(BaseResourceHandler):
         self.logger.warning(f"No license found for dataset {self.dataset_id}")
         return 0.0
 
-    def get_documentation_score(self) -> float:
-        """Evaluate documentation quality comprehensively"""
-        cached = self._cache_get("doc_score")
-        if cached is not None:
-            return cached
-
-        api_data = self.get_huggingface_api_data()
-        readme = self.get_readme_content()
-
-        score = 0.0
-
-        # README content
-        if len(readme) > 1000:
-            score += 0.3
-        elif len(readme) > 500:
-            score += 0.2
-        elif len(readme) > 100:
-            score += 0.1
-
-        # Card data
-        if api_data.get("cardData"):
-            score += 0.2
-
-        # Description
-        if api_data.get("description"):
-            desc_len = len(api_data["description"])
-            if desc_len > 200:
-                score += 0.2
-            elif desc_len > 100:
-                score += 0.15
-            elif desc_len > 50:
-                score += 0.1
-
-        # Tags indicate categorization
-        tags = api_data.get("tags", [])
-        if len(tags) > 3:
-            score += 0.15
-        elif len(tags) > 0:
-            score += 0.05
-
-        # Check for structured dataset info
-        card_data = api_data.get("cardData", {})
-        if card_data.get("dataset_info"):
-            score += 0.15
-
-        final_score = min(score, 1.0)
-        self._cache_set("doc_score", final_score)
-        self.logger.info(f"Dataset documentation score for {self.dataset_id}: {final_score:.2f}")
-        return final_score
-
+    # Contributors
     def get_contributor_count(self) -> int:
         """Get number of contributors (approximation using downloads)"""
         api_data = self.get_huggingface_api_data()
         downloads = api_data.get("downloads", 0)
-
-        # Improved heuristic for datasets
         if downloads > 50000:
             return 10
-        elif downloads > 10000:
+        if downloads > 10000:
             return 5
-        elif downloads > 1000:
+        if downloads > 1000:
             return 3
-        elif downloads > 100:
+        if downloads > 100:
             return 2
-        else:
-            return 1
+        return 1
 
+    #  Helpers
     def get_tags(self) -> List[str]:
-        """Get dataset tags"""
         api_data = self.get_huggingface_api_data()
         return api_data.get("tags", [])
 
     def get_downloads(self) -> int:
-        """Get download count"""
         api_data = self.get_huggingface_api_data()
         return api_data.get("downloads", 0)
 
     def get_description(self) -> str:
-        """Get dataset description"""
         api_data = self.get_huggingface_api_data()
         return api_data.get("description", "")
 
     def get_siblings(self) -> List[Dict[str, Any]]:
-        """Get dataset files/siblings"""
         api_data = self.get_huggingface_api_data()
         return api_data.get("siblings", [])
