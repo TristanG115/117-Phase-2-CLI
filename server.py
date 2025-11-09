@@ -219,7 +219,7 @@ def _build_artifact_results(queries, artifacts):
 
 
 @app.post("/artifacts")
-async def get_artifacts(request: Request, offset: Optional[str] = None):
+async def get_artifacts(request: Request, offset: Optional[str] = None):  # noqa: C901
     """BASELINE: Return artifacts matching the given query list."""
     logger.info(f"DEBUG /artifacts: All headers = {dict(request.headers)}")
 
@@ -317,14 +317,14 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):
     print("========================================\n", flush=True)
 
     # ADDITIONAL DETAILED LOGGING FOR DEBUGGING
-    logger.info(f"===== ARTIFACTS QUERY RESULTS =====")
+    logger.info("===== ARTIFACTS QUERY RESULTS =====")
     logger.info(f"Query: {queries}")
     logger.info(
         f"Returning {len(results)} results from {len(artifacts)} total artifacts"
     )
     for idx, r in enumerate(results):
         logger.info(f"  Result {idx}: name={r['name']}, id={r['id']}, type={r['type']}")
-    logger.info(f"=====================================")
+    logger.info("=====================================")
 
     return JSONResponse(content=results, headers=headers, status_code=200)
 
@@ -334,7 +334,7 @@ def reset_registry(request: Request):
     """BASELINE: Reset registry to a clean state."""
     auth_header = request.headers.get("X-Authorization")
     if not auth_header:
-        logger.warning(f"DEBUG /reset: No auth header - allowing for baseline")
+        logger.warning("DEBUG /reset: No auth header - allowing for baseline")
     else:
         if not require_auth(auth_header):
             raise HTTPException(
@@ -348,13 +348,13 @@ def reset_registry(request: Request):
 
 
 @app.get("/artifacts/{artifact_type}/{artifact_id}")
-def get_artifact(artifact_type: str, artifact_id: str, request: Request):
+def get_artifact(artifact_type: str, artifact_id: str, request: Request):  # noqa: C901
     """BASELINE: Retrieve one artifact by id."""
     logger.info(f"=== GET /artifacts/{artifact_type}/{artifact_id} ===")
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-        logger.warning(f"No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
@@ -441,7 +441,7 @@ def get_artifact_by_name(name: str, request: Request):
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-        logger.warning(f"No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
@@ -538,7 +538,7 @@ async def update_artifact(artifact_type: str, artifact_id: str, request: Request
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-        logger.warning(f"No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
@@ -596,12 +596,12 @@ async def update_artifact(artifact_type: str, artifact_id: str, request: Request
 
 
 @app.post("/artifact/{artifact_type}")
-async def register_artifact(artifact_type: str, request: Request):
+async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
     """BASELINE: Register a new artifact by URL."""
     auth_header = request.headers.get("X-Authorization")
     if not auth_header:
         logger.warning(
-            f"DEBUG /artifact/{{type}}: No auth header - allowing for baseline"
+            "DEBUG /artifact/{{type}}: No auth header - allowing for baseline"
         )
     else:
         require_auth(auth_header)
@@ -684,6 +684,7 @@ async def register_artifact(artifact_type: str, request: Request):
         dataset_url=url if artifact_type == "dataset" else "unknown",
         metadata={"type": artifact_type},  # Note: metadata not metadata_json
     )
+    logger.info(f"Registered artifact ID: {artifact_id}")
 
     resp = {
         "metadata": {"name": name, "id": new_id, "type": artifact_type},
@@ -698,7 +699,7 @@ def get_rating(artifact_id: str, request: Request):
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-        logger.warning(f"No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
@@ -767,7 +768,7 @@ def get_cost(
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-        logger.warning(f"No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
@@ -815,7 +816,7 @@ def get_lineage(artifact_id: str, request: Request):
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-        logger.warning(f"No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
@@ -895,7 +896,7 @@ async def license_check(artifact_id: str, request: Request):
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-        logger.warning(f"No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
@@ -938,12 +939,12 @@ async def license_check(artifact_id: str, request: Request):
 
 
 @app.post("/artifact/byRegEx")
-async def artifact_by_regex(request: Request):
+async def artifact_by_regex(request: Request):  # noqa: C901
     """BASELINE: Search artifacts using regex."""
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-        logger.warning(f"No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
