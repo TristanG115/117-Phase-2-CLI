@@ -10,7 +10,7 @@ from urllib.parse import unquote, urlparse
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
-
+from handlers.registry_handler import init_registry, reset_registry
 from handlers import registry_handler
 
 # Garbage collection tuning
@@ -1102,7 +1102,7 @@ def get_all_packages(request: Request):
         logger.error(f"/packages failed: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-
+    
 @app.get("/health", status_code=200)
 def health_check():
     logger.info("Health check called")

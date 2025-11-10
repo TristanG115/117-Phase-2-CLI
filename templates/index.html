@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
   <title>Trustworthy Model Registry - ECE 461 Phase 2</title>
   <style>
     * {
@@ -191,6 +192,12 @@
       <h1> Trustworthy Model Registry</h1>
       <p class="subtitle">ECE 461 - Fall 2025 - Phase 2</p>
     </header>
+    
+  <div style="padding: 20px; text-align:right;">
+    <button onclick="resetRegistry()" class="btn btn-danger">
+      Reset Registry
+    </button>
+  </div>
 
     <div class="stats">
       <div class="stat-card">
@@ -266,5 +273,25 @@
     </div>
   </div>
 </body>
+
+<script>
+    async function resetRegistry() {
+        if (!confirm("Are you sure? This will delete ALL stored models.")) {
+            return false;
+        }
+
+        const response = await fetch("/reset", { method: "DELETE" });
+
+        if (response.ok) {
+            alert("Registry reset successfully.");
+            location.reload();
+        } else {
+            alert("Failed to reset registry.");
+        }
+
+        return false;
+    }
+</script>
+
 
 </html>
