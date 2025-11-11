@@ -12,7 +12,7 @@ class DatasetHandler(BaseResourceHandler):
     def __init__(self, url: str):
         super().__init__(url)
         self.dataset_id = self._extract_dataset_id()
-        self._readme_content = None
+        self._readme_content = ""
 
     def _extract_dataset_id(self) -> str:
         """Extract dataset ID from Hugging Face URL"""

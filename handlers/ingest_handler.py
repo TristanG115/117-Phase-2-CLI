@@ -22,7 +22,7 @@ def _extract_card_data(card_data: Any) -> Tuple[Dict, str]:
     Returns:
         Tuple of (metadata_dict, card_text)
     """
-    metadata = {}
+    metadata: Dict[str, Any] = {}
     card_text = ""
 
     try:
@@ -64,7 +64,7 @@ def _extract_metadata(model_id: str, api: HfApi) -> Tuple[Dict, str]:
     Returns:
         Tuple of (metadata_dict, card_text)
     """
-    metadata = {}
+    metadata: Dict[str, Any] = {}
     card_text = ""
 
     try:
@@ -517,10 +517,13 @@ def ingest_dataset(
     tags = "dataset"
 
     # Add to registry using add_artifact for proper type handling
+    raw_score = result.get("net_score", 0.0)
+    score = float(raw_score) if isinstance(raw_score, (int, float)) else 0.0
+
     artifact_id = registry_handler.add_artifact(
         name=dataset_name,
         artifact_type="dataset",
-        score=result.get("net_score", 0.0),
+        score=score,
         url=dataset_url,
         tags=tags,
         dataset_url=dataset_url,
@@ -569,10 +572,13 @@ def ingest_code(
     tags = "code"
 
     # Add to registry using add_artifact for proper type handling
+    raw_score = result.get("net_score", 0.0)
+    score = float(raw_score) if isinstance(raw_score, (int, float)) else 0.0
+
     artifact_id = registry_handler.add_artifact(
         name=code_name,
         artifact_type="code",
-        score=result.get("net_score", 0.0),
+        score=score,
         url=code_url,
         tags=tags,
         code_url=code_url,

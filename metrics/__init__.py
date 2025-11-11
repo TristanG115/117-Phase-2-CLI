@@ -1,7 +1,6 @@
 # Metrics package
 # Provides all metric classes for evaluating different aspects of models
 
-from .base_metric import BaseMetric
 from .bus_factor_metric import BusFactorMetric
 from .code_quality_metric import CodeQualityMetric
 from .dataset_and_code_score_metric import DatasetAndCodeScoreMetric
@@ -14,7 +13,6 @@ from .size_score_metric import SizeScoreMetric
 
 # Export all classes and constants
 __all__ = [
-    "BaseMetric",
     "BusFactorMetric",
     "CodeQualityMetric",
     "DatasetAndCodeScoreMetric",

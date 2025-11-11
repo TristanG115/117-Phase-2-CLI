@@ -25,18 +25,19 @@ def get_model_info(model_id: str):
 
 @router.post("/{model_id}/upload")
 async def upload_model(model_id: str, file: UploadFile):
-    # Uploads a model to S3 as a .zip file
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
+            safe_name = file.filename or "uploaded_model.bin"
+
             # Save the uploaded file locally
-            file_path = os.path.join(tmpdir, file.filename)
+            file_path = os.path.join(tmpdir, safe_name)
             with open(file_path, "wb") as f:
                 f.write(await file.read())
 
             # Create a ZIP archive
             zip_path = os.path.join(tmpdir, f"{model_id}.zip")
             with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-                zipf.write(file_path, arcname=file.filename)
+                zipf.write(file_path, arcname=safe_name)
 
             # Upload the ZIP file to S3
             with open(zip_path, "rb") as f:

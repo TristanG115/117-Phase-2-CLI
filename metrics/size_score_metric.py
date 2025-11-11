@@ -13,11 +13,11 @@ class SizeScoreMetric(BaseMetric):
         # Size is primarily a model concern
         return [URLType.MODEL]
 
-    def calculate(self, resources: Dict[URLType, List[Any]]) -> Tuple[float, int]:
+    def calculate(self, resources) -> Tuple[Dict[str, float], int]:  # type: ignore[override]
         start_time = time.time()
 
         if not resources.get(URLType.MODEL):
-            return 0.0, int((time.time() - start_time) * 1000)
+            return {}, int((time.time() - start_time) * 1000)
 
         model = resources[URLType.MODEL][0]  # Assume one model
         size_dict = self._calculate_hardware_compatibility(model)

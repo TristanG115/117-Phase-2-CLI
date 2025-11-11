@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import Mock
 
 from metrics import CodeQualityMetric, DatasetQualityMetric, LicenseMetric, SizeScoreMetric
+from resource_handlers import BaseResourceHandler
 from url_classifier import URLType
 
 
@@ -77,7 +78,7 @@ class TestMetrics(unittest.TestCase):
     def test_metric_with_missing_resources(self):
         """Test 17: Metric calculation with missing resources"""
         metric = DatasetQualityMetric()
-        empty_resources = {}
+        empty_resources: dict[URLType, list[BaseResourceHandler]] = {}
         score, latency = metric.calculate(empty_resources)
         self.assertEqual(score, 0.0)
         self.assertIsInstance(latency, int)

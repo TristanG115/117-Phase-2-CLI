@@ -52,6 +52,7 @@ async def log_requests(request: Request, call_next):
 
 
 # Setup templates
+templates: Optional[Jinja2Templates]
 try:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
@@ -60,7 +61,6 @@ try:
 except Exception as e:
     templates = None
     logging.warning(f"Could not load templates directory: {e}")
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -230,8 +230,10 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):  # noqa
 
     try:
         body_bytes = await request.body()
-        print(f"DEBUG /artifacts: Raw body = {body_bytes[:500]}", flush=True)
-        logger.info(f"DEBUG /artifacts: Raw body = {body_bytes[:500]}")
+        body_preview = body_bytes[:500].decode("utf-8", "replace")
+        print(f"DEBUG /artifacts: Raw body = {body_preview}", flush=True)
+        logger.info(f"DEBUG /artifacts: Raw body = {body_preview}")
+
         queries = json.loads(body_bytes)
         print(f"DEBUG /artifacts: Parsed queries = {queries}", flush=True)
         logger.info(f"DEBUG /artifacts: Parsed queries = {queries}")

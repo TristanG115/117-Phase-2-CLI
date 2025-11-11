@@ -68,7 +68,7 @@ class DynamoDB:
 
     def _python_to_dynamo(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Convert Python types to DynamoDB-compatible types"""
-        result = {}
+        result: Dict[str, Any] = {}
         for key, value in data.items():
             if isinstance(value, float):
                 result[key] = Decimal(str(value))
@@ -84,7 +84,7 @@ class DynamoDB:
 
     def _dynamo_to_python(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Convert DynamoDB types back to Python types"""
-        result = {}
+        result: Dict[str, Any] = {}
         for key, value in data.items():
             if isinstance(value, Decimal):
                 result[key] = float(value)
@@ -386,7 +386,7 @@ class DynamoDB:
             stats = {"total": len(items)}
 
             # Count by type
-            type_counts = {}
+            type_counts: Dict[str, int] = {}
             for item in items:
                 artifact_type = item.get("artifact_type", "model")
                 type_counts[artifact_type] = type_counts.get(artifact_type, 0) + 1

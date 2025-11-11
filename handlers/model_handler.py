@@ -14,7 +14,7 @@ class ModelHandler(BaseResourceHandler):
     def __init__(self, url: str):
         super().__init__(url)
         self.model_id = self._extract_model_id()
-        self._readme_content = None
+        self._readme_content = ""  # was None
         self._api_data_fetched = False
 
     def _extract_model_id(self) -> str:

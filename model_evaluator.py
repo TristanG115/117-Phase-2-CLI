@@ -20,7 +20,7 @@ class ModelEvaluator:
         self.logger = logging.getLogger(__name__)
 
         # Initialize metrics
-        self.metrics = {name: metric_class() for name, metric_class in METRIC_CLASSES.items()}
+        self.metrics = {name: metric_class() for name, metric_class in METRIC_CLASSES.items()}  # type: ignore[abstract]
 
     def evaluate_urls(self, urls: List[str]) -> List[Dict[str, Any]]:
         """
@@ -52,44 +52,16 @@ class ModelEvaluator:
     def _create_resource_handlers(  # noqa: C901
         self, grouped_urls: Dict[URLType, List[str]]
     ) -> Dict[URLType, List[BaseResourceHandler]]:
-        """Create resource handlers for each URL type with error handling"""
-        resources = {}
+        resources: Dict[URLType, List[BaseResourceHandler]] = {}
 
-        # Create MODEL handlers
         if grouped_urls.get(URLType.MODEL):
-            model_handlers = []
-            for url in grouped_urls[URLType.MODEL]:
-                try:
-                    handler = ModelHandler(url)
-                    model_handlers.append(handler)
-                except Exception as e:
-                    self.logger.error(f"Failed to create ModelHandler for {url}: {e}")
-            if model_handlers:
-                resources[URLType.MODEL] = model_handlers
+            resources[URLType.MODEL] = [ModelHandler(u) for u in grouped_urls[URLType.MODEL]]
 
-        # Create DATASET handlers
         if grouped_urls.get(URLType.DATASET):
-            dataset_handlers = []
-            for url in grouped_urls[URLType.DATASET]:
-                try:
-                    handler = DatasetHandler(url)
-                    dataset_handlers.append(handler)
-                except Exception as e:
-                    self.logger.error(f"Failed to create DatasetHandler for {url}: {e}")
-            if dataset_handlers:
-                resources[URLType.DATASET] = dataset_handlers
+            resources[URLType.DATASET] = [DatasetHandler(u) for u in grouped_urls[URLType.DATASET]]
 
-        # Create CODE handlers
         if grouped_urls.get(URLType.CODE):
-            code_handlers = []
-            for url in grouped_urls[URLType.CODE]:
-                try:
-                    handler = CodeHandler(url)
-                    code_handlers.append(handler)
-                except Exception as e:
-                    self.logger.error(f"Failed to create CodeHandler for {url}: {e}")
-            if code_handlers:
-                resources[URLType.CODE] = code_handlers
+            resources[URLType.CODE] = [CodeHandler(u) for u in grouped_urls[URLType.CODE]]
 
         return resources
 

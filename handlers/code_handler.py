@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 import requests
@@ -13,7 +13,7 @@ class CodeHandler(BaseResourceHandler):
     def __init__(self, url: str):
         super().__init__(url)
         self.repo_path = self._extract_repo_path()
-        self._repo_tree = None
+        self._repo_tree: Optional[List[Dict[str, Any]]] = None
 
     def _extract_repo_path(self) -> str:
         """Extract owner/repo from GitHub URL"""
