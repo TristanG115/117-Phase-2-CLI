@@ -942,81 +942,73 @@ async def license_check(artifact_id: str, request: Request):
 
 @app.post("/artifact/byRegEx")
 async def artifact_by_regex(request: Request):
-    """BASELINE: Search artifacts using regex."""
+    """BASELINE: Search artifacts by regex over name."""
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
-        logger.warning(f"No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
+    # Parse input JSON
     try:
         body = await request.json()
     except Exception:
         raise HTTPException(
             status_code=400,
-            detail=(
-                "There is missing field(s) in the artifact_regex or it is "
-                "formed improperly, or is invalid"
-            ),
+            detail="There is missing field(s) in the artifact_regex or it is "
+            "formed improperly, or is invalid",
         )
 
     regex = body.get("regex")
     if not regex or not isinstance(regex, str):
         raise HTTPException(
             status_code=400,
-            detail=(
-                "There is missing field(s) in the artifact_regex or it is "
-                "formed improperly, or is invalid"
-            ),
+            detail="There is missing field(s) in the artifact_regex or it is "
+            "formed improperly, or is invalid",
         )
 
+    # Compile regex
     try:
         pattern = re.compile(regex, re.IGNORECASE)
     except re.error:
         raise HTTPException(
             status_code=400,
-            detail=(
-                "There is missing field(s) in the artifact_regex or it is "
-                "formed improperly, or is invalid"
-            ),
+            detail="There is missing field(s) in the artifact_regex or it is "
+            "formed improperly, or is invalid",
         )
 
-    # Use list_artifacts() to search all artifacts
     artifacts = registry_handler.list_artifacts()
     matches = []
-    seen = set()
+    seen_ids = set()
+
     for a in artifacts:
-        artifact_id = gen_id(a["name"])
-        # Skip if we've already added this artifact
-        if artifact_id in seen:
+        name = a.get("name", "")
+        artifact_id = gen_id(name)
+
+        # Avoid duplicates
+        if artifact_id in seen_ids:
             continue
-        metadata = {}
+
+        # Build minimal search text according to spec
+        search_text = name
+
+        # Include README if present in metadata_json
         try:
             metadata = json.loads(a.get("metadata_json", "{}"))
+            readme_text = metadata.get("readme", "")
+            if isinstance(readme_text, str):
+                search_text += " " + readme_text
         except Exception:
             pass
-        # Build comprehensive search text from all fields
-        metadata_text = " ".join(str(v) for v in metadata.values() if v)
-        # Include all possible searchable fields
-        search_fields = [
-            a.get("name", ""),
-            a.get("tags", ""),
-            a.get("code_url", ""),
-            a.get("dataset_url", ""),
-            a.get("url", ""),
-            metadata_text,
-        ]
 
-        text = " ".join(str(field) for field in search_fields if field)
-
-        if pattern.search(text):
-            # Use standardized type detection
+        # Test regex match
+        if pattern.search(search_text):
             actual_type = _get_artifact_type(a)
+            matches.append({"name": name, "id": artifact_id, "type": actual_type})
+            seen_ids.add(artifact_id)
 
-            seen.add(artifact_id)
-            matches.append({"name": a["name"], "id": artifact_id, "type": actual_type})
-
+    # Must be 404 if no results
     if not matches:
         raise HTTPException(
             status_code=404, detail="No artifact found under this regex."
