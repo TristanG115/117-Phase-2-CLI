@@ -12,6 +12,7 @@ from beautilog import logger
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from starlette.templating import _TemplateResponse as TemplateResponse
 
 from handlers import registry_handler
 
@@ -89,7 +90,7 @@ async def log_requests(request: Request, call_next):
     path = request.url.path
     client = request.client.host if request.client else "unknown"
 
-    # Log method-specific
+    # method logging...
     if method == "GET":
         log_get(f"GET {path} from {client}")
     elif method == "POST":
@@ -101,32 +102,36 @@ async def log_requests(request: Request, call_next):
     else:
         logger.info(f"{method} {path} from {client}")
 
-    # Log request payload
+    # request payload...
     try:
         body = await request.body()
         if body:
             log_payload(f"REQUEST BODY: {body[:500].decode('utf-8', 'ignore')}")
     except Exception as e:
-        logger.debug(f"Failed to read request body: {e}")
+        logger.debug(f"Cannot read body: {e}")
 
-    # Process request
+    # call endpoint
     response = await call_next(request)
 
-    # Response metadata
-    elapsed = round((time.time() - start) * 1000, 2)
-    logger.info(f"{method} {path} → {response.status_code} ({elapsed} ms)")
+    # DO NOT consume TemplateResponse generator
+    if isinstance(response, TemplateResponse):
+        logger.info(f"{method} {path} → {response.status_code} (template render)")
+        logger.info("-" * 60)
+        return response
 
-    # Log response preview
+    # Normal response preview logging
     try:
-        accumulated = b""
+        data = b""
         async for chunk in response.body_iterator:
-            accumulated += chunk
-        if accumulated:
-            log_payload(f"RESPONSE BODY: {accumulated[:500].decode('utf-8', 'ignore')}")
-        response.body_iterator = iter([accumulated])
+            data += chunk
+        if data:
+            log_payload(f"RESPONSE BODY: {data[:500].decode('utf-8', 'ignore')}")
+        response.body_iterator = iter([data])
     except Exception:
         pass
 
+    elapsed = round((time.time() - start) * 1000, 2)
+    logger.info(f"{method} {path} → {response.status_code} ({elapsed} ms)")
     logger.info("-" * 60)
     return response
 
