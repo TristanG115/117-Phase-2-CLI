@@ -197,7 +197,7 @@ def _build_artifact_results(queries, artifacts):
                 results.append(
                     {
                         "name": a["name"],
-                        "id": str(artifact_id),
+                        "id": artifact_id,
                         "type": actual_type,
                     }
                 )
@@ -465,9 +465,7 @@ def get_artifact_by_name(name: str, request: Request):
             # Use standardized type detection
             actual_type = _get_artifact_type(a)
 
-            matches.append(
-                {"name": a["name"], "id": str(artifact_id), "type": actual_type}
-            )
+            matches.append({"name": a["name"], "id": artifact_id, "type": actual_type})
             seen_ids.add(artifact_id)
 
     if not matches:
@@ -1012,9 +1010,7 @@ async def artifact_by_regex(request: Request):
             actual_type = _get_artifact_type(a)
 
             seen.add(artifact_id)
-            matches.append(
-                {"name": a["name"], "id": str(artifact_id), "type": actual_type}
-            )
+            matches.append({"name": a["name"], "id": artifact_id, "type": actual_type})
 
     if not matches:
         raise HTTPException(
@@ -1086,7 +1082,7 @@ def get_all_packages(request: Request):
             category = a.get("artifact_type") or _get_artifact_type(a)
             formatted.append(
                 {
-                    "id": str(artifact_id),
+                    "id": artifact_id,
                     "name": a.get("name", "unknown"),
                     "category": category.upper() if category else "MODEL",
                 }
