@@ -61,12 +61,12 @@ jobs:
 
       - name: Copy SSH key from secret
         run: |
-          echo "${{ secrets.EC2_SSH_KEY }}" > ec2-key-pair.pem
-          chmod 400 ec2-key-pair.pem
+          echo "${{ secrets.EC2_SSH_KEY }}" > new-ec2-key.pem
+          chmod 400 new-ec2-key.pem
 
       - name: Deploy code to EC2
         run: |
-          ssh -i ec2-key-pair.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -i new-ec2-key.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             cd /home/ec2-user
             if [ ! -d "117-Phase-2-CLI" ]; then
               git clone https://github.com/TristanG115/117-Phase-2-CLI.git
