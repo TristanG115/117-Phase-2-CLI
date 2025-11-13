@@ -18,9 +18,9 @@ gc.set_threshold(700, 10, 10)
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="ECE 461 Phase 2",
-    description="API for managing ML models, datasets, and code artifacts",
-    version="2.0.0",
+    title="ECE 461 - Fall 2025 - Project Phase 2",
+    description='API for ECE 461/Fall 2025/Project Phase 2: A Trustworthy Model Registry',
+    version="3.4.4",
     docs_url="/docs",
     redoc_url=None,
 )
@@ -1105,6 +1105,7 @@ def get_all_packages(request: Request):
     
 @app.get("/health", status_code=200)
 def health_check():
+    """BASELINE: Heartbeat check."""
     logger.info("Health check called")
     return Response(status_code=200)
 
