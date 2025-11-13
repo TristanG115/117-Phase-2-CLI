@@ -5,7 +5,6 @@ import logging
 import os
 import re
 from typing import Optional
-from urllib.parse import unquote, urlparse
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -604,6 +603,7 @@ async def register_artifact(artifact_type: str, request: Request):
     else:
         require_auth(auth_header)
 
+    # Validate type early
     if artifact_type not in ["model", "dataset", "code"]:
         raise HTTPException(
             status_code=400,
@@ -613,6 +613,7 @@ async def register_artifact(artifact_type: str, request: Request):
             ),
         )
 
+    # Parse request body
     try:
         body = await request.json()
     except Exception:
@@ -624,7 +625,15 @@ async def register_artifact(artifact_type: str, request: Request):
             ),
         )
 
+    name = body.get("name")
     url = body.get("url")
+
+    if not name or not isinstance(name, str):
+        raise HTTPException(
+            status_code=400,
+            detail="Artifact name must be provided and be a string.",
+        )
+
     if not url or not isinstance(url, str):
         raise HTTPException(
             status_code=400,
@@ -634,59 +643,55 @@ async def register_artifact(artifact_type: str, request: Request):
             ),
         )
 
-    # Improved URL parsing to handle edge cases
-    try:
-        # Robust name extraction for edge-case URLs
-        url_clean = url.rstrip("/")
-        parsed = urlparse(url_clean)
-        path = parsed.path.rstrip("/")
+    # DO NOT lowercase or parse name from URL — keep exact value
+    original_name = name
 
-        try:
-            name = unquote(path.split("/")[-1] or parsed.netloc or "artifact")
+    # Generate ID from name (matching autograder expectations)
+    new_id = gen_id(original_name)
+    logger.info(
+        f"Creating artifact: name={original_name}, type={artifact_type}, ID={new_id}"
+    )
 
-            # Handle cases like "https://github.com/org" (no repo segment)
-            if not name.strip() or name in ("www", "github", "huggingface", "co"):
-                name = parsed.netloc.split(".")[0] or "artifact"
-
-        except Exception as e:
-            logger.error(f"URL parsing error for {url}: {e}")
-            name = url.rstrip("/").split("/")[-1] or "artifact"
-
-        # Normalize casing for deterministic IDs
-        name = name.lower()
-
-    except Exception as e:
-        logger.error(f"URL parsing error for {url}: {e}")
-        # Fallback to simple parsing
-        name = url.rstrip("/").split("/")[-1]
-
-    new_id = gen_id(name)
-    logger.info(f"Creating artifact: name={name}, type={artifact_type}, ID={new_id}")
-
+    # Load all artifacts to check for duplicates
     artifacts = registry_handler.list_artifacts()
     for a in artifacts:
-        # Check for duplicate by URL (exact match)
+        # Check duplicate URL
         if a.get("url") == url:
             raise HTTPException(status_code=409, detail="Artifact exists already.")
-        # Also check for duplicate by name+type
-        if gen_id(a["name"]) == new_id and a.get("artifact_type") == artifact_type:
+
+        # Check duplicate name+type (ID collision)
+        if gen_id(a["name"]) == new_id and _get_artifact_type(a) == artifact_type:
             raise HTTPException(status_code=409, detail="Artifact exists already.")
 
+    # Store correct URL fields depending on type
+    if artifact_type == "code":
+        code_url = url
+        dataset_url = "unknown"
+    elif artifact_type == "dataset":
+        code_url = "unknown"
+        dataset_url = url
+    else:  # model
+        code_url = url
+        dataset_url = "unknown"
+
+    # Save artifact
     artifact_id = registry_handler.add_artifact(
-        name=name,
+        name=original_name,
         artifact_type=artifact_type,
         score=0.0,
         url=url,
         tags=artifact_type,
-        code_url=url if artifact_type in ["code", "model"] else "unknown",
-        dataset_url=url if artifact_type == "dataset" else "unknown",
-        metadata={"type": artifact_type},  # Note: metadata not metadata_json
+        code_url=code_url,
+        dataset_url=dataset_url,
+        metadata={"type": artifact_type},
     )
 
+    # Return response
     resp = {
-        "metadata": {"name": name, "id": new_id, "type": artifact_type},
+        "metadata": {"name": original_name, "id": new_id, "type": artifact_type},
         "data": {"url": url},
     }
+
     return JSONResponse(status_code=201, content=resp)
 
 
