@@ -2,7 +2,7 @@ import hashlib
 import json
 import logging
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from API.dynamo import DynamoDB
 
@@ -56,7 +56,7 @@ class _InMemoryDB:
         return results
 
     def get_registry_stats(self):
-        stats = {}
+        stats: dict[str, int] = {}
         for item in self.data.values():
             t = item["artifact_type"]
             stats[t] = stats.get(t, 0) + 1
@@ -68,7 +68,7 @@ class _InMemoryDB:
 logger = logging.getLogger(__name__)
 
 # Initialize DynamoDB instance
-_db: Optional[DynamoDB] = None
+_db: Optional[Union[DynamoDB, "_InMemoryDB"]] = None
 
 
 def _get_db():
