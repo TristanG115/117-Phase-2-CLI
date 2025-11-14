@@ -56,7 +56,7 @@ jobs:
     name: Deploy to EC2
     needs: ci
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/ec2'
 
     steps:
       - name: Checkout code
