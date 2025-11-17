@@ -23,4 +23,8 @@ sample_input.txt
 *.pyc
 env_setup.txt
 Phase2LoginPutty.ppk
+<<<<<<< HEAD
 .aws/
+=======
+*.pem
+>>>>>>> a89f912a1f76e06629ea25ceabb04910539202df

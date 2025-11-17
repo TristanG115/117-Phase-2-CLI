@@ -2,9 +2,11 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, ec2]
   pull_request:
-    branches: [main, dev]
+    branches: [main, ec2]
+  workflow_dispatch: 
+
 
 jobs:
   ci:
@@ -19,6 +21,13 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
       - name: Install dependencies
         run: |
@@ -30,13 +39,13 @@ jobs:
         run: flake8 .
 
       - name: Check import order
-        run: isort . --check-only
+        run: isort . --check-only --profile black --line-length 120
 
       - name: Check formatting
         run: black --check --line-length 120 .
 
       - name: Type checking
-        run: mypy .
+        run: mypy . --check-untyped-defs
 
       - name: Run tests with coverage
         run: |
@@ -47,7 +56,7 @@ jobs:
     name: Deploy to EC2
     needs: ci
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/ec2'
 
     steps:
       - name: Checkout code
@@ -55,12 +64,12 @@ jobs:
 
       - name: Copy SSH key from secret
         run: |
-          echo "${{ secrets.EC2_SSH_KEY }}" > ec2-key-pair.pem
-          chmod 400 ec2-key-pair.pem
+          echo "${{ secrets.EC2_SSH_KEY }}" > new-ec2-key.pem
+          chmod 400 new-ec2-key.pem
 
       - name: Deploy code to EC2
         run: |
-          ssh -i ec2-key-pair.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -i new-ec2-key.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             cd /home/ec2-user
             if [ ! -d "117-Phase-2-CLI" ]; then
               git clone https://github.com/TristanG115/117-Phase-2-CLI.git

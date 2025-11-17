@@ -20,3 +20,7 @@ pre-commit==4.3.0
 pytest==8.3.2
 pytest-cov==7.0.0
 coverage>=7.10.6
+
+types-requests
+types-boto3
+types-botocore

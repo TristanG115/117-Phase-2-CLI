@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from typing import Any
 from unittest.mock import Mock, patch
 
 from model_evaluator import ModelEvaluator
@@ -39,7 +40,7 @@ class TestModelEvaluator(unittest.TestCase):
 
     def test_net_score_calculation(self):
         """Test 20: Net score calculation"""
-        mock_results = {
+        mock_results: dict[str, dict[str, Any]] = {
             "license": {"score": 0.8, "latency": 100},
             "performance_claims": {"score": 0.6, "latency": 200},
             "ramp_up_time": {"score": 0.7, "latency": 150},

@@ -1,10 +1,10 @@
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
-import tempfile
-import subprocess
-import os
 import logging
+import os
 import shutil
+import subprocess
+import tempfile
+from abc import ABC, abstractmethod
+from typing import Any, Dict, Optional
 
 
 class BaseResourceHandler(ABC):
@@ -42,8 +42,8 @@ class BaseResourceHandler(ABC):
         """Clone repository to temporary directory and return path"""
         temp_dir = None
         try:
-            temp_dir = tempfile.mkdtemp(prefix='repo_clone_')
-            clone_cmd = ['git', 'clone', clone_url, temp_dir]
+            temp_dir = tempfile.mkdtemp(prefix="repo_clone_")
+            clone_cmd = ["git", "clone", clone_url, temp_dir]
 
             self.logger.info(f"Cloning repository: {clone_url}")
             result = subprocess.run(clone_cmd, capture_output=True, text=True, timeout=300)
@@ -77,21 +77,43 @@ class BaseResourceHandler(ABC):
         # Accepted SPDX license identifiers and common names
         accepted_licenses = {
             # MIT
-            'mit', 'mit license',
+            "mit",
+            "mit license",
             # Apache
-            'apache', 'apache-2.0', 'apache 2.0', 'apache license',
+            "apache",
+            "apache-2.0",
+            "apache 2.0",
+            "apache license",
             # BSD variants
-            'bsd', 'bsd-2-clause', 'bsd-3-clause', 'bsd license',
+            "bsd",
+            "bsd-2-clause",
+            "bsd-3-clause",
+            "bsd license",
             # GPL variants
-            'gpl-2.0', 'gpl-2.0-only', 'gpl-2.0-or-later', 'gplv2',
-            'gpl-3.0', 'gpl-3.0-only', 'gpl-3.0-or-later', 'gplv3',
+            "gpl-2.0",
+            "gpl-2.0-only",
+            "gpl-2.0-or-later",
+            "gplv2",
+            "gpl-3.0",
+            "gpl-3.0-only",
+            "gpl-3.0-or-later",
+            "gplv3",
             # LGPL variants
-            'lgpl-2.1', 'lgpl-2.1-only', 'lgpl-2.1-or-later', 'lgplv2.1',
-            'lgpl-3.0', 'lgpl-3.0-only', 'lgpl-3.0-or-later', 'lgplv3',
+            "lgpl-2.1",
+            "lgpl-2.1-only",
+            "lgpl-2.1-or-later",
+            "lgplv2.1",
+            "lgpl-3.0",
+            "lgpl-3.0-only",
+            "lgpl-3.0-or-later",
+            "lgplv3",
             # Creative Commons
-            'cc0', 'cc0-1.0', 'creative commons zero',
+            "cc0",
+            "cc0-1.0",
+            "creative commons zero",
             # Other permissive licenses
-            'unlicense', 'public domain'
+            "unlicense",
+            "public domain",
         }
 
         return 1.0 if license_lower in accepted_licenses else 0.0
@@ -105,13 +127,27 @@ class BaseResourceHandler(ABC):
 
         # Accepted licenses: MIT, Apache, BSD, GPLv2, LGPLv2.1, LGPLv3, CC0
         accepted_licenses = [
-            'mit license', 'mit',
-            'apache license', 'apache', 'apache-2.0', 'apache 2.0',
-            'bsd license', 'bsd',
-            'gpl-2.0', 'gplv2', 'gpl v2', 'gnu general public license version 2',
-            'lgpl-2.1', 'lgplv2.1', 'lgpl v2.1',
-            'lgpl-3.0', 'lgplv3', 'lgpl v3',
-            'cc0', 'cc0-1.0', 'creative commons zero'
+            "mit license",
+            "mit",
+            "apache license",
+            "apache",
+            "apache-2.0",
+            "apache 2.0",
+            "bsd license",
+            "bsd",
+            "gpl-2.0",
+            "gplv2",
+            "gpl v2",
+            "gnu general public license version 2",
+            "lgpl-2.1",
+            "lgplv2.1",
+            "lgpl v2.1",
+            "lgpl-3.0",
+            "lgplv3",
+            "lgpl v3",
+            "cc0",
+            "cc0-1.0",
+            "creative commons zero",
         ]
 
         # Check if any accepted license is mentioned
