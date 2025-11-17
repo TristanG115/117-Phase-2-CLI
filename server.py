@@ -11,6 +11,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from handlers import registry_handler
+from model_evaluator import ModelEvaluator
 
 # Garbage collection tuning
 gc.set_threshold(700, 10, 10)
@@ -126,7 +127,10 @@ def _validate_query(query):
     if not isinstance(query, dict):
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_query or it is " "formed improperly, or is invalid."),
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
         )
 
     name = query.get("name", "").lower()
@@ -135,7 +139,10 @@ def _validate_query(query):
     if not name or not isinstance(types, list):
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_query or it is " "formed improperly, or is invalid."),
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
         )
 
     # If types is empty, default to all types
@@ -241,14 +248,22 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):  # noqa
         logger.error(f"DEBUG /artifacts: JSON parse error: {e}")
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_query or it is " "formed improperly, or is invalid."),
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
         )
     except Exception as e:
-        print(f"DEBUG /artifacts: Unexpected error: {type(e).__name__}: {e}", flush=True)
+        print(
+            f"DEBUG /artifacts: Unexpected error: {type(e).__name__}: {e}", flush=True
+        )
         logger.error(f"DEBUG /artifacts: Unexpected error: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_query or it is " "formed improperly, or is invalid."),
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
         )
 
     # Handle both dict and list inputs
@@ -263,11 +278,16 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):  # noqa
         )
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_query or it is " "formed improperly, or is invalid."),
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
         )
 
     if len(queries) > 100:
-        raise HTTPException(status_code=400, detail="Too many queries. Maximum 100 queries per request.")
+        raise HTTPException(
+            status_code=400, detail="Too many queries. Maximum 100 queries per request."
+        )
 
     print("DEBUG: About to call list_artifacts()", flush=True)
     artifacts = registry_handler.list_artifacts()
@@ -301,7 +321,9 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):  # noqa
     # ADDITIONAL DETAILED LOGGING FOR DEBUGGING
     logger.info("===== ARTIFACTS QUERY RESULTS =====")
     logger.info(f"Query: {queries}")
-    logger.info(f"Returning {len(results)} results from {len(artifacts)} total artifacts")
+    logger.info(
+        f"Returning {len(results)} results from {len(artifacts)} total artifacts"
+    )
     for idx, r in enumerate(results):
         logger.info(f"  Result {idx}: name={r['name']}, id={r['id']}, type={r['type']}")
     logger.info("=====================================")
@@ -370,15 +392,23 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):  # noq
         if calculated_id == aid:
             # Use standardized type detection
             actual_type = _get_artifact_type(a)
-            logger.info(f"Found ID match: name={a['name']}, type={actual_type}, requested={artifact_type}")
+            logger.info(
+                f"Found ID match: name={a['name']}, type={actual_type}, requested={artifact_type}"
+            )
 
             if actual_type.lower() == artifact_type.lower():
                 artifact = a
                 break
             else:
-                logger.warning(f"Type mismatch: has {actual_type}, wants {artifact_type}")
+                logger.warning(
+                    f"Type mismatch: has {actual_type}, wants {artifact_type}"
+                )
 
     if artifact:
+        if artifact.get("invalid") is True:
+            logger.warning(f"Artifact {artifact['name']} is marked invalid.")
+            raise HTTPException(status_code=404, detail="Artifact does not exist.")
+
         # Determine URL based on artifact type
         if artifact_type == "code":
             url = artifact.get("code_url", artifact.get("url", "unknown"))
@@ -434,6 +464,10 @@ def get_artifact_by_name(name: str, request: Request):
         if a["name"] == name:
             artifact_id = gen_id(a["name"])
 
+            # Skip invalid artifacts
+            if a.get("invalid") is True:
+                continue
+
             # Skip if we've already added this ID
             if artifact_id in seen_ids:
                 continue
@@ -480,7 +514,10 @@ def _validate_update_request(metadata, data, artifact_type, artifact_id):
             ),
         )
 
-    if str(metadata.get("id")) != str(artifact_id) or metadata.get("type") != artifact_type:
+    if (
+        str(metadata.get("id")) != str(artifact_id)
+        or metadata.get("type") != artifact_type
+    ):
         raise HTTPException(
             status_code=400,
             detail=(
@@ -571,7 +608,9 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
     """BASELINE: Register a new artifact by URL."""
     auth_header = request.headers.get("X-Authorization")
     if not auth_header:
-        logger.warning("DEBUG /artifact/{{type}}: No auth header - allowing for baseline")
+        logger.warning(
+            "DEBUG /artifact/{{type}}: No auth header - allowing for baseline"
+        )
     else:
         require_auth(auth_header)
 
@@ -615,7 +654,6 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
             ),
         )
 
-    # DO NOT lowercase or parse name from URL — keep exact value
     original_name = name
 
     # Generate ID from name (matching autograder expectations)
@@ -646,7 +684,6 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
         code_url = url
         dataset_url = "unknown"
 
-    # Save artifact
     artifact_id = registry_handler.add_artifact(
         name=original_name,
         artifact_type=artifact_type,
@@ -657,6 +694,8 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
         dataset_url=dataset_url,
         metadata={"type": artifact_type},
     )
+    registry_handler.update_artifact(original_name, invalid=False)
+
     logger.info(f"Registered artifact ID: {artifact_id}")
 
     # Return response
@@ -669,69 +708,101 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
 
 
 @app.get("/artifact/model/{artifact_id}/rate")
-def get_rating(artifact_id: str, request: Request):
-    """BASELINE: Return metrics for this model artifact."""
-    auth_header = request.headers.get("X-Authorization")
+def rate_model(artifact_id: str, request: Request):  # noqa: C901
+    """Compute and return model evaluation metrics."""
 
-    if not auth_header:
-        logger.warning("No auth header - allowing for baseline")
-    else:
+    auth_header = request.headers.get("X-Authorization")
+    if auth_header:
         require_auth(auth_header)
 
     try:
         aid = int(artifact_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail=("There is missing field(s) in the artifact_id or it is " "formed improperly, or is invalid."),
-        )
+    except:
+        raise HTTPException(status_code=400, detail="Invalid artifact_id.")
 
     artifacts = registry_handler.list_artifacts()
+    artifact = None
     for a in artifacts:
         if gen_id(a["name"]) == aid:
-            meta = json.loads(a.get("metadata_json", "{}"))
-            if meta and any(key in meta for key in ["net_score", "ramp_up_time", "bus_factor"]):
-                return meta
-            else:
-                return {
-                    "name": a["name"],
-                    "category": "MODEL",
-                    "net_score": a.get("score", 0),
-                    "net_score_latency": 0,
-                    "ramp_up_time": 0,
-                    "ramp_up_time_latency": 0,
-                    "bus_factor": 0,
-                    "bus_factor_latency": 0,
-                    "performance_claims": 0,
-                    "performance_claims_latency": 0,
-                    "license": 0,
-                    "license_latency": 0,
-                    "dataset_and_code_score": 0,
-                    "dataset_and_code_score_latency": 0,
-                    "dataset_quality": 0,
-                    "dataset_quality_latency": 0,
-                    "code_quality": 0,
-                    "code_quality_latency": 0,
-                    "reproducibility": 0,
-                    "reproducibility_latency": 0,
-                    "reviewedness": 0,
-                    "reviewedness_latency": 0,
-                    "tree_score": 0,
-                    "tree_score_latency": 0,
-                    "size_score": {
-                        "raspberry_pi": 0,
-                        "jetson_nano": 0,
-                        "desktop_pc": 0,
-                        "aws_server": 0,
-                    },
-                    "size_score_latency": 0,
-                }
+            artifact = a
+            break
 
-    raise HTTPException(status_code=404, detail="Artifact does not exist.")
+    if artifact is None:
+        raise HTTPException(status_code=404, detail="Artifact does not exist.")
+
+        # If previously invalid -> 404
+        raise HTTPException(status_code=404, detail="Artifact does not exist.")
+
+    urls = []
+    if artifact.get("url") not in (None, "unknown"):
+        urls.append(artifact["url"])
+    if artifact.get("code_url") not in (None, "unknown"):
+        urls.append(artifact["code_url"])
+    if artifact.get("dataset_url") not in (None, "unknown"):
+        urls.append(artifact["dataset_url"])
+
+    if not urls:
+        registry_handler.update_artifact(artifact["name"], invalid=True)
+        raise HTTPException(
+            status_code=500,
+            detail="The artifact rating system encountered an error while computing at least one metric.",
+        )
+
+    #  Compute metrics
+    evaluator = ModelEvaluator()
+    try:
+        results = evaluator.evaluate_urls(urls)
+    except:
+        registry_handler.update_artifact(artifact["name"], invalid=True)
+        raise HTTPException(
+            status_code=500,
+            detail="The artifact rating system encountered an error while computing at least one metric.",
+        )
+
+    if not results:
+        registry_handler.update_artifact(artifact["name"], invalid=True)
+        raise HTTPException(
+            status_code=500,
+            detail="The artifact rating system encountered an error while computing at least one metric.",
+        )
+
+    result = results[0]
+
+    # evaluator returns "treescore"
+    if "treescore" in result:
+        result["tree_score"] = result.pop("treescore")
+
+    # Validate metrics (<0.5 = invalid )
+    for key, val in result.items():
+        if key.endswith("_latency") or key in ("name", "category", "size_score"):
+            continue
+        if val == -1:  # Phase 2 stubs OK
+            continue
+
+        try:
+            if float(val) < 0.5:
+                registry_handler.update_artifact(artifact["name"], invalid=True)
+                raise HTTPException(
+                    status_code=500,
+                    detail="The artifact rating system encountered an error while computing at least one metric.",
+                )
+        except:
+            pass
+
+    registry_handler.update_artifact(
+        artifact["name"],
+        metadata=result,
+        score=result.get("net_score", 0.0),
+        invalid=False,
+    )
+
+    return JSONResponse(status_code=200, content=result)
 
 
 @app.get("/artifact/{artifact_type}/{artifact_id}/cost")
-def get_cost(artifact_type: str, artifact_id: str, request: Request, dependency: bool = False):
+def get_cost(
+    artifact_type: str, artifact_id: str, request: Request, dependency: bool = False
+):
     """BASELINE: Return total cost of the artifact."""
     auth_header = request.headers.get("X-Authorization")
 
@@ -793,7 +864,10 @@ def get_lineage(artifact_id: str, request: Request):
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail=("The lineage graph cannot be computed because the artifact " "metadata is missing or malformed."),
+            detail=(
+                "The lineage graph cannot be computed because the artifact "
+                "metadata is missing or malformed."
+            ),
         )
 
     artifacts = registry_handler.list_artifacts()
@@ -804,7 +878,8 @@ def get_lineage(artifact_id: str, request: Request):
                 raise HTTPException(
                     status_code=400,
                     detail=(
-                        "The lineage graph cannot be computed because the " "artifact metadata is missing or malformed."
+                        "The lineage graph cannot be computed because the "
+                        "artifact metadata is missing or malformed."
                     ),
                 )
 
@@ -869,31 +944,41 @@ async def license_check(artifact_id: str, request: Request):
     except Exception:
         raise HTTPException(
             status_code=400,
-            detail=("The license check request is malformed or references an " "unsupported usage context."),
+            detail=(
+                "The license check request is malformed or references an "
+                "unsupported usage context."
+            ),
         )
 
     github_url = body.get("github_url")
     if not github_url or not isinstance(github_url, str):
         raise HTTPException(
             status_code=400,
-            detail=("The license check request is malformed or references an " "unsupported usage context."),
+            detail=(
+                "The license check request is malformed or references an "
+                "unsupported usage context."
+            ),
         )
 
     try:
         aid = int(artifact_id)
     except ValueError:
-        raise HTTPException(status_code=404, detail="The artifact or GitHub project could not be found.")
+        raise HTTPException(
+            status_code=404, detail="The artifact or GitHub project could not be found."
+        )
 
     artifacts = registry_handler.list_artifacts()
     if not _verify_artifact_exists(aid, artifacts):
-        raise HTTPException(status_code=404, detail="The artifact or GitHub project could not be found.")
+        raise HTTPException(
+            status_code=404, detail="The artifact or GitHub project could not be found."
+        )
 
     result = _check_license_compatibility(github_url)
     return JSONResponse(content=result)
 
 
 @app.post("/artifact/byRegEx")
-async def artifact_by_regex(request: Request):
+async def artifact_by_regex(request: Request):  # noqa: C901
     """BASELINE: Search artifacts by regex over name."""
     auth_header = request.headers.get("X-Authorization")
 
@@ -908,7 +993,10 @@ async def artifact_by_regex(request: Request):
     except Exception:
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_regex or it is " "formed improperly, or is invalid"),
+            detail=(
+                "There is missing field(s) in the artifact_regex or it is "
+                "formed improperly, or is invalid"
+            ),
         )
 
     regex = body.get("regex")
@@ -961,7 +1049,9 @@ async def artifact_by_regex(request: Request):
 
     # Must be 404 if no results
     if not matches:
-        raise HTTPException(status_code=404, detail="No artifact found under this regex.")
+        raise HTTPException(
+            status_code=404, detail="No artifact found under this regex."
+        )
 
     return JSONResponse(content=matches)
 
@@ -974,7 +1064,10 @@ def get_tracks():
     except Exception:
         raise HTTPException(
             status_code=500,
-            detail=("The system encountered an error while retrieving the " "student's track information."),
+            detail=(
+                "The system encountered an error while retrieving the "
+                "student's track information."
+            ),
         )
 
 
@@ -982,15 +1075,21 @@ def get_tracks():
 def index(request: Request):
     """Serve the main registry dashboard."""
     if not templates:
-        return HTMLResponse(content="<h1>Registry API Server</h1><p>API docs at <a href='/docs'>/docs</a></p>")
+        return HTMLResponse(
+            content="<h1>Registry API Server</h1><p>API docs at <a href='/docs'>/docs</a></p>"
+        )
 
     try:
         # Use list_artifacts for dashboard to show all types
         artifacts = registry_handler.list_artifacts()
-        return templates.TemplateResponse("index.html", {"request": request, "models": artifacts})
+        return templates.TemplateResponse(
+            "index.html", {"request": request, "models": artifacts}
+        )
     except Exception as e:
         logger.error(f"Error loading dashboard: {e}")
-        return HTMLResponse(content="<h1>Registry API Server</h1><p>API docs at <a href='/docs'>/docs</a></p>")
+        return HTMLResponse(
+            content="<h1>Registry API Server</h1><p>API docs at <a href='/docs'>/docs</a></p>"
+        )
 
 
 @app.get("/packages")
