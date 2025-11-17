@@ -894,7 +894,8 @@ async def license_check(artifact_id: str, request: Request):
 
 @app.post("/artifact/byRegEx")
 async def artifact_by_regex(request: Request):
-    """BASELINE: Search artifacts by regex over name."""
+    """BASELINE: Search artifacts by regex."""
+    
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
@@ -929,6 +930,10 @@ async def artifact_by_regex(request: Request):
             "formed improperly, or is invalid",
         )
 
+    # Helper function to detect catastrophic backtracking via timeout
+    def timeout_handler(signum, frame):
+        raise TimeoutError("Regex matching timeout - catastrophic backtracking detected")
+    
     artifacts = registry_handler.list_artifacts()
     matches = []
     seen_ids = set()
@@ -953,11 +958,31 @@ async def artifact_by_regex(request: Request):
         except Exception:
             pass
 
-        # Test regex match
-        if pattern.search(search_text):
-            actual_type = _get_artifact_type(a)
-            matches.append({"name": name, "id": artifact_id, "type": actual_type})
-            seen_ids.add(artifact_id)
+        # Test regex match with timeout to detect catastrophic backtracking
+        try:
+            # Set a 2-second timeout for regex matching
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(2)
+            
+            matched = pattern.search(search_text)
+            
+            # Cancel the alarm if match completed successfully
+            signal.alarm(0)
+            
+            if matched:
+                actual_type = _get_artifact_type(a)
+                matches.append({"name": name, "id": artifact_id, "type": actual_type})
+                seen_ids.add(artifact_id)
+                
+        except TimeoutError:
+            # Catastrophic backtracking detected - cancel alarm and return 400
+            signal.alarm(0)
+            logger.warning(f"Catastrophic backtracking detected for regex: {regex}")
+            raise HTTPException(
+                status_code=400,
+                detail="There is missing field(s) in the artifact_regex or it is "
+                "formed improperly, or is invalid",
+            )
 
     # Must be 404 if no results
     if not matches:
