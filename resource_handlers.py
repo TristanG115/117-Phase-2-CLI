@@ -1,4 +1,3 @@
-from handlers import BaseResourceHandler, ModelHandler, DatasetHandler, CodeHandler
+from handlers import BaseResourceHandler, CodeHandler, DatasetHandler, ModelHandler
 
-__all__ = ['BaseResourceHandler', 'ModelHandler', 'DatasetHandler', 'CodeHandler']
-
+__all__ = ["BaseResourceHandler", "ModelHandler", "DatasetHandler", "CodeHandler"]

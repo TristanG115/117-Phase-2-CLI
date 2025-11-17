@@ -22,9 +22,7 @@ class S3Storage:
 
         # Initialize S3 client
         self.s3 = boto3.client("s3", region_name=self.region)
-        logger.info(
-            f"S3Storage initialized: bucket={self.bucket_name}, region={self.region}"
-        )
+        logger.info(f"S3Storage initialized: bucket={self.bucket_name}, region={self.region}")
 
     def load_config(self) -> Dict[str, str]:
         """Load AWS region and bucket name from config.json"""
@@ -48,9 +46,7 @@ class S3Storage:
                 break
 
         if not config_path:
-            raise FileNotFoundError(
-                f"Config file not found. Tried locations: {possible_paths}"
-            )
+            raise FileNotFoundError(f"Config file not found. Tried locations: {possible_paths}")
 
         with open(config_path, "r", encoding="utf-8") as file:
             data = json.load(file)
@@ -60,9 +56,7 @@ class S3Storage:
         logger.info(f"Config loaded from: {config_path}")
         return config_info
 
-    def upload(
-        self, file_obj: BinaryIO, key: str, metadata: Optional[Dict[str, str]] = None
-    ) -> Dict[str, str]:
+    def upload(self, file_obj: BinaryIO, key: str, metadata: Optional[Dict[str, str]] = None) -> Dict[str, str]:
         """
         Upload a file object to the S3 bucket.
 
@@ -79,9 +73,7 @@ class S3Storage:
             if metadata:
                 extra_args["Metadata"] = metadata
 
-            self.s3.upload_fileobj(
-                file_obj, self.bucket_name, key, ExtraArgs=extra_args
-            )
+            self.s3.upload_fileobj(file_obj, self.bucket_name, key, ExtraArgs=extra_args)
             logger.info(f"Uploaded file to s3://{self.bucket_name}/{key}")
 
             return {
@@ -114,9 +106,7 @@ class S3Storage:
             return url
         except ClientError as e:
             logger.error(f"Could not generate download URL for {key}: {e}")
-            raise HTTPException(
-                status_code=500, detail=f"Could not generate download URL: {e}"
-            )
+            raise HTTPException(status_code=500, detail=f"Could not generate download URL: {e}")
 
     def download_to_file(self, key: str, local_path: str) -> None:
         """
@@ -216,6 +206,4 @@ class S3Storage:
             if e.response["Error"]["Code"] == "NoSuchKey":
                 raise HTTPException(status_code=404, detail=f"File not found: {key}")
             else:
-                raise HTTPException(
-                    status_code=500, detail=f"Metadata retrieval failed: {e}"
-                )
+                raise HTTPException(status_code=500, detail=f"Metadata retrieval failed: {e}")

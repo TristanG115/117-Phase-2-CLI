@@ -41,19 +41,8 @@ class URLClassifier:
             return URLType.UNKNOWN
 
     def group_urls_by_type(self, urls: List[str]) -> Dict[URLType, List[str]]:
-        """
-        Group a list of URLs by their type
-
-        Args:
-            urls: List of URLs to classify
-
-        Returns:
-            Dictionary mapping URLType to list of URLs of that type
-        """
-        grouped = {url_type: [] for url_type in URLType}
-
+        grouped: Dict[URLType, List[str]] = {t: [] for t in URLType}
         for url in urls:
             url_type = self.classify_url(url)
             grouped[url_type].append(url)
-
         return grouped

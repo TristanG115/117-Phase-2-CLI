@@ -1,6 +1,7 @@
-from abc import ABC, abstractmethod
-from typing import Tuple, Dict, List, Any
 import logging
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Tuple
+
 from url_classifier import URLType
 
 

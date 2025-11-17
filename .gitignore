@@ -23,3 +23,4 @@ sample_input.txt
 *.pyc
 env_setup.txt
 Phase2LoginPutty.ppk
+*.pem

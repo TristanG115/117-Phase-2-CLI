@@ -21,9 +21,7 @@ def validate_github_token() -> None:
         sys.exit(1)
     headers = {"Authorization": f"token {token}"}
     try:
-        resp = requests.get(
-            "https://api.github.com/rate_limit", headers=headers, timeout=5
-        )
+        resp = requests.get("https://api.github.com/rate_limit", headers=headers, timeout=5)
         if resp.status_code != 200:
             sys.stderr.write("Error: Invalid GITHUB_TOKEN\n")
             sys.exit(1)
@@ -86,9 +84,7 @@ pytest==8.3.2
 coverage==7.3.2
 """
                 )
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", "-r", REQUIREMENTS]
-        )
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", REQUIREMENTS])
         logging.info("Dependencies installed successfully.")
         print("Dependencies installed successfully")
     except subprocess.CalledProcessError as e:
@@ -153,16 +149,12 @@ def run_tests():
             total_lines += len(analysis[1]) + len(analysis[2])
             covered_lines += len(analysis[1])
 
-    coverage_percent = (
-        int((covered_lines / total_lines * 100)) if total_lines > 0 else 0
-    )
+    coverage_percent = int((covered_lines / total_lines * 100)) if total_lines > 0 else 0
     total_tests = result.testsRun
     passed_tests = total_tests - len(result.failures) - len(result.errors)
 
     # exact syntax autograder expects
-    sys.stdout.write(
-        f"{passed_tests}/{total_tests} test cases passed. {coverage_percent}% line coverage achieved.\n"
-    )
+    sys.stdout.write(f"{passed_tests}/{total_tests} test cases passed. {coverage_percent}% line coverage achieved.\n")
     sys.stdout.flush()
     sys.exit(0)
 
@@ -186,7 +178,7 @@ def run_tests_debug():
         sys.exit(1)
 
 
-def main():
+def main():  # noqa: C901
     if len(sys.argv) < 2:
         print("Usage: ./run <command>")
         print("\nCommands:")
