@@ -7,48 +7,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from metrics import METRIC_CLASSES
 from metrics.base_metric import BaseMetric
-
-# Phase 2 Metrics (only reproducibility exists)
-from metrics.reproducibility_metric import ReproducibilityMetric
-from resource_handlers import (
-    BaseResourceHandler,
-    CodeHandler,
-    DatasetHandler,
-    ModelHandler,
-)
+from resource_handlers import BaseResourceHandler, CodeHandler, DatasetHandler, ModelHandler
 from url_classifier import URLClassifier, URLType
-
-# Phase 2  metrics
-
-
-class ReviewednessMetric(BaseMetric):
-    """Stub: GitHub PR reviewedness metric (not implemented yet)."""
-
-    def required_url_types(self) -> List[URLType]:
-        return []
-
-    def calculate(self, resources: Dict[URLType, List[Any]]) -> Tuple[float, int]:
-        return -1.0, 1
-
-
-class TreeScoreMetric(BaseMetric):
-    """Stub: Parent average score metric (not implemented yet)."""
-
-    def required_url_types(self) -> List[URLType]:
-        return []
-
-    def calculate(self, resources: Dict[URLType, List[Any]]) -> Tuple[float, int]:
-        return -1.0, 1
-
-
-class LineageMetric(BaseMetric):
-    """Stub: Lineage calculation metric (not implemented yet)."""
-
-    def required_url_types(self) -> List[URLType]:
-        return []
-
-    def calculate(self, resources: Dict[URLType, List[Any]]) -> Tuple[float, int]:
-        return -1.0, 1
 
 
 class ModelEvaluator:
@@ -59,20 +19,26 @@ class ModelEvaluator:
         self.max_workers = max_workers
         self.logger = logging.getLogger(__name__)
 
-        # --- Phase 1 metrics ---
-        self.metrics = {
-            name: metric_class() for name, metric_class in METRIC_CLASSES.items()
-        }
-
-        # --- Add Phase 2 metrics (one real metric, three stubs) ---
-        self.metrics["reproducibility"] = ReproducibilityMetric()
-        self.metrics["reviewedness"] = ReviewednessMetric()  # always returns -1
-        self.metrics["treescore"] = TreeScoreMetric()  # always returns -1
-        self.metrics["lineage"] = LineageMetric()  # always returns -1
+        # Initialize metrics
+        self.metrics = {name: metric_class() for name, metric_class in METRIC_CLASSES.items()}  # type: ignore[abstract]
 
     def evaluate_urls(self, urls: List[str]) -> List[Dict[str, Any]]:
+        """
+        Evaluate a list of URLs and return results for MODEL URLs only
+
+        Args:
+            urls: List of URLs to evaluate
+
+        Returns:
+            List of evaluation results for model URLs
+        """
+        # Group URLs by type
         grouped_urls = self.url_classifier.group_urls_by_type(urls)
+
+        # Create resource handlers
         resources = self._create_resource_handlers(grouped_urls)
+
+        # Find model URLs to evaluate
         model_urls = grouped_urls[URLType.MODEL]
 
         results = []
@@ -83,40 +49,43 @@ class ModelEvaluator:
 
         return results
 
-    def _create_resource_handlers(
+    def _create_resource_handlers(  # noqa: C901
         self, grouped_urls: Dict[URLType, List[str]]
     ) -> Dict[URLType, List[BaseResourceHandler]]:
         resources: Dict[URLType, List[BaseResourceHandler]] = {}
 
         if grouped_urls.get(URLType.MODEL):
-            resources[URLType.MODEL] = [
-                ModelHandler(u) for u in grouped_urls[URLType.MODEL]
-            ]
+            resources[URLType.MODEL] = [ModelHandler(u) for u in grouped_urls[URLType.MODEL]]
 
         if grouped_urls.get(URLType.DATASET):
-            resources[URLType.DATASET] = [
-                DatasetHandler(u) for u in grouped_urls[URLType.DATASET]
-            ]
+            resources[URLType.DATASET] = [DatasetHandler(u) for u in grouped_urls[URLType.DATASET]]
 
         if grouped_urls.get(URLType.CODE):
-            resources[URLType.CODE] = [
-                CodeHandler(u) for u in grouped_urls[URLType.CODE]
-            ]
+            resources[URLType.CODE] = [CodeHandler(u) for u in grouped_urls[URLType.CODE]]
 
         return resources
 
     def _evaluate_single_model(
         self, model_url: str, resources: Dict[URLType, List[BaseResourceHandler]]
     ) -> Optional[Dict[str, Any]]:
+        """Evaluate a single model with available resources"""
         try:
             model_handler = ModelHandler(model_url)
-
+            # Extract just the model name part (e.g., "bert-base-uncased" from "google-bert/bert-base-uncased")
             model_id = model_handler.model_id or "unknown"
-            model_name = model_id.split("/")[-1] if "/" in model_id else model_id
+            if "/" in model_id:
+                model_name = model_id.split("/")[-1]  # Get the last part after the slash
+            else:
+                model_name = model_id
 
+            # Calculate metrics in parallel
             metric_results = self._calculate_metrics_parallel(resources)
+
+            # Calculate net score
             net_score, net_score_latency = self._calculate_net_score(metric_results)
 
+            # Build result according to specification
+            # Round size_score dict values
             size_score_dict = metric_results.get("size_score", {}).get("score", {})
             if isinstance(size_score_dict, dict):
                 size_score_dict = {k: round(v, 2) for k, v in size_score_dict.items()}
@@ -126,40 +95,25 @@ class ModelEvaluator:
                 "category": "MODEL",
                 "net_score": net_score,
                 "net_score_latency": net_score_latency,
-                # -------- Phase 1 metrics --------
-                "ramp_up_time": round(metric_results["ramp_up_time"]["score"], 2),
-                "ramp_up_time_latency": metric_results["ramp_up_time"]["latency"],
-                "bus_factor": round(metric_results["bus_factor"]["score"], 2),
-                "bus_factor_latency": metric_results["bus_factor"]["latency"],
-                "performance_claims": round(
-                    metric_results["performance_claims"]["score"], 2
-                ),
-                "performance_claims_latency": metric_results["performance_claims"][
-                    "latency"
-                ],
-                "license": round(metric_results["license"]["score"], 2),
-                "license_latency": metric_results["license"]["latency"],
+                "ramp_up_time": round(metric_results.get("ramp_up_time", {}).get("score", 0.0), 2),
+                "ramp_up_time_latency": metric_results.get("ramp_up_time", {}).get("latency", 0),
+                "bus_factor": round(metric_results.get("bus_factor", {}).get("score", 0.0), 2),
+                "bus_factor_latency": metric_results.get("bus_factor", {}).get("latency", 0),
+                "performance_claims": round(metric_results.get("performance_claims", {}).get("score", 0.0), 2),
+                "performance_claims_latency": metric_results.get("performance_claims", {}).get("latency", 0),
+                "license": round(metric_results.get("license", {}).get("score", 0.0), 2),
+                "license_latency": metric_results.get("license", {}).get("latency", 0),
                 "size_score": size_score_dict,
-                "size_score_latency": metric_results["size_score"]["latency"],
+                "size_score_latency": metric_results.get("size_score", {}).get("latency", 0),
                 "dataset_and_code_score": round(
-                    metric_results["dataset_and_code_score"]["score"], 2
+                    metric_results.get("dataset_and_code_score", {}).get("score", 0.0),
+                    2,
                 ),
-                "dataset_and_code_score_latency": metric_results[
-                    "dataset_and_code_score"
-                ]["latency"],
-                "dataset_quality": round(metric_results["dataset_quality"]["score"], 2),
-                "dataset_quality_latency": metric_results["dataset_quality"]["latency"],
-                "code_quality": round(metric_results["code_quality"]["score"], 2),
-                "code_quality_latency": metric_results["code_quality"]["latency"],
-                # -------- Phase 2 metrics (one real, three stubs) --------
-                "reproducibility": round(metric_results["reproducibility"]["score"], 2),
-                "reproducibility_latency": metric_results["reproducibility"]["latency"],
-                "reviewedness": round(metric_results["reviewedness"]["score"], 2),
-                "reviewedness_latency": metric_results["reviewedness"]["latency"],
-                "treescore": round(metric_results["treescore"]["score"], 2),
-                "treescore_latency": metric_results["treescore"]["latency"],
-                "lineage": round(metric_results["lineage"]["score"], 2),
-                "lineage_latency": metric_results["lineage"]["latency"],
+                "dataset_and_code_score_latency": metric_results.get("dataset_and_code_score", {}).get("latency", 0),
+                "dataset_quality": round(metric_results.get("dataset_quality", {}).get("score", 0.0), 2),
+                "dataset_quality_latency": metric_results.get("dataset_quality", {}).get("latency", 0),
+                "code_quality": round(metric_results.get("code_quality", {}).get("score", 0.0), 2),
+                "code_quality_latency": metric_results.get("code_quality", {}).get("latency", 0),
             }
 
             return result
@@ -171,65 +125,96 @@ class ModelEvaluator:
     def _calculate_metrics_parallel(
         self, resources: Dict[URLType, List[BaseResourceHandler]]
     ) -> Dict[str, Dict[str, Any]]:
+        """Calculate all metrics in parallel with graceful handling of missing resources"""
         metric_results = {}
 
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            # Submit all metric calculations
             future_to_metric = {}
-
             for metric_name, metric in self.metrics.items():
-                required = metric.required_url_types()
+                # Get required resources for this metric
+                required_types = metric.required_url_types()
 
-                available = {
-                    url_type: resources.get(url_type, []) for url_type in required
-                }
+                # Build available resources, including empty lists for missing types
+                available_resources = {}
+                for url_type in required_types:
+                    available_resources[url_type] = resources.get(url_type, [])
 
-                future = executor.submit(self._safe_calculate_metric, metric, available)
+                # Always try to calculate the metric, even with partial/missing resources
+                # The metric implementations should handle missing resources gracefully
+                future = executor.submit(self._safe_calculate_metric, metric, available_resources)
                 future_to_metric[future] = metric_name
 
+            # Collect results
             for future in as_completed(future_to_metric):
-                mname = future_to_metric[future]
+                metric_name = future_to_metric[future]
                 try:
                     score, latency = future.result()
-                    metric_results[mname] = {"score": score, "latency": latency}
+                    metric_results[metric_name] = {"score": score, "latency": latency}
                 except Exception as e:
-                    self.logger.error(f"Error calculating {mname}: {e}")
-                    metric_results[mname] = {"score": 0.0, "latency": 0}
+                    self.logger.error(f"Error calculating {metric_name}: {e}")
+                    metric_results[metric_name] = {"score": 0.0, "latency": 0}
 
         return metric_results
 
-    def _safe_calculate_metric(
-        self, metric: BaseMetric, resources: Dict[URLType, List[BaseResourceHandler]]
-    ):
+    def _safe_calculate_metric(self, metric: BaseMetric, resources: Dict[URLType, List[BaseResourceHandler]]):
+        """Safely calculate a metric with error handling"""
         try:
             return metric.calculate(resources)
         except Exception as e:
             self.logger.error(f"Error in metric calculation: {e}")
             return 0.0, 0
 
-    def _calculate_net_score(
-        self, metric_results: Dict[str, Dict[str, Any]]
-    ) -> Tuple[float, int]:
-        """Equal-weight net score."""
-        numeric_scores = []
+    def _calculate_net_score(self, metric_results: Dict[str, Dict[str, Any]]) -> Tuple[float, int]:
+        """Calculate weighted net score"""
+        # Define weights based on Sarah's priorities
+        weights = {
+            "license": 0.2,  # High priority - legal compliance
+            "performance_claims": 0.15,  # High priority - proven performance
+            "ramp_up_time": 0.15,  # Important for adoption
+            "bus_factor": 0.1,  # Risk management
+            "size_score": 0.1,  # Deployment considerations
+            "dataset_and_code_score": 0.1,  # Reproducibility
+            "dataset_quality": 0.1,  # Data quality matters
+            "code_quality": 0.1,  # Maintainability
+        }
+
+        weighted_sum = 0.0
+        total_weight = 0.0
         total_latency = 0
 
-        for name, mr in metric_results.items():
-            score = mr["score"]
-            total_latency += mr["latency"]
+        for metric_name, weight in weights.items():
+            if metric_name in metric_results:
+                score = metric_results[metric_name]["score"]
+                latency = metric_results[metric_name]["latency"]
 
-            if isinstance(score, dict):
-                continue
+                # Handle size_score which is a dict
+                if isinstance(score, dict):
+                    # Average the hardware scores
+                    if score:
+                        score = sum(score.values()) / len(score.values())
+                    else:
+                        score = 0.0
 
-            numeric_scores.append(float(score))
+                weighted_sum += score * weight
+                total_weight += weight
+                total_latency += latency
 
-        if numeric_scores:
-            net_score = sum(numeric_scores) / len(numeric_scores)
-        else:
-            net_score = 0.0
+        net_score = weighted_sum / total_weight if total_weight > 0 else 0.0
+        net_score = round(net_score, 2)
 
-        return round(net_score, 2), total_latency
+        return net_score, total_latency
 
     def evaluate_from_file(self, url_file_path: str) -> List[Dict[str, Any]]:
+        """
+        Evaluate URLs from a file where each line represents a group of related URLs
+
+        Args:
+            url_file_path: Path to file containing line-by-line comma-separated URLs
+
+        Returns:
+            List of evaluation results
+        """
         self.logger.info(f"Starting evaluation of URL file: {url_file_path}")
         try:
             results = []
@@ -237,21 +222,31 @@ class ModelEvaluator:
                 for line_num, line in enumerate(f, 1):
                     line = line.strip()
                     if line:
-                        urls = [u.strip() for u in line.split(",") if u.strip()]
-                        if urls:
-                            line_results = self.evaluate_urls(urls)
+                        # Split each line by commas and filter out empty URLs
+                        line_urls = [url.strip() for url in line.split(",") if url.strip()]
+                        if line_urls:
+                            self.logger.info(f"Processing line {line_num} with {len(line_urls)} URLs")
+                            # Evaluate each line's URLs as a group
+                            line_results = self.evaluate_urls(line_urls)
                             results.extend(line_results)
+
+            self.logger.info(f"Evaluation completed. Generated {len(results)} results")
             return results
 
+        except FileNotFoundError:
+            self.logger.error(f"URL file not found: {url_file_path}")
+            return []
         except Exception as e:
             self.logger.error(f"Error reading URL file: {e}")
             return []
 
     def print_results_ndjson(self, results: List[Dict[str, Any]]) -> None:
+        """Print results in NDJSON format to stdout"""
         for result in results:
             print(json.dumps(result))
 
     def setup_logging(self) -> None:
+        """Setup logging based on environment variables"""
         log_file = os.environ.get("LOG_FILE")
         log_level = int(os.environ.get("LOG_LEVEL", "0"))
 
@@ -260,12 +255,22 @@ class ModelEvaluator:
             return
 
         level = logging.INFO if log_level == 1 else logging.DEBUG
+
+        # Re-enable logging first (in case it was disabled)
         logging.disable(logging.NOTSET)
+
+        # Clear any existing handlers first
         logging.getLogger().handlers.clear()
 
         if log_file:
             try:
-                os.makedirs(os.path.dirname(log_file), exist_ok=True)
+                # Validate log file path
+                log_dir = os.path.dirname(log_file)
+                if log_dir and not os.path.exists(log_dir):
+                    # Try to create directory
+                    os.makedirs(log_dir, exist_ok=True)
+
+                # Test if we can write to the log file
                 open(log_file, "a").close()
 
                 logging.basicConfig(
@@ -274,14 +279,24 @@ class ModelEvaluator:
                     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
                     force=True,
                 )
-            except Exception as e:
+            except (OSError, PermissionError) as e:
+                # Invalid log file path, fall back to console logging
                 print(f"Warning: Cannot write to log file '{log_file}': {e}")
-                logging.basicConfig(level=level, force=True)
+                logging.basicConfig(
+                    level=level,
+                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                    force=True,
+                )
         else:
-            logging.basicConfig(level=level, force=True)
+            logging.basicConfig(
+                level=level,
+                format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                force=True,
+            )
 
 
 def main():
+    """Main entry point for command line usage"""
     if len(sys.argv) != 2:
         print("Usage: python model_evaluator.py <URL_FILE>", file=sys.stderr)
         sys.exit(1)

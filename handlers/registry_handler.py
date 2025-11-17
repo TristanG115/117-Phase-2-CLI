@@ -50,10 +50,7 @@ class _InMemoryDB:
     def search_artifacts(self, query, artifact_type=None):
         results = []
         for item in self.data.values():
-            if (
-                query.lower() in item["name"].lower()
-                or query.lower() in item["tags"].lower()
-            ):
+            if query.lower() in item["name"].lower() or query.lower() in item["tags"].lower():
                 if not artifact_type or item["artifact_type"] == artifact_type:
                     results.append(item)
         return results
@@ -121,8 +118,7 @@ def add_artifact(
     Returns the artifact_id.
     """
     db = _get_db()
-
-    artifact_id = db.add_artifact(
+    return db.add_artifact(
         name=name,
         artifact_type=artifact_type,
         score=score,
@@ -133,14 +129,8 @@ def add_artifact(
         metadata=metadata,
     )
 
-    db.update_artifact(artifact_id, invalid=False)
 
-    return artifact_id
-
-
-def get_artifact_by_id(
-    artifact_id: str, artifact_type: Optional[str] = None
-) -> Optional[Dict]:
+def get_artifact_by_id(artifact_id: str, artifact_type: Optional[str] = None) -> Optional[Dict]:
     """
     Get an artifact by ID.
     If artifact_type provided, validates the type matches.
@@ -288,9 +278,7 @@ def add_model(
     )
 
 
-def get_artifact_by_name(
-    name: str, artifact_type: Optional[str] = None
-) -> Optional[Dict]:
+def get_artifact_by_name(name: str, artifact_type: Optional[str] = None) -> Optional[Dict]:
     """
     Get an artifact by name instead of ID.
     Useful for looking up artifacts when you only have the name.
