@@ -2769,3 +2769,191 @@ RESPONSE: 404
 ============================================================
 
 INFO:     128.46.3.2:53666 - "GET /package/%7Bid%7D/rate HTTP/1.1" 404 Not Found
+2025-11-17 17:21:26,123 INFO: Logging initialized successfully.
+2025-11-17 17:21:26,123 INFO: Registry initialized successfully
+2025-11-17 17:21:26,704 INFO: HTTP Request: GET https://huggingface.co/api/models/microsoft/git-base "HTTP/1.1 200 OK"
+2025-11-17 17:21:26,762 INFO: HTTP Request: HEAD https://huggingface.co/microsoft/git-base/resolve/main/README.md "HTTP/1.1 307 Temporary Redirect"
+2025-11-17 17:21:26,778 INFO: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/microsoft/git-base/1f7fe8444292beb4a259e3a5b6eba440cd5999d4/README.md "HTTP/1.1 200 OK"
+2025-11-17 17:21:26,797 INFO: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/microsoft/git-base/1f7fe8444292beb4a259e3a5b6eba440cd5999d4/README.md "HTTP/1.1 200 OK"
+2025-11-17 17:21:26,832 INFO: [infer_links_from_hf] Inferred for microsoft/git-base: code=https://github.com/microsoft/GenerativeImage2Text, data=https://huggingface.co/datasets/huggingface/documentation-images
+2025-11-17 17:21:26,877 INFO: HTTP Request: GET https://huggingface.co/api/models/git-base "HTTP/1.1 401 Unauthorized"
+2025-11-17 17:21:26,877 WARNING: Could not fetch metadata for git-base: 401 Client Error. (Request ID: Root=1-691b9fe6-6fcab54e2d243df57d412cd4;997d7606-ff94-46ec-a8ab-5798a0529671)
+
+Repository Not Found for url: https://huggingface.co/api/models/git-base.
+Please make sure you specified the correct `repo_id` and `repo_type`.
+If you are trying to access a private or gated repo, make sure you are authenticated. For more details, see https://huggingface.co/docs/huggingface_hub/authentication
+Invalid username or password.
+2025-11-17 17:22:07,766 INFO: Logging initialized successfully.
+2025-11-17 17:22:07,767 INFO: Registry initialized successfully
+2025-11-17 17:22:08,317 INFO: HTTP Request: GET https://huggingface.co/api/models/deepseek-ai/DeepSeek-R1 "HTTP/1.1 200 OK"
+2025-11-17 17:22:08,374 INFO: HTTP Request: HEAD https://huggingface.co/deepseek-ai/DeepSeek-R1/resolve/main/README.md "HTTP/1.1 307 Temporary Redirect"
+2025-11-17 17:22:08,389 INFO: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/deepseek-ai/DeepSeek-R1/56d4cbbb4d29f4355bab4b9a39ccb717a14ad5ad/README.md "HTTP/1.1 200 OK"
+2025-11-17 17:22:08,407 INFO: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/deepseek-ai/DeepSeek-R1/56d4cbbb4d29f4355bab4b9a39ccb717a14ad5ad/README.md "HTTP/1.1 200 OK"
+2025-11-17 17:22:08,445 INFO: [infer_links_from_hf] Inferred for deepseek-ai/DeepSeek-R1: code=https://github.com/deepseek-ai/DeepSeek-V2, data=unknown
+2025-11-17 17:22:08,494 INFO: HTTP Request: GET https://huggingface.co/api/models/DeepSeek-R1 "HTTP/1.1 401 Unauthorized"
+2025-11-17 17:22:08,494 WARNING: Could not fetch metadata for DeepSeek-R1: 401 Client Error. (Request ID: Root=1-691ba00f-222bc6401fbb16d97ce05c06;7a437589-cede-4e53-bfa4-875fbb3d9fbb)
+
+Repository Not Found for url: https://huggingface.co/api/models/DeepSeek-R1.
+Please make sure you specified the correct `repo_id` and `repo_type`.
+If you are trying to access a private or gated repo, make sure you are authenticated. For more details, see https://huggingface.co/docs/huggingface_hub/authentication
+Invalid username or password.
+2025-11-17 17:22:23,931 INFO: Logging initialized successfully.
+2025-11-17 17:22:23,931 INFO: Registry initialized successfully
+2025-11-17 17:22:24,491 INFO: HTTP Request: GET https://huggingface.co/api/models/meta-llama/Meta-Llama-3-8B "HTTP/1.1 200 OK"
+2025-11-17 17:22:24,549 INFO: HTTP Request: HEAD https://huggingface.co/meta-llama/Meta-Llama-3-8B/resolve/main/README.md "HTTP/1.1 200 OK"
+2025-11-17 17:22:24,619 INFO: HTTP Request: GET https://huggingface.co/meta-llama/Meta-Llama-3-8B/resolve/main/README.md "HTTP/1.1 200 OK"
+2025-11-17 17:22:24,689 INFO: [infer_links_from_hf] Inferred for meta-llama/Meta-Llama-3-8B: code=https://github.com/meta-llama/llama3, data=unknown
+2025-11-17 17:22:24,736 INFO: HTTP Request: GET https://huggingface.co/api/models/Meta-Llama-3-8B "HTTP/1.1 401 Unauthorized"
+2025-11-17 17:22:24,736 WARNING: Could not fetch metadata for Meta-Llama-3-8B: 401 Client Error. (Request ID: Root=1-691ba020-62092c4d2c0850297507ed8b;56cfbdcb-1779-488e-b56e-86a208d4078f)
+
+Repository Not Found for url: https://huggingface.co/api/models/Meta-Llama-3-8B.
+Please make sure you specified the correct `repo_id` and `repo_type`.
+If you are trying to access a private or gated repo, make sure you are authenticated. For more details, see https://huggingface.co/docs/huggingface_hub/authentication
+Invalid username or password.
+2025-11-17 17:22:54,060 INFO: Logging initialized successfully.
+2025-11-17 17:23:23,983 INFO: Logging initialized successfully.
+2025-11-17 17:23:23,983 INFO: Registry initialized successfully
+2025-11-17 17:23:24,595 INFO: HTTP Request: GET https://huggingface.co/api/models/openai/gpt-oss-20b "HTTP/1.1 200 OK"
+2025-11-17 17:23:24,650 INFO: HTTP Request: HEAD https://huggingface.co/openai/gpt-oss-20b/resolve/main/README.md "HTTP/1.1 307 Temporary Redirect"
+2025-11-17 17:23:24,667 INFO: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/openai/gpt-oss-20b/6cee5e81ee83917806bbde320786a8fb61efebee/README.md "HTTP/1.1 200 OK"
+2025-11-17 17:23:24,687 INFO: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/openai/gpt-oss-20b/6cee5e81ee83917806bbde320786a8fb61efebee/README.md "HTTP/1.1 200 OK"
+2025-11-17 17:23:24,728 INFO: [infer_links_from_hf] Inferred for openai/gpt-oss-20b: code=https://github.com/openai/harmony, data=unknown
+2025-11-17 17:23:24,776 INFO: HTTP Request: GET https://huggingface.co/api/models/gpt-oss-20b "HTTP/1.1 401 Unauthorized"
+2025-11-17 17:23:24,776 WARNING: Could not fetch metadata for gpt-oss-20b: 401 Client Error. (Request ID: Root=1-691ba05c-7d2c5bb72de6f91b0ea6fc47;111caa78-4461-44f5-ad62-a2f3bf97089f)
+
+Repository Not Found for url: https://huggingface.co/api/models/gpt-oss-20b.
+Please make sure you specified the correct `repo_id` and `repo_type`.
+If you are trying to access a private or gated repo, make sure you are authenticated. For more details, see https://huggingface.co/docs/huggingface_hub/authentication
+Invalid username or password.
+2025-11-17 17:28:03,779 INFO: Logging initialized successfully.
+2025-11-17 17:28:03,780 INFO: Registry initialized successfully
+2025-11-17 17:28:04,337 INFO: HTTP Request: GET https://huggingface.co/api/models/openai/gpt-oss-20b "HTTP/1.1 200 OK"
+2025-11-17 17:28:04,388 INFO: HTTP Request: HEAD https://huggingface.co/openai/gpt-oss-20b/resolve/main/README.md "HTTP/1.1 307 Temporary Redirect"
+2025-11-17 17:28:04,404 INFO: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/openai/gpt-oss-20b/6cee5e81ee83917806bbde320786a8fb61efebee/README.md "HTTP/1.1 200 OK"
+2025-11-17 17:28:04,418 INFO: [infer_links_from_hf] Inferred for openai/gpt-oss-20b: code=https://github.com/openai/harmony, data=unknown
+2025-11-17 17:28:04,470 INFO: HTTP Request: GET https://huggingface.co/api/models/gpt-oss-20b "HTTP/1.1 401 Unauthorized"
+2025-11-17 17:28:04,470 WARNING: Could not fetch metadata for gpt-oss-20b: 401 Client Error. (Request ID: Root=1-691ba173-27c1f2dc79492bf74c070053;8d3ecf3e-436b-4d53-bb04-15a358102aca)
+
+Repository Not Found for url: https://huggingface.co/api/models/gpt-oss-20b.
+Please make sure you specified the correct `repo_id` and `repo_type`.
+If you are trying to access a private or gated repo, make sure you are authenticated. For more details, see https://huggingface.co/docs/huggingface_hub/authentication
+Invalid username or password.
+2025-11-17 17:28:16,073 INFO: Logging initialized successfully.
+2025-11-17 17:28:16,073 INFO: Registry initialized successfully
+2025-11-17 17:28:40,217 INFO: Logging initialized successfully.
+2025-11-17 17:28:40,217 INFO: Registry initialized successfully
+2025-11-17 17:28:55,881 INFO: Logging initialized successfully.
+2025-11-17 17:28:55,882 INFO: Registry initialized successfully
+2025-11-17 17:29:02,596 INFO: Logging initialized successfully.
+2025-11-17 17:29:02,596 INFO: Registry initialized successfully
+2025-11-17 17:29:03,129 INFO: HTTP Request: GET https://huggingface.co/api/models/openai/gpt-oss-20b "HTTP/1.1 200 OK"
+2025-11-17 17:29:03,181 INFO: HTTP Request: HEAD https://huggingface.co/openai/gpt-oss-20b/resolve/main/README.md "HTTP/1.1 307 Temporary Redirect"
+2025-11-17 17:29:03,195 INFO: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/openai/gpt-oss-20b/6cee5e81ee83917806bbde320786a8fb61efebee/README.md "HTTP/1.1 200 OK"
+2025-11-17 17:29:03,200 INFO: [infer_links_from_hf] Inferred for openai/gpt-oss-20b: code=https://github.com/openai/harmony, data=unknown
+2025-11-17 17:29:03,245 INFO: HTTP Request: GET https://huggingface.co/api/models/gpt-oss-20b "HTTP/1.1 401 Unauthorized"
+2025-11-17 17:29:03,246 WARNING: Could not fetch metadata for gpt-oss-20b: 401 Client Error. (Request ID: Root=1-691ba1ae-4a62dd6047c7f22b2243938b;bfe23803-e5b3-41f7-9e8b-867a7f7e3765)
+
+Repository Not Found for url: https://huggingface.co/api/models/gpt-oss-20b.
+Please make sure you specified the correct `repo_id` and `repo_type`.
+If you are trying to access a private or gated repo, make sure you are authenticated. For more details, see https://huggingface.co/docs/huggingface_hub/authentication
+Invalid username or password.
+2025-11-17 17:29:16,201 INFO: Logging initialized successfully.
+2025-11-17 17:29:16,201 INFO: Registry initialized successfully
+2025-11-17 17:30:07,185 INFO: Logging initialized successfully.
+2025-11-17 17:30:07,185 INFO: Config loaded from: C:\Users\Ethan\Desktop\school\SE\clone-11-09\117-Phase-2-CLI\.aws\config.json
+2025-11-17 17:30:07,287 INFO: Found credentials in shared credentials file: ~/.aws/credentials
+2025-11-17 17:30:07,508 INFO: DynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2
+2025-11-17 17:30:07,993 ERROR: Failed to initialize registry: An error occurred (UnrecognizedClientException) when calling the DescribeTable operation: The security token included in the request is invalid.
+2025-11-17 17:31:39,672 INFO: Logging initialized successfully.
+2025-11-17 17:31:39,672 INFO: Config loaded from: C:\Users\Ethan\Desktop\school\SE\clone-11-09\117-Phase-2-CLI\.aws\config.json
+2025-11-17 17:31:39,784 INFO: Found credentials in shared credentials file: ~/.aws/credentials
+2025-11-17 17:31:40,080 INFO: DynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2
+2025-11-17 17:31:40,596 ERROR: Failed to initialize registry: An error occurred (UnrecognizedClientException) when calling the DescribeTable operation: The security token included in the request is invalid.
+2025-11-17 17:35:47,923 INFO: Logging initialized successfully.
+2025-11-17 17:35:47,923 INFO: Config loaded from: C:\Users\Ethan\Desktop\school\SE\clone-11-09\117-Phase-2-CLI\.aws\config.json
+2025-11-17 17:35:48,018 INFO: Found credentials in environment variables.
+2025-11-17 17:35:48,239 INFO: DynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2
+2025-11-17 17:35:48,742 INFO: Table TrustworthyModelRegDB already exists
+2025-11-17 17:35:48,742 INFO: Registry initialized successfully
+2025-11-17 17:35:49,310 INFO: HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased "HTTP/1.1 200 OK"
+2025-11-17 17:35:49,356 INFO: HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/main/README.md "HTTP/1.1 307 Temporary Redirect"
+2025-11-17 17:35:49,371 INFO: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/README.md "HTTP/1.1 200 OK"
+2025-11-17 17:35:49,371 INFO: [infer_links_from_hf] Inferred for google-bert/bert-base-uncased: code=https://github.com/google-research/bert, data=https://huggingface.co/datasets/bookcorpus
+2025-11-17 17:35:49,419 INFO: HTTP Request: GET https://huggingface.co/api/models/bert-base-uncased "HTTP/1.1 307 Temporary Redirect"
+2025-11-17 17:35:49,481 INFO: HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased "HTTP/1.1 200 OK"
+2025-11-17 17:35:49,529 INFO: HTTP Request: HEAD https://huggingface.co/bert-base-uncased/resolve/main/README.md "HTTP/1.1 200 OK"
+2025-11-17 17:36:22,816 INFO: Logging initialized successfully.
+2025-11-17 17:36:22,816 INFO: Config loaded from: C:\Users\Ethan\Desktop\school\SE\clone-11-09\117-Phase-2-CLI\.aws\config.json
+2025-11-17 17:36:22,911 INFO: Found credentials in environment variables.
+2025-11-17 17:36:23,148 INFO: DynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2
+2025-11-17 17:36:23,620 INFO: Table TrustworthyModelRegDB already exists
+2025-11-17 17:36:23,620 INFO: Registry initialized successfully
+2025-11-17 17:37:17,625 INFO: Logging initialized successfully.
+2025-11-17 17:39:13,904 INFO: Logging initialized successfully.
+2025-11-17 17:39:13,904 INFO: Registry initialized successfully
+2025-11-17 17:39:14,450 INFO: HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased "HTTP/1.1 200 OK"
+2025-11-17 17:39:14,503 INFO: HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/main/README.md "HTTP/1.1 307 Temporary Redirect"
+2025-11-17 17:39:14,519 INFO: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/README.md "HTTP/1.1 200 OK"
+2025-11-17 17:39:14,524 INFO: [infer_links_from_hf] Inferred for google-bert/bert-base-uncased: code=https://github.com/google-research/bert, data=https://huggingface.co/datasets/bookcorpus
+2025-11-17 17:39:14,573 INFO: HTTP Request: GET https://huggingface.co/api/models/bert-base-uncased "HTTP/1.1 307 Temporary Redirect"
+2025-11-17 17:39:14,629 INFO: HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased "HTTP/1.1 200 OK"
+2025-11-17 17:39:14,680 INFO: HTTP Request: HEAD https://huggingface.co/bert-base-uncased/resolve/main/README.md "HTTP/1.1 200 OK"
+2025-11-17 17:39:22,020 INFO: Logging initialized successfully.
+2025-11-17 17:39:22,020 INFO: Registry initialized successfully
+2025-11-17 17:40:35,523 INFO: Logging initialized successfully.
+2025-11-17 17:40:35,523 INFO: Registry initialized successfully
+2025-11-17 17:40:41,729 INFO: Logging initialized successfully.
+2025-11-17 17:40:41,729 INFO: Registry initialized successfully
+2025-11-17 17:40:42,302 INFO: HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased "HTTP/1.1 200 OK"
+2025-11-17 17:40:42,351 INFO: HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/main/README.md "HTTP/1.1 307 Temporary Redirect"
+2025-11-17 17:40:42,365 INFO: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/README.md "HTTP/1.1 200 OK"
+2025-11-17 17:40:42,369 INFO: [infer_links_from_hf] Inferred for google-bert/bert-base-uncased: code=https://github.com/google-research/bert, data=https://huggingface.co/datasets/bookcorpus
+2025-11-17 17:40:42,422 INFO: HTTP Request: GET https://huggingface.co/api/models/bert-base-uncased "HTTP/1.1 307 Temporary Redirect"
+2025-11-17 17:40:42,473 INFO: HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased "HTTP/1.1 200 OK"
+2025-11-17 17:40:42,523 INFO: HTTP Request: HEAD https://huggingface.co/bert-base-uncased/resolve/main/README.md "HTTP/1.1 200 OK"
+2025-11-17 17:40:48,156 INFO: Logging initialized successfully.
+2025-11-17 17:40:48,157 INFO: Registry initialized successfully
+2025-11-17 17:40:53,901 INFO: Logging initialized successfully.
+2025-11-17 17:40:53,902 INFO: Config loaded from: C:\Users\Ethan\Desktop\school\SE\clone-11-09\117-Phase-2-CLI\.aws\config.json
+2025-11-17 17:40:54,005 INFO: Found credentials in environment variables.
+2025-11-17 17:40:54,229 INFO: DynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2
+2025-11-17 17:40:54,691 INFO: Table TrustworthyModelRegDB already exists
+2025-11-17 17:40:54,692 INFO: Registry initialized successfully
+2025-11-17 17:42:08,906 INFO: Logging initialized successfully.
+2025-11-17 17:44:35,998 INFO: Logging initialized successfully.
+2025-11-17 17:58:01,426 INFO: Logging initialized successfully.
+2025-11-17 17:58:01,426 INFO: Config loaded from: C:\Users\Ethan\Desktop\school\SE\clone-11-09\117-Phase-2-CLI\.aws\config.json
+2025-11-17 17:58:01,528 INFO: Found credentials in environment variables.
+2025-11-17 17:58:01,747 INFO: DynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2
+2025-11-17 17:58:02,269 INFO: Table TrustworthyModelRegDB already exists
+2025-11-17 17:58:02,269 INFO: Registry initialized successfully
+2025-11-17 17:58:22,275 INFO: Logging initialized successfully.
+2025-11-17 17:58:22,276 INFO: Config loaded from: C:\Users\Ethan\Desktop\school\SE\clone-11-09\117-Phase-2-CLI\.aws\config.json
+2025-11-17 17:58:22,389 INFO: Found credentials in environment variables.
+2025-11-17 17:58:22,610 INFO: DynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2
+2025-11-17 17:58:23,121 INFO: Table TrustworthyModelRegDB already exists
+2025-11-17 17:58:23,121 INFO: Registry initialized successfully
+2025-11-17 17:58:36,392 INFO: Logging initialized successfully.
+2025-11-17 17:58:36,392 INFO: Config loaded from: C:\Users\Ethan\Desktop\school\SE\clone-11-09\117-Phase-2-CLI\.aws\config.json
+2025-11-17 17:58:36,495 INFO: Found credentials in environment variables.
+2025-11-17 17:58:36,717 INFO: DynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2
+2025-11-17 17:58:37,254 INFO: Table TrustworthyModelRegDB already exists
+2025-11-17 17:58:37,254 INFO: Registry initialized successfully
+2025-11-17 17:58:56,569 INFO: Logging initialized successfully.
+2025-11-17 17:58:56,569 INFO: Config loaded from: C:\Users\Ethan\Desktop\school\SE\clone-11-09\117-Phase-2-CLI\.aws\config.json
+2025-11-17 17:58:56,671 INFO: Found credentials in environment variables.
+2025-11-17 17:58:56,896 INFO: DynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2
+2025-11-17 17:58:57,419 INFO: Table TrustworthyModelRegDB already exists
+2025-11-17 17:58:57,419 INFO: Registry initialized successfully
+2025-11-17 18:06:35,920 INFO: Logging initialized successfully.
+2025-11-17 18:06:35,920 INFO: Config loaded from: C:\Users\Ethan\Desktop\school\SE\clone-11-09\117-Phase-2-CLI\.aws\config.json
+2025-11-17 18:06:36,023 INFO: Found credentials in environment variables.
+2025-11-17 18:06:36,241 INFO: DynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2
+2025-11-17 18:06:36,769 INFO: Table TrustworthyModelRegDB already exists
+2025-11-17 18:06:36,769 INFO: Registry initialized successfully
+2025-11-17 18:06:42,865 INFO: Logging initialized successfully.
+2025-11-17 18:06:42,865 INFO: Config loaded from: C:\Users\Ethan\Desktop\school\SE\clone-11-09\117-Phase-2-CLI\.aws\config.json
+2025-11-17 18:06:42,968 INFO: Found credentials in environment variables.
+2025-11-17 18:06:43,188 INFO: DynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2
+2025-11-17 18:06:43,703 INFO: Table TrustworthyModelRegDB already exists
+2025-11-17 18:06:43,703 INFO: Registry initialized successfully

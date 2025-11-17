@@ -188,6 +188,7 @@ def main():  # noqa: C901
         print("  ingest        Ingest a Hugging Face model into the registry")
         print("  list          List all locally ingested models")
         print("  search        Search local registry by model name or tags")
+        print("  lineage       Show lineage graph for a model")
         print("  reset         Clear all stored models and downloaded files")
         print("  <URL_FILE>    Process and evaluate URLs from file")
         sys.exit(1)
@@ -228,11 +229,32 @@ def main():  # noqa: C901
         results = registry_handler.search_models(query)
         print(json.dumps(results, indent=2))
         sys.exit(0)
+    
+    elif cmd == "lineage":
+        if len(sys.argv) < 3:
+            print("Usage: ./run lineage <model_url_or_name>")
+            sys.exit(1)
+        
+        model_identifier = sys.argv[2]
+        registry_handler.init_registry()
+        
+        try:
+            lineage_data = registry_handler.get_lineage_graph(model_identifier)
+            print(json.dumps(lineage_data, indent=2))
+            sys.exit(0)
+        except ValueError as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error generating lineage: {e}")
+            sys.exit(1)
+    
     elif cmd == "reset":
         registry_handler.init_registry()
         registry_handler.reset_registry()
         print("System registry reset successfully.")
         sys.exit(0)
+
     else:
         process_url_file(cmd)
 
