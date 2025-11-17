@@ -11,6 +11,10 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from handlers import registry_handler
+from model_evaluator import ModelEvaluator
+
+# Initialize model evaluator for rating
+model_evaluator = ModelEvaluator()
 
 # Garbage collection tuning
 gc.set_threshold(700, 10, 10)
@@ -210,6 +214,72 @@ def _build_artifact_results(queries, artifacts):
     print(f"DEBUG _build: Returning {len(results)} total results", flush=True)
     return results
 
+async def rate_model_background(artifact_id: int, name: str, url: str):
+    """Background task to rate a model after upload and mark invalid if score < 0.5"""
+    try:
+        logger.info(f"Starting background rating for {name} (ID: {artifact_id})")
+        
+        # Run the evaluation
+        results = model_evaluator.evaluate_urls([url])
+        
+        if not results or len(results) == 0:
+            logger.warning(f"No rating results for {name}")
+            # Set default failed rating
+            rating_metadata = {
+                "net_score": 0.0,
+                "rating_calculated": True,
+                "rating_valid": False,
+            }
+        else:
+            result = results[0]
+            rating_metadata = result
+            rating_metadata["rating_calculated"] = True
+            
+            # CRITICAL: Check if model meets 0.5 threshold for ALL non-latency metrics
+            net_score = result.get("net_score", 0.0)
+            
+            # Check each Phase 1 metric against 0.5 threshold
+            metrics_to_check = [
+                "license", "ramp_up_time", "bus_factor", "performance_claims",
+                "dataset_and_code_score", "dataset_quality", "code_quality"
+            ]
+            
+            all_metrics_pass = net_score >= 0.5
+            for metric in metrics_to_check:
+                if result.get(metric, 0.0) < 0.5:
+                    all_metrics_pass = False
+                    logger.warning(f"Model {name} failed metric {metric}: {result.get(metric, 0.0)}")
+                    break
+            
+            rating_metadata["rating_valid"] = all_metrics_pass
+            
+            if not all_metrics_pass:
+                logger.warning(f"Model {name} failed rating validation (net_score={net_score})")
+        
+        # Update artifact with rating in metadata_json
+        artifact = registry_handler.get_artifact_by_id(str(artifact_id))
+        if artifact:
+            existing_metadata = json.loads(artifact.get("metadata_json", "{}"))
+            existing_metadata.update(rating_metadata)
+            
+            # Mark as invalid if it failed the threshold
+            if not rating_metadata.get("rating_valid", False):
+                existing_metadata["invalid"] = True
+                existing_metadata["invalid_reason"] = "Model did not meet minimum 0.5 threshold on all metrics"
+            
+            registry_handler.update_artifact(
+                str(artifact_id),
+                metadata_json=json.dumps(existing_metadata),
+                score=rating_metadata.get("net_score", 0.0)
+            )
+            
+            if rating_metadata.get("rating_valid", False):
+                logger.info(f"Rating completed for {name}: net_score={rating_metadata.get('net_score', 0.0)} - VALID")
+            else:
+                logger.warning(f"Rating completed for {name}: net_score={rating_metadata.get('net_score', 0.0)} - INVALID")
+        
+    except Exception as e:
+        logger.error(f"Error rating model {name}: {e}")
 
 @app.post("/artifacts")
 async def get_artifacts(request: Request, offset: Optional[str] = None):  # noqa: C901
@@ -567,8 +637,8 @@ async def update_artifact(artifact_type: str, artifact_id: str, request: Request
 
 
 @app.post("/artifact/{artifact_type}")
-async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
-    """BASELINE: Register a new artifact by URL."""
+async def register_artifact(artifact_type: str, request: Request):
+    """BASELINE: Register a new artifact by URL with async rating for models."""
     auth_header = request.headers.get("X-Authorization")
     if not auth_header:
         logger.warning("DEBUG /artifact/{{type}}: No auth header - allowing for baseline")
@@ -655,9 +725,14 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
         tags=artifact_type,
         code_url=code_url,
         dataset_url=dataset_url,
-        metadata={"type": artifact_type},
+        metadata={"type": artifact_type, "rating_calculated": False},
     )
     logger.info(f"Registered artifact ID: {artifact_id}")
+
+    # Start background rating task for models
+    if artifact_type == "model":
+        asyncio.create_task(rate_model_background(new_id, original_name, url))
+        logger.info(f"Started background rating task for model {original_name}")
 
     # Return response
     resp = {
@@ -689,43 +764,62 @@ def get_rating(artifact_id: str, request: Request):
     artifacts = registry_handler.list_artifacts()
     for a in artifacts:
         if gen_id(a["name"]) == aid:
+            # Check if artifact is a model
+            if _get_artifact_type(a) != "model":
+                raise HTTPException(status_code=404, detail="Artifact does not exist.")
+            
             meta = json.loads(a.get("metadata_json", "{}"))
-            if meta and any(key in meta for key in ["net_score", "ramp_up_time", "bus_factor"]):
-                return meta
-            else:
-                return {
-                    "name": a["name"],
+            
+            # Check if model is marked invalid
+            if meta.get("invalid"):
+                raise HTTPException(
+                    status_code=424,
+                    detail="Package is not uploaded due to disqualified rating."
+                )
+            
+            # Check if rating has been calculated
+            if meta.get("rating_calculated"):
+                # Return the stored rating with Phase 2 metrics
+                return JSONResponse(content={
+                    "name": meta.get("name", a["name"]),
                     "category": "MODEL",
-                    "net_score": a.get("score", 0),
-                    "net_score_latency": 0,
-                    "ramp_up_time": 0,
-                    "ramp_up_time_latency": 0,
-                    "bus_factor": 0,
-                    "bus_factor_latency": 0,
-                    "performance_claims": 0,
-                    "performance_claims_latency": 0,
-                    "license": 0,
-                    "license_latency": 0,
-                    "dataset_and_code_score": 0,
-                    "dataset_and_code_score_latency": 0,
-                    "dataset_quality": 0,
-                    "dataset_quality_latency": 0,
-                    "code_quality": 0,
-                    "code_quality_latency": 0,
-                    "reproducibility": 0,
+                    "net_score": meta.get("net_score", 0.0),
+                    "net_score_latency": meta.get("net_score_latency", 0),
+                    "ramp_up_time": meta.get("ramp_up_time", 0.0),
+                    "ramp_up_time_latency": meta.get("ramp_up_time_latency", 0),
+                    "bus_factor": meta.get("bus_factor", 0.0),
+                    "bus_factor_latency": meta.get("bus_factor_latency", 0),
+                    "performance_claims": meta.get("performance_claims", 0.0),
+                    "performance_claims_latency": meta.get("performance_claims_latency", 0),
+                    "license": meta.get("license", 0.0),
+                    "license_latency": meta.get("license_latency", 0),
+                    "dataset_and_code_score": meta.get("dataset_and_code_score", 0.0),
+                    "dataset_and_code_score_latency": meta.get("dataset_and_code_score_latency", 0),
+                    "dataset_quality": meta.get("dataset_quality", 0.0),
+                    "dataset_quality_latency": meta.get("dataset_quality_latency", 0),
+                    "code_quality": meta.get("code_quality", 0.0),
+                    "code_quality_latency": meta.get("code_quality_latency", 0),
+                    # Phase 2 metrics - not implemented yet, return -1
+                    "reproducibility": -1.0,
                     "reproducibility_latency": 0,
-                    "reviewedness": 0,
+                    "reviewedness": -1.0,
                     "reviewedness_latency": 0,
-                    "tree_score": 0,
+                    "tree_score": -1.0,
                     "tree_score_latency": 0,
-                    "size_score": {
-                        "raspberry_pi": 0,
-                        "jetson_nano": 0,
-                        "desktop_pc": 0,
-                        "aws_server": 0,
-                    },
-                    "size_score_latency": 0,
-                }
+                    "size_score": meta.get("size_score", {
+                        "raspberry_pi": 0.0,
+                        "jetson_nano": 0.0,
+                        "desktop_pc": 0.0,
+                        "aws_server": 0.0
+                    }),
+                    "size_score_latency": meta.get("size_score_latency", 0),
+                })
+            else:
+                # Rating still in progress or failed
+                raise HTTPException(
+                    status_code=500,
+                    detail="The artifact rating system encountered an error while computing at least one metric."
+                )
 
     raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
@@ -894,7 +988,7 @@ async def license_check(artifact_id: str, request: Request):
 
 @app.post("/artifact/byRegEx")
 async def artifact_by_regex(request: Request):
-    """BASELINE: Search artifacts by regex."""
+    """BASELINE: Search artifacts by regex over name with catastrophic backtracking detection."""
     
     auth_header = request.headers.get("X-Authorization")
 
