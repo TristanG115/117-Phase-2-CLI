@@ -1,3 +1,4 @@
+import asyncio
 import gc
 import hashlib
 import json
@@ -130,7 +131,10 @@ def _validate_query(query):
     if not isinstance(query, dict):
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_query or it is " "formed improperly, or is invalid."),
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
         )
 
     name = query.get("name", "").lower()
@@ -139,7 +143,10 @@ def _validate_query(query):
     if not name or not isinstance(types, list):
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_query or it is " "formed improperly, or is invalid."),
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
         )
 
     # If types is empty, default to all types
@@ -214,14 +221,15 @@ def _build_artifact_results(queries, artifacts):
     print(f"DEBUG _build: Returning {len(results)} total results", flush=True)
     return results
 
+
 async def rate_model_background(artifact_id: int, name: str, url: str):
     """Background task to rate a model after upload and mark invalid if score < 0.5"""
     try:
         logger.info(f"Starting background rating for {name} (ID: {artifact_id})")
-        
+
         # Run the evaluation
         results = model_evaluator.evaluate_urls([url])
-        
+
         if not results or len(results) == 0:
             logger.warning(f"No rating results for {name}")
             # Set default failed rating
@@ -234,52 +242,68 @@ async def rate_model_background(artifact_id: int, name: str, url: str):
             result = results[0]
             rating_metadata = result
             rating_metadata["rating_calculated"] = True
-            
+
             # CRITICAL: Check if model meets 0.5 threshold for ALL non-latency metrics
             net_score = result.get("net_score", 0.0)
-            
+
             # Check each Phase 1 metric against 0.5 threshold
             metrics_to_check = [
-                "license", "ramp_up_time", "bus_factor", "performance_claims",
-                "dataset_and_code_score", "dataset_quality", "code_quality"
+                "license",
+                "ramp_up_time",
+                "bus_factor",
+                "performance_claims",
+                "dataset_and_code_score",
+                "dataset_quality",
+                "code_quality",
             ]
-            
+
             all_metrics_pass = net_score >= 0.5
             for metric in metrics_to_check:
                 if result.get(metric, 0.0) < 0.5:
                     all_metrics_pass = False
-                    logger.warning(f"Model {name} failed metric {metric}: {result.get(metric, 0.0)}")
+                    logger.warning(
+                        f"Model {name} failed metric {metric}: {result.get(metric, 0.0)}"
+                    )
                     break
-            
+
             rating_metadata["rating_valid"] = all_metrics_pass
-            
+
             if not all_metrics_pass:
-                logger.warning(f"Model {name} failed rating validation (net_score={net_score})")
-        
+                logger.warning(
+                    f"Model {name} failed rating validation (net_score={net_score})"
+                )
+
         # Update artifact with rating in metadata_json
         artifact = registry_handler.get_artifact_by_id(str(artifact_id))
         if artifact:
             existing_metadata = json.loads(artifact.get("metadata_json", "{}"))
             existing_metadata.update(rating_metadata)
-            
+
             # Mark as invalid if it failed the threshold
             if not rating_metadata.get("rating_valid", False):
                 existing_metadata["invalid"] = True
-                existing_metadata["invalid_reason"] = "Model did not meet minimum 0.5 threshold on all metrics"
-            
+                existing_metadata["invalid_reason"] = (
+                    "Model did not meet minimum 0.5 threshold on all metrics"
+                )
+
             registry_handler.update_artifact(
                 str(artifact_id),
                 metadata_json=json.dumps(existing_metadata),
-                score=rating_metadata.get("net_score", 0.0)
+                score=rating_metadata.get("net_score", 0.0),
             )
-            
+
             if rating_metadata.get("rating_valid", False):
-                logger.info(f"Rating completed for {name}: net_score={rating_metadata.get('net_score', 0.0)} - VALID")
+                logger.info(
+                    f"Rating completed for {name}: net_score={rating_metadata.get('net_score', 0.0)} - VALID"
+                )
             else:
-                logger.warning(f"Rating completed for {name}: net_score={rating_metadata.get('net_score', 0.0)} - INVALID")
-        
+                logger.warning(
+                    f"Rating completed for {name}: net_score={rating_metadata.get('net_score', 0.0)} - INVALID"
+                )
+
     except Exception as e:
         logger.error(f"Error rating model {name}: {e}")
+
 
 @app.post("/artifacts")
 async def get_artifacts(request: Request, offset: Optional[str] = None):  # noqa: C901
@@ -311,14 +335,22 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):  # noqa
         logger.error(f"DEBUG /artifacts: JSON parse error: {e}")
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_query or it is " "formed improperly, or is invalid."),
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
         )
     except Exception as e:
-        print(f"DEBUG /artifacts: Unexpected error: {type(e).__name__}: {e}", flush=True)
+        print(
+            f"DEBUG /artifacts: Unexpected error: {type(e).__name__}: {e}", flush=True
+        )
         logger.error(f"DEBUG /artifacts: Unexpected error: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_query or it is " "formed improperly, or is invalid."),
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
         )
 
     # Handle both dict and list inputs
@@ -333,11 +365,16 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):  # noqa
         )
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_query or it is " "formed improperly, or is invalid."),
+            detail=(
+                "There is missing field(s) in the artifact_query or it is "
+                "formed improperly, or is invalid."
+            ),
         )
 
     if len(queries) > 100:
-        raise HTTPException(status_code=400, detail="Too many queries. Maximum 100 queries per request.")
+        raise HTTPException(
+            status_code=400, detail="Too many queries. Maximum 100 queries per request."
+        )
 
     print("DEBUG: About to call list_artifacts()", flush=True)
     artifacts = registry_handler.list_artifacts()
@@ -371,7 +408,9 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):  # noqa
     # ADDITIONAL DETAILED LOGGING FOR DEBUGGING
     logger.info("===== ARTIFACTS QUERY RESULTS =====")
     logger.info(f"Query: {queries}")
-    logger.info(f"Returning {len(results)} results from {len(artifacts)} total artifacts")
+    logger.info(
+        f"Returning {len(results)} results from {len(artifacts)} total artifacts"
+    )
     for idx, r in enumerate(results):
         logger.info(f"  Result {idx}: name={r['name']}, id={r['id']}, type={r['type']}")
     logger.info("=====================================")
@@ -440,13 +479,17 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):  # noq
         if calculated_id == aid:
             # Use standardized type detection
             actual_type = _get_artifact_type(a)
-            logger.info(f"Found ID match: name={a['name']}, type={actual_type}, requested={artifact_type}")
+            logger.info(
+                f"Found ID match: name={a['name']}, type={actual_type}, requested={artifact_type}"
+            )
 
             if actual_type.lower() == artifact_type.lower():
                 artifact = a
                 break
             else:
-                logger.warning(f"Type mismatch: has {actual_type}, wants {artifact_type}")
+                logger.warning(
+                    f"Type mismatch: has {actual_type}, wants {artifact_type}"
+                )
 
     if artifact:
         # Determine URL based on artifact type
@@ -550,7 +593,10 @@ def _validate_update_request(metadata, data, artifact_type, artifact_id):
             ),
         )
 
-    if str(metadata.get("id")) != str(artifact_id) or metadata.get("type") != artifact_type:
+    if (
+        str(metadata.get("id")) != str(artifact_id)
+        or metadata.get("type") != artifact_type
+    ):
         raise HTTPException(
             status_code=400,
             detail=(
@@ -641,7 +687,9 @@ async def register_artifact(artifact_type: str, request: Request):
     """BASELINE: Register a new artifact by URL with async rating for models."""
     auth_header = request.headers.get("X-Authorization")
     if not auth_header:
-        logger.warning("DEBUG /artifact/{{type}}: No auth header - allowing for baseline")
+        logger.warning(
+            "DEBUG /artifact/{{type}}: No auth header - allowing for baseline"
+        )
     else:
         require_auth(auth_header)
 
@@ -758,7 +806,10 @@ def get_rating(artifact_id: str, request: Request):
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_id or it is " "formed improperly, or is invalid."),
+            detail=(
+                "There is missing field(s) in the artifact_id or it is "
+                "formed improperly, or is invalid."
+            ),
         )
 
     artifacts = registry_handler.list_artifacts()
@@ -767,65 +818,80 @@ def get_rating(artifact_id: str, request: Request):
             # Check if artifact is a model
             if _get_artifact_type(a) != "model":
                 raise HTTPException(status_code=404, detail="Artifact does not exist.")
-            
+
             meta = json.loads(a.get("metadata_json", "{}"))
-            
+
             # Check if model is marked invalid
             if meta.get("invalid"):
                 raise HTTPException(
                     status_code=424,
-                    detail="Package is not uploaded due to disqualified rating."
+                    detail="Package is not uploaded due to disqualified rating.",
                 )
-            
+
             # Check if rating has been calculated
             if meta.get("rating_calculated"):
                 # Return the stored rating with Phase 2 metrics
-                return JSONResponse(content={
-                    "name": meta.get("name", a["name"]),
-                    "category": "MODEL",
-                    "net_score": meta.get("net_score", 0.0),
-                    "net_score_latency": meta.get("net_score_latency", 0),
-                    "ramp_up_time": meta.get("ramp_up_time", 0.0),
-                    "ramp_up_time_latency": meta.get("ramp_up_time_latency", 0),
-                    "bus_factor": meta.get("bus_factor", 0.0),
-                    "bus_factor_latency": meta.get("bus_factor_latency", 0),
-                    "performance_claims": meta.get("performance_claims", 0.0),
-                    "performance_claims_latency": meta.get("performance_claims_latency", 0),
-                    "license": meta.get("license", 0.0),
-                    "license_latency": meta.get("license_latency", 0),
-                    "dataset_and_code_score": meta.get("dataset_and_code_score", 0.0),
-                    "dataset_and_code_score_latency": meta.get("dataset_and_code_score_latency", 0),
-                    "dataset_quality": meta.get("dataset_quality", 0.0),
-                    "dataset_quality_latency": meta.get("dataset_quality_latency", 0),
-                    "code_quality": meta.get("code_quality", 0.0),
-                    "code_quality_latency": meta.get("code_quality_latency", 0),
-                    # Phase 2 metrics - not implemented yet, return -1
-                    "reproducibility": -1.0,
-                    "reproducibility_latency": 0,
-                    "reviewedness": -1.0,
-                    "reviewedness_latency": 0,
-                    "tree_score": -1.0,
-                    "tree_score_latency": 0,
-                    "size_score": meta.get("size_score", {
-                        "raspberry_pi": 0.0,
-                        "jetson_nano": 0.0,
-                        "desktop_pc": 0.0,
-                        "aws_server": 0.0
-                    }),
-                    "size_score_latency": meta.get("size_score_latency", 0),
-                })
+                return JSONResponse(
+                    content={
+                        "name": meta.get("name", a["name"]),
+                        "category": "MODEL",
+                        "net_score": meta.get("net_score", 0.0),
+                        "net_score_latency": meta.get("net_score_latency", 0),
+                        "ramp_up_time": meta.get("ramp_up_time", 0.0),
+                        "ramp_up_time_latency": meta.get("ramp_up_time_latency", 0),
+                        "bus_factor": meta.get("bus_factor", 0.0),
+                        "bus_factor_latency": meta.get("bus_factor_latency", 0),
+                        "performance_claims": meta.get("performance_claims", 0.0),
+                        "performance_claims_latency": meta.get(
+                            "performance_claims_latency", 0
+                        ),
+                        "license": meta.get("license", 0.0),
+                        "license_latency": meta.get("license_latency", 0),
+                        "dataset_and_code_score": meta.get(
+                            "dataset_and_code_score", 0.0
+                        ),
+                        "dataset_and_code_score_latency": meta.get(
+                            "dataset_and_code_score_latency", 0
+                        ),
+                        "dataset_quality": meta.get("dataset_quality", 0.0),
+                        "dataset_quality_latency": meta.get(
+                            "dataset_quality_latency", 0
+                        ),
+                        "code_quality": meta.get("code_quality", 0.0),
+                        "code_quality_latency": meta.get("code_quality_latency", 0),
+                        # Phase 2 metrics - not implemented yet, return -1
+                        "reproducibility": -1.0,
+                        "reproducibility_latency": 0,
+                        "reviewedness": -1.0,
+                        "reviewedness_latency": 0,
+                        "tree_score": -1.0,
+                        "tree_score_latency": 0,
+                        "size_score": meta.get(
+                            "size_score",
+                            {
+                                "raspberry_pi": 0.0,
+                                "jetson_nano": 0.0,
+                                "desktop_pc": 0.0,
+                                "aws_server": 0.0,
+                            },
+                        ),
+                        "size_score_latency": meta.get("size_score_latency", 0),
+                    }
+                )
             else:
                 # Rating still in progress or failed
                 raise HTTPException(
                     status_code=500,
-                    detail="The artifact rating system encountered an error while computing at least one metric."
+                    detail="The artifact rating system encountered an error while computing at least one metric.",
                 )
 
     raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
 
 @app.get("/artifact/{artifact_type}/{artifact_id}/cost")
-def get_cost(artifact_type: str, artifact_id: str, request: Request, dependency: bool = False):
+def get_cost(
+    artifact_type: str, artifact_id: str, request: Request, dependency: bool = False
+):
     """BASELINE: Return total cost of the artifact."""
     auth_header = request.headers.get("X-Authorization")
 
@@ -887,7 +953,10 @@ def get_lineage(artifact_id: str, request: Request):
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail=("The lineage graph cannot be computed because the artifact " "metadata is missing or malformed."),
+            detail=(
+                "The lineage graph cannot be computed because the artifact "
+                "metadata is missing or malformed."
+            ),
         )
 
     artifacts = registry_handler.list_artifacts()
@@ -898,7 +967,8 @@ def get_lineage(artifact_id: str, request: Request):
                 raise HTTPException(
                     status_code=400,
                     detail=(
-                        "The lineage graph cannot be computed because the " "artifact metadata is missing or malformed."
+                        "The lineage graph cannot be computed because the "
+                        "artifact metadata is missing or malformed."
                     ),
                 )
 
@@ -963,24 +1033,34 @@ async def license_check(artifact_id: str, request: Request):
     except Exception:
         raise HTTPException(
             status_code=400,
-            detail=("The license check request is malformed or references an " "unsupported usage context."),
+            detail=(
+                "The license check request is malformed or references an "
+                "unsupported usage context."
+            ),
         )
 
     github_url = body.get("github_url")
     if not github_url or not isinstance(github_url, str):
         raise HTTPException(
             status_code=400,
-            detail=("The license check request is malformed or references an " "unsupported usage context."),
+            detail=(
+                "The license check request is malformed or references an "
+                "unsupported usage context."
+            ),
         )
 
     try:
         aid = int(artifact_id)
     except ValueError:
-        raise HTTPException(status_code=404, detail="The artifact or GitHub project could not be found.")
+        raise HTTPException(
+            status_code=404, detail="The artifact or GitHub project could not be found."
+        )
 
     artifacts = registry_handler.list_artifacts()
     if not _verify_artifact_exists(aid, artifacts):
-        raise HTTPException(status_code=404, detail="The artifact or GitHub project could not be found.")
+        raise HTTPException(
+            status_code=404, detail="The artifact or GitHub project could not be found."
+        )
 
     result = _check_license_compatibility(github_url)
     return JSONResponse(content=result)
@@ -989,7 +1069,7 @@ async def license_check(artifact_id: str, request: Request):
 @app.post("/artifact/byRegEx")
 async def artifact_by_regex(request: Request):
     """BASELINE: Search artifacts by regex over name with catastrophic backtracking detection."""
-    
+
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
@@ -1003,7 +1083,10 @@ async def artifact_by_regex(request: Request):
     except Exception:
         raise HTTPException(
             status_code=400,
-            detail=("There is missing field(s) in the artifact_regex or it is " "formed improperly, or is invalid"),
+            detail=(
+                "There is missing field(s) in the artifact_regex or it is "
+                "formed improperly, or is invalid"
+            ),
         )
 
     regex = body.get("regex")
@@ -1024,10 +1107,20 @@ async def artifact_by_regex(request: Request):
             "formed improperly, or is invalid",
         )
 
-    # Helper function to detect catastrophic backtracking via timeout
-    def timeout_handler(signum, frame):
-        raise TimeoutError("Regex matching timeout - catastrophic backtracking detected")
-    
+    # Use a thread-based timeout to detect catastrophic backtracking (cross-platform)
+    import concurrent.futures
+
+    def _match_with_timeout(pattern, text, timeout=2):
+        """Run pattern.search(text) in a worker thread and raise TimeoutError on timeout."""
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+            future = ex.submit(pattern.search, text)
+            try:
+                return future.result(timeout=timeout)
+            except concurrent.futures.TimeoutError:
+                raise TimeoutError(
+                    "Regex matching timeout - catastrophic backtracking detected"
+                )
+
     artifacts = registry_handler.list_artifacts()
     matches = []
     seen_ids = set()
@@ -1054,23 +1147,15 @@ async def artifact_by_regex(request: Request):
 
         # Test regex match with timeout to detect catastrophic backtracking
         try:
-            # Set a 2-second timeout for regex matching
-            signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(2)
-            
-            matched = pattern.search(search_text)
-            
-            # Cancel the alarm if match completed successfully
-            signal.alarm(0)
-            
+            matched = _match_with_timeout(pattern, search_text, timeout=2)
+
             if matched:
                 actual_type = _get_artifact_type(a)
                 matches.append({"name": name, "id": artifact_id, "type": actual_type})
                 seen_ids.add(artifact_id)
-                
+
         except TimeoutError:
-            # Catastrophic backtracking detected - cancel alarm and return 400
-            signal.alarm(0)
+            # Catastrophic backtracking detected - return 400
             logger.warning(f"Catastrophic backtracking detected for regex: {regex}")
             raise HTTPException(
                 status_code=400,
@@ -1080,7 +1165,9 @@ async def artifact_by_regex(request: Request):
 
     # Must be 404 if no results
     if not matches:
-        raise HTTPException(status_code=404, detail="No artifact found under this regex.")
+        raise HTTPException(
+            status_code=404, detail="No artifact found under this regex."
+        )
 
     return JSONResponse(content=matches)
 
@@ -1093,7 +1180,10 @@ def get_tracks():
     except Exception:
         raise HTTPException(
             status_code=500,
-            detail=("The system encountered an error while retrieving the " "student's track information."),
+            detail=(
+                "The system encountered an error while retrieving the "
+                "student's track information."
+            ),
         )
 
 
@@ -1101,15 +1191,21 @@ def get_tracks():
 def index(request: Request):
     """Serve the main registry dashboard."""
     if not templates:
-        return HTMLResponse(content="<h1>Registry API Server</h1><p>API docs at <a href='/docs'>/docs</a></p>")
+        return HTMLResponse(
+            content="<h1>Registry API Server</h1><p>API docs at <a href='/docs'>/docs</a></p>"
+        )
 
     try:
         # Use list_artifacts for dashboard to show all types
         artifacts = registry_handler.list_artifacts()
-        return templates.TemplateResponse("index.html", {"request": request, "models": artifacts})
+        return templates.TemplateResponse(
+            "index.html", {"request": request, "models": artifacts}
+        )
     except Exception as e:
         logger.error(f"Error loading dashboard: {e}")
-        return HTMLResponse(content="<h1>Registry API Server</h1><p>API docs at <a href='/docs'>/docs</a></p>")
+        return HTMLResponse(
+            content="<h1>Registry API Server</h1><p>API docs at <a href='/docs'>/docs</a></p>"
+        )
 
 
 @app.get("/packages")
