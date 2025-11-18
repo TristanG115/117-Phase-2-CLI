@@ -1,3 +1,4 @@
+import asyncio
 import gc
 import hashlib
 import json
@@ -221,60 +222,87 @@ def _build_artifact_results(queries, artifacts):
     return results
 
 
-def rate_model_sync(name: str, url: str) -> tuple:
-    """
-    Synchronously rate a model during upload.
-    Returns (rating_metadata, is_valid)
-    """
+async def rate_model_background(artifact_id: int, name: str, url: str):
+    """Background task to rate a model after upload and mark invalid if score < 0.5"""
     try:
-        logger.info(f"Starting rating for {name}")
+        logger.info(f"Starting background rating for {name} (ID: {artifact_id})")
 
         # Run the evaluation
         results = model_evaluator.evaluate_urls([url])
 
         if not results or len(results) == 0:
             logger.warning(f"No rating results for {name}")
-            return {
+            # Set default failed rating
+            rating_metadata = {
                 "net_score": 0.0,
                 "rating_calculated": True,
-            }, False
+                "rating_valid": False,
+            }
+        else:
+            result = results[0]
+            rating_metadata = result
+            rating_metadata["rating_calculated"] = True
 
-        result = results[0]
-        rating_metadata = result
-        rating_metadata["rating_calculated"] = True
+            # CRITICAL: Check if model meets 0.5 threshold for ALL non-latency metrics
+            net_score = result.get("net_score", 0.0)
 
-        # Check if model meets 0.5 threshold for ALL non-latency Phase 1 metrics
-        metrics_to_check = [
-            "license",
-            "ramp_up_time",
-            "bus_factor",
-            "performance_claims",
-            "dataset_and_code_score",
-            "dataset_quality",
-            "code_quality",
-        ]
+            # Check each Phase 1 metric against 0.5 threshold
+            metrics_to_check = [
+                "license",
+                "ramp_up_time",
+                "bus_factor",
+                "performance_claims",
+                "dataset_and_code_score",
+                "dataset_quality",
+                "code_quality",
+            ]
 
-        all_metrics_pass = True
-        for metric in metrics_to_check:
-            metric_score = result.get(metric, 0.0)
-            if metric_score < 0.5:
-                all_metrics_pass = False
-                logger.warning(f"Model {name} failed metric {metric}: {metric_score}")
-                break
+            all_metrics_pass = net_score >= 0.5
+            for metric in metrics_to_check:
+                if result.get(metric, 0.0) < 0.5:
+                    all_metrics_pass = False
+                    logger.warning(
+                        f"Model {name} failed metric {metric}: {result.get(metric, 0.0)}"
+                    )
+                    break
 
-        net_score = result.get("net_score", 0.0)
-        logger.info(
-            f"Rating completed for {name}: net_score={net_score}, valid={all_metrics_pass}"
-        )
+            rating_metadata["rating_valid"] = all_metrics_pass
 
-        return rating_metadata, all_metrics_pass
+            if not all_metrics_pass:
+                logger.warning(
+                    f"Model {name} failed rating validation (net_score={net_score})"
+                )
+
+        # Update artifact with rating in metadata_json
+        artifact = registry_handler.get_artifact_by_id(str(artifact_id))
+        if artifact:
+            existing_metadata = json.loads(artifact.get("metadata_json", "{}"))
+            existing_metadata.update(rating_metadata)
+
+            # Mark as invalid if it failed the threshold
+            if not rating_metadata.get("rating_valid", False):
+                existing_metadata["invalid"] = True
+                existing_metadata["invalid_reason"] = (
+                    "Model did not meet minimum 0.5 threshold on all metrics"
+                )
+
+            registry_handler.update_artifact(
+                str(artifact_id),
+                metadata_json=json.dumps(existing_metadata),
+                score=rating_metadata.get("net_score", 0.0),
+            )
+
+            if rating_metadata.get("rating_valid", False):
+                logger.info(
+                    f"Rating completed for {name}: net_score={rating_metadata.get('net_score', 0.0)} - VALID"
+                )
+            else:
+                logger.warning(
+                    f"Rating completed for {name}: net_score={rating_metadata.get('net_score', 0.0)} - INVALID"
+                )
 
     except Exception as e:
         logger.error(f"Error rating model {name}: {e}")
-        return {
-            "net_score": 0.0,
-            "rating_calculated": True,
-        }, False
 
 
 @app.post("/artifacts")
@@ -656,7 +684,7 @@ async def update_artifact(artifact_type: str, artifact_id: str, request: Request
 
 @app.post("/artifact/{artifact_type}")
 async def register_artifact(artifact_type: str, request: Request):
-    """BASELINE: Register a new artifact by URL with synchronous rating for models."""
+    """BASELINE: Register a new artifact by URL with async rating for models."""
     auth_header = request.headers.get("X-Authorization")
     if not auth_header:
         logger.warning(
@@ -736,51 +764,23 @@ async def register_artifact(artifact_type: str, request: Request):
         code_url = url
         dataset_url = "unknown"
 
-    # FOR MODELS: Rate synchronously before saving
+    # Save artifact
+    artifact_id = registry_handler.add_artifact(
+        name=original_name,
+        artifact_type=artifact_type,
+        score=0.0,
+        url=url,
+        tags=artifact_type,
+        code_url=code_url,
+        dataset_url=dataset_url,
+        metadata={"type": artifact_type, "rating_calculated": False},
+    )
+    logger.info(f"Registered artifact ID: {artifact_id}")
+
+    # Start background rating task for models
     if artifact_type == "model":
-        logger.info(f"Rating model {original_name} before upload...")
-        rating_metadata, is_valid = rate_model_sync(original_name, url)
-
-        if not is_valid:
-            # Model failed rating - return 424
-            logger.warning(
-                f"Model {original_name} disqualified: net_score={rating_metadata.get('net_score', 0.0)}"
-            )
-            raise HTTPException(
-                status_code=424,
-                detail="Package is not uploaded due to disqualified rating.",
-            )
-
-        # Model passed - save it with rating metadata
-        metadata_to_save = {"type": artifact_type}
-        metadata_to_save.update(rating_metadata)
-
-        artifact_id = registry_handler.add_artifact(
-            name=original_name,
-            artifact_type=artifact_type,
-            score=rating_metadata.get("net_score", 0.0),
-            url=url,
-            tags=artifact_type,
-            code_url=code_url,
-            dataset_url=dataset_url,
-            metadata=metadata_to_save,
-        )
-        logger.info(
-            f"Registered model {original_name} (ID: {artifact_id}) with net_score={rating_metadata.get('net_score', 0.0)}"
-        )
-    else:
-        # For code/dataset: just save without rating
-        artifact_id = registry_handler.add_artifact(
-            name=original_name,
-            artifact_type=artifact_type,
-            score=0.0,
-            url=url,
-            tags=artifact_type,
-            code_url=code_url,
-            dataset_url=dataset_url,
-            metadata={"type": artifact_type},
-        )
-        logger.info(f"Registered {artifact_type} artifact ID: {artifact_id}")
+        asyncio.create_task(rate_model_background(new_id, original_name, url))
+        logger.info(f"Started background rating task for model {original_name}")
 
     # Return response
     resp = {
