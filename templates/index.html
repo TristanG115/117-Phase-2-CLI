@@ -80,13 +80,13 @@
       padding: 30px;
     }
 
-    .model-grid {
+    .artifact-grid {
       display: grid;
       gap: 20px;
       margin-top: 20px;
     }
 
-    .model-card {
+    .artifact-card {
       background: white;
       border: 2px solid #e9ecef;
       border-radius: 8px;
@@ -94,20 +94,20 @@
       transition: all 0.3s ease;
     }
 
-    .model-card:hover {
+    .artifact-card:hover {
       border-color: #667eea;
       box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
       transform: translateY(-2px);
     }
 
-    .model-header {
+    .artifact-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 15px;
     }
 
-    .model-name {
+    .artifact-name {
       font-size: 1.3em;
       font-weight: 600;
       color: #2c3e50;
@@ -122,7 +122,17 @@
       font-size: 0.9em;
     }
 
-    .model-meta {
+    .type-badge {
+      background: #e9ecef;
+      color: #495057;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9em;
+      text-transform: uppercase;
+    }
+
+    .artifact-meta {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 10px;
@@ -189,73 +199,78 @@
 <body>
   <div class="container">
     <header>
-      <h1> Trustworthy Model Registry</h1>
+      <h1>Trustworthy Model Registry</h1>
       <p class="subtitle">ECE 461 - Fall 2025 - Phase 2</p>
     </header>
-    
-  <div style="padding: 20px; text-align:right;">
-    <button onclick="resetRegistry()" class="btn btn-danger">
-      Reset Registry
-    </button>
-  </div>
+
+    <div style="padding: 20px; text-align:right;">
+      <button onclick="resetRegistry()" class="btn btn-danger">
+        Reset Registry
+      </button>
+    </div>
 
     <div class="stats">
       <div class="stat-card">
         <div class="stat-value">{{ models|length }}</div>
-        <div class="stat-label">Total Models</div>
+        <div class="stat-label">Total Artifacts</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value">{{ models|selectattr('score', 'gt', 0.5)|list|length }}</div>
-        <div class="stat-label">High Quality</div>
+        <div class="stat-value">{{ models|selectattr('artifact_type', 'equalto', 'model')|list|length }}</div>
+        <div class="stat-label">Models</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">
-          {% if models %}
-          {{ "%.2f"|format(models|sum(attribute='score') / models|length) }}
+          {% set model_list = models|selectattr('artifact_type', 'equalto', 'model')|list %}
+          {% if model_list %}
+          {{ "%.2f"|format(model_list|sum(attribute='score') / model_list|length) }}
           {% else %}
           0.00
           {% endif %}
         </div>
-        <div class="stat-label">Avg Score</div>
+        <div class="stat-label">Avg Model Score</div>
       </div>
     </div>
 
     <div class="content">
-      <h2 style="margin-bottom: 20px; color: #2c3e50;"> Registered Models</h2>
+      <h2 style="margin-bottom: 20px; color: #2c3e50;">Registered Artifacts</h2>
 
       {% if models %}
-      <div class="model-grid">
-        {% for model in models %}
-        <div class="model-card">
-          <div class="model-header">
-            <div class="model-name">{{ model.name }}</div>
-            <div class="score-badge">Score: {{ "%.2f"|format(model.score) }}</div>
+      <div class="artifact-grid">
+        {% for artifact in models %}
+        <div class="artifact-card">
+          <div class="artifact-header">
+            <div class="artifact-name">{{ artifact.name }}</div>
+            {% if artifact.artifact_type == 'model' %}
+              <div class="score-badge">Score: {{ "%.2f"|format(artifact.score) }}</div>
+            {% else %}
+              <div class="type-badge">{{ artifact.artifact_type }}</div>
+            {% endif %}
           </div>
 
-          {% if model.tags %}
+          {% if artifact.tags %}
           <div style="margin: 10px 0;">
-            <span class="tag">{{ model.tags }}</span>
+            <span class="tag">{{ artifact.tags }}</span>
           </div>
           {% endif %}
 
-          <div class="model-meta">
-            {% if model.code_url and model.code_url != 'unknown' %}
+          <div class="artifact-meta">
+            {% if artifact.code_url and artifact.code_url != 'unknown' %}
             <div class="meta-item">
               <div class="meta-label">Code URL</div>
               <div class="meta-value">
-                <a href="{{ model.code_url }}" target="_blank" style="color: #667eea;">
-                  {{ model.code_url[:50] }}...
+                <a href="{{ artifact.code_url }}" target="_blank" style="color: #667eea;">
+                  {{ artifact.code_url[:50] }}...
                 </a>
               </div>
             </div>
             {% endif %}
 
-            {% if model.dataset_url and model.dataset_url != 'unknown' %}
+            {% if artifact.dataset_url and artifact.dataset_url != 'unknown' %}
             <div class="meta-item">
               <div class="meta-label">Dataset URL</div>
               <div class="meta-value">
-                <a href="{{ model.dataset_url }}" target="_blank" style="color: #667eea;">
-                  {{ model.dataset_url[:50] }}...
+                <a href="{{ artifact.dataset_url }}" target="_blank" style="color: #667eea;">
+                  {{ artifact.dataset_url[:50] }}...
                 </a>
               </div>
             </div>
@@ -263,11 +278,16 @@
 
             <div class="meta-item">
               <div class="meta-label">Created</div>
-              <div class="meta-value">{{ model.created_at[:10] }}</div>
+              <div class="meta-value">{{ artifact.created_at[:10] }}</div>
             </div>
           </div>
         </div>
         {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <h2>No artifacts registered yet</h2>
+        <p>Start by uploading your first model, dataset, or code artifact</p>
       </div>
       {% endif %}
     </div>
@@ -276,7 +296,7 @@
 
 <script>
     async function resetRegistry() {
-        if (!confirm("Are you sure? This will delete ALL stored models.")) {
+        if (!confirm("Are you sure? This will delete ALL stored artifacts.")) {
             return false;
         }
 
@@ -292,6 +312,5 @@
         return false;
     }
 </script>
-
 
 </html>
