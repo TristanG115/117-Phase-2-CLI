@@ -229,9 +229,10 @@ async def rate_model_background(artifact_id: int, name: str, url: str):
             rating_metadata["rating_calculated"] = True
 
             # CRITICAL: Check if model meets 0.5 threshold for ALL non-latency metrics
+            # Per spec: "To be ingestible, the package must score at least 0.5 on each of the non-latency metrics"
             net_score = result.get("net_score", 0.0)
 
-            # Check each Phase 1 metric against 0.5 threshold
+            # Check EACH non-latency metric against 0.5 threshold
             metrics_to_check = [
                 "license",
                 "ramp_up_time",
@@ -240,22 +241,29 @@ async def rate_model_background(artifact_id: int, name: str, url: str):
                 "dataset_and_code_score",
                 "dataset_quality",
                 "code_quality",
+                "reproducibility",
+                "reviewedness",
+                "tree_score",
             ]
 
-            all_metrics_pass = net_score >= 0.5
+            all_metrics_pass = True
+            failed_metrics = []
+
             for metric in metrics_to_check:
-                if result.get(metric, 0.0) < 0.5:
+                metric_value = result.get(metric, 0.0)
+                # Special case: reviewedness can be -1 if no GitHub repo
+                if metric == "reviewedness" and metric_value == -1.0:
+                    continue  # Skip reviewedness if it's -1 (no GitHub repo)
+
+                if metric_value < 0.5:
                     all_metrics_pass = False
-                    logger.warning(
-                        f"Model {name} failed metric {metric}: {result.get(metric, 0.0)}"
-                    )
-                    break
+                    failed_metrics.append(f"{metric}={metric_value}")
 
             rating_metadata["rating_valid"] = all_metrics_pass
 
             if not all_metrics_pass:
                 logger.warning(
-                    f"Model {name} failed rating validation (net_score={net_score})"
+                    f"Model {name} failed validation. Net_score={net_score}, Failed metrics: {', '.join(failed_metrics)}"
                 )
 
         # Update artifact with rating in metadata_json
@@ -796,10 +804,19 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
     else:
         require_auth(auth_header)
 
+    # Log the incoming request with details
+    logger.info(
+        f"[RATE REQUEST] Received rate request for artifact_id='{artifact_id}' (raw string)"
+    )
+
     # Validate artifact_id format
     try:
         aid = int(artifact_id)
+        logger.info(f"[RATE REQUEST] Successfully converted to integer: {aid}")
     except ValueError:
+        logger.error(
+            f"[RATE REQUEST] FAILED - Invalid artifact_id format: '{artifact_id}' cannot be converted to integer"
+        )
         raise HTTPException(
             status_code=400,
             detail="There is missing field(s) in the artifact_id or it is formed improperly, or is invalid.",
@@ -825,23 +842,38 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
             break
 
     if not artifact:
+        logger.error(
+            f"[RATE REQUEST] Artifact with ID {aid} not found. Available artifacts: {[gen_id(a['name']) for a in artifacts[:10]]}"
+        )
         raise HTTPException(status_code=404, detail="Artifact does not exist.")
+
+    logger.info(
+        f"[RATE REQUEST] Found artifact: name='{artifact.get('name')}', type='{artifact.get('artifact_type')}'"
+    )
 
     # Get cached rating data from metadata
     try:
         metadata = json.loads(artifact.get("metadata_json", "{}"))
         rating_calculated = metadata.get("rating_calculated", False)
 
+        logger.info(
+            f"[RATE REQUEST] Artifact metadata - rating_calculated={rating_calculated}"
+        )
+
         if not rating_calculated:
             # Rating hasn't been calculated yet
-            logger.warning(f"Rating not yet calculated for artifact {aid}")
+            logger.warning(
+                f"[RATE REQUEST] Rating not yet calculated for artifact {aid} (name='{artifact.get('name')}')"
+            )
             raise HTTPException(
                 status_code=500,
                 detail="The artifact rating system encountered an error while computing at least one metric.",
             )
 
         # Return cached rating data
-        logger.info(f"Returning cached rating for artifact {aid}")
+        logger.info(
+            f"[RATE REQUEST] Returning cached rating for artifact {aid} (name='{artifact.get('name')}')"
+        )
 
         # Extract name and category
         name = artifact.get("name", "unknown")
@@ -889,6 +921,13 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
             ),
             "size_score_latency": metadata.get("size_score_latency", 0),
         }
+
+        # Log the key metrics being returned
+        logger.info(
+            f"[RATE RESPONSE] Returning rating for '{name}': net_score={response['net_score']}, "
+            f"license={response['license']}, ramp_up_time={response['ramp_up_time']}, "
+            f"bus_factor={response['bus_factor']}, reproducibility={response['reproducibility']}"
+        )
 
         return JSONResponse(content=response)
 
