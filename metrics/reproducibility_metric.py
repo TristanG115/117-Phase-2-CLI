@@ -3,10 +3,10 @@ import tempfile
 import time
 from typing import Any, Dict, List, Tuple
 
-from base_metric import BaseMetric
-
 from API.storage import S3Storage
 from url_classifier import URLType
+
+from .base_metric import BaseMetric
 
 
 class ReproducibilityMetric(BaseMetric):
