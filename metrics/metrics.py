@@ -6,7 +6,10 @@ from .dataset_quality_metric import DatasetQualityMetric
 from .license_metric import LicenseMetric
 from .performance_claims_metric import PerformanceClaimsMetric
 from .ramp_up_time_metric import RampUpTimeMetric
+from .reproducibility_metric import ReproducibilityMetric
+from .reviewedness_metric import ReviewednessMetric
 from .size_score_metric import SizeScoreMetric
+from .treescore_metric import TreescoreMetric
 
 # Metric registry for easy access
 METRIC_CLASSES = {
@@ -18,4 +21,7 @@ METRIC_CLASSES = {
     "dataset_and_code_score": DatasetAndCodeScoreMetric,
     "dataset_quality": DatasetQualityMetric,
     "code_quality": CodeQualityMetric,
+    "reproducibility": ReproducibilityMetric,
+    "reviewedness": ReviewednessMetric,
+    "treescore": TreescoreMetric,
 }
