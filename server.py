@@ -59,8 +59,6 @@ logging.basicConfig(
     handlers=[logging.FileHandler("server.log"), logging.StreamHandler()],
 )
 
-logger = logging.getLogger(__name__)
-
 
 @app.on_event("startup")
 async def startup_event():
