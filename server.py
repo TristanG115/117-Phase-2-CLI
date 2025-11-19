@@ -672,7 +672,7 @@ async def update_artifact(artifact_type: str, artifact_id: str, request: Request
 
 
 @app.post("/artifact/{artifact_type}")
-async def register_artifact(artifact_type: str, request: Request):
+async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
     """BASELINE: Register a new artifact by URL with async rating for models."""
     auth_header = request.headers.get("X-Authorization")
     if not auth_header:
@@ -784,8 +784,11 @@ async def register_artifact(artifact_type: str, request: Request):
 
 
 @app.get("/artifact/model/{artifact_id}/rate")
-def get_rating(artifact_id: str, request: Request):
-    """BASELINE: Return metrics for this model artifact."""
+async def rate_model(artifact_id: str, request: Request):
+    """
+    BASELINE: Get ratings for a model artifact.
+    Returns all metrics including reproducibility, reviewedness, and treescore.
+    """
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
@@ -793,91 +796,110 @@ def get_rating(artifact_id: str, request: Request):
     else:
         require_auth(auth_header)
 
+    # Validate artifact_id format
     try:
         aid = int(artifact_id)
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail=(
-                "There is missing field(s) in the artifact_id or it is "
-                "formed improperly, or is invalid."
-            ),
+            detail="There is missing field(s) in the artifact_id or it is formed improperly, or is invalid.",
         )
 
-    artifacts = registry_handler.list_artifacts()
+    logger.info(f"[DATA] Rating request for artifact ID: {aid}")
+
+    # Check if artifact exists
+    try:
+        artifacts = registry_handler.list_artifacts()
+    except Exception as e:
+        logger.error(f"Error listing artifacts: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="The artifact rating system encountered an error while computing at least one metric.",
+        )
+
+    # Find the artifact
+    artifact = None
     for a in artifacts:
         if gen_id(a["name"]) == aid:
-            # Check if artifact is a model
-            if _get_artifact_type(a) != "model":
-                raise HTTPException(status_code=404, detail="Artifact does not exist.")
+            artifact = a
+            break
 
-            meta = json.loads(a.get("metadata_json", "{}"))
+    if not artifact:
+        raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
-            # Check if model is marked invalid
-            if meta.get("invalid"):
-                raise HTTPException(
-                    status_code=424,
-                    detail="Package is not uploaded due to disqualified rating.",
-                )
+    # Get cached rating data from metadata
+    try:
+        metadata = json.loads(artifact.get("metadata_json", "{}"))
+        rating_calculated = metadata.get("rating_calculated", False)
 
-            # Check if rating has been calculated
-            if meta.get("rating_calculated"):
-                # Return the stored rating with Phase 2 metrics
-                return JSONResponse(
-                    content={
-                        "name": meta.get("name", a["name"]),
-                        "category": "MODEL",
-                        "net_score": meta.get("net_score", 0.0),
-                        "net_score_latency": meta.get("net_score_latency", 0),
-                        "ramp_up_time": meta.get("ramp_up_time", 0.0),
-                        "ramp_up_time_latency": meta.get("ramp_up_time_latency", 0),
-                        "bus_factor": meta.get("bus_factor", 0.0),
-                        "bus_factor_latency": meta.get("bus_factor_latency", 0),
-                        "performance_claims": meta.get("performance_claims", 0.0),
-                        "performance_claims_latency": meta.get(
-                            "performance_claims_latency", 0
-                        ),
-                        "license": meta.get("license", 0.0),
-                        "license_latency": meta.get("license_latency", 0),
-                        "dataset_and_code_score": meta.get(
-                            "dataset_and_code_score", 0.0
-                        ),
-                        "dataset_and_code_score_latency": meta.get(
-                            "dataset_and_code_score_latency", 0
-                        ),
-                        "dataset_quality": meta.get("dataset_quality", 0.0),
-                        "dataset_quality_latency": meta.get(
-                            "dataset_quality_latency", 0
-                        ),
-                        "code_quality": meta.get("code_quality", 0.0),
-                        "code_quality_latency": meta.get("code_quality_latency", 0),
-                        # Phase 2 metrics - not implemented yet, return -1
-                        "reproducibility": -1.0,
-                        "reproducibility_latency": 0,
-                        "reviewedness": -1.0,
-                        "reviewedness_latency": 0,
-                        "tree_score": -1.0,
-                        "tree_score_latency": 0,
-                        "size_score": meta.get(
-                            "size_score",
-                            {
-                                "raspberry_pi": 0.0,
-                                "jetson_nano": 0.0,
-                                "desktop_pc": 0.0,
-                                "aws_server": 0.0,
-                            },
-                        ),
-                        "size_score_latency": meta.get("size_score_latency", 0),
-                    }
-                )
-            else:
-                # Rating still in progress or failed
-                raise HTTPException(
-                    status_code=500,
-                    detail="The artifact rating system encountered an error while computing at least one metric.",
-                )
+        if not rating_calculated:
+            # Rating hasn't been calculated yet
+            logger.warning(f"Rating not yet calculated for artifact {aid}")
+            raise HTTPException(
+                status_code=500,
+                detail="The artifact rating system encountered an error while computing at least one metric.",
+            )
 
-    raise HTTPException(status_code=404, detail="Artifact does not exist.")
+        # Return cached rating data
+        logger.info(f"Returning cached rating for artifact {aid}")
+
+        # Extract name and category
+        name = artifact.get("name", "unknown")
+        if "/" in name:
+            name = name.split("/")[-1]
+
+        category = artifact.get("artifact_type") or _get_artifact_type(artifact)
+
+        # Build response with cached data
+        response = {
+            "name": name,
+            "category": category.upper() if category else "MODEL",
+            "net_score": metadata.get("net_score", 0.0),
+            "net_score_latency": metadata.get("net_score_latency", 0),
+            "ramp_up_time": metadata.get("ramp_up_time", 0.0),
+            "ramp_up_time_latency": metadata.get("ramp_up_time_latency", 0),
+            "bus_factor": metadata.get("bus_factor", 0.0),
+            "bus_factor_latency": metadata.get("bus_factor_latency", 0),
+            "performance_claims": metadata.get("performance_claims", 0.0),
+            "performance_claims_latency": metadata.get("performance_claims_latency", 0),
+            "license": metadata.get("license", 0.0),
+            "license_latency": metadata.get("license_latency", 0),
+            "dataset_and_code_score": metadata.get("dataset_and_code_score", 0.0),
+            "dataset_and_code_score_latency": metadata.get(
+                "dataset_and_code_score_latency", 0
+            ),
+            "dataset_quality": metadata.get("dataset_quality", 0.0),
+            "dataset_quality_latency": metadata.get("dataset_quality_latency", 0),
+            "code_quality": metadata.get("code_quality", 0.0),
+            "code_quality_latency": metadata.get("code_quality_latency", 0),
+            "reproducibility": metadata.get("reproducibility", 0.0),
+            "reproducibility_latency": metadata.get("reproducibility_latency", 0),
+            "reviewedness": metadata.get("reviewedness", -1.0),
+            "reviewedness_latency": metadata.get("reviewedness_latency", 0),
+            "tree_score": metadata.get("treescore", 0.0),
+            "tree_score_latency": metadata.get("treescore_latency", 0),
+            "size_score": metadata.get(
+                "size_score",
+                {
+                    "raspberry_pi": 0.0,
+                    "jetson_nano": 0.0,
+                    "desktop_pc": 0.0,
+                    "aws_server": 0.0,
+                },
+            ),
+            "size_score_latency": metadata.get("size_score_latency", 0),
+        }
+
+        return JSONResponse(content=response)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving rating for artifact {aid}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="The artifact rating system encountered an error while computing at least one metric.",
+        )
 
 
 @app.get("/artifact/{artifact_type}/{artifact_id}/cost")
@@ -1059,8 +1081,8 @@ async def license_check(artifact_id: str, request: Request):
     return JSONResponse(content=result)
 
 
-@app.post("/artifact/byRegEx")
-async def artifact_by_regex(request: Request):
+@app.post("/artifact/byRegEx")  # noqa: C901
+async def artifact_by_regex(request: Request):  # noqa: C901
     """BASELINE: Search artifacts by regex over name with catastrophic backtracking detection."""
 
     auth_header = request.headers.get("X-Authorization")
