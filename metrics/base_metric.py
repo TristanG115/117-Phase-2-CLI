@@ -17,12 +17,15 @@ class BaseMetric(ABC):
         pass
 
     @abstractmethod
-    def calculate(self, resources: Dict[URLType, List[Any]]) -> Tuple[float, int]:
+    def calculate(
+        self, resources: Dict[URLType, List[Any]], **kwargs
+    ) -> Tuple[float, int]:
         """
         Calculate the metric score
 
         Args:
             resources: Dictionary mapping URLType to list of resource handlers
+            **kwargs: Additional metric-specific parameters (e.g., artifact_id for treescore)
 
         Returns:
             Tuple of (score, latency_ms)

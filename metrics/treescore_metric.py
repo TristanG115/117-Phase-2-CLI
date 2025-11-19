@@ -1,5 +1,5 @@
 import time
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from url_classifier import URLType
 
@@ -18,9 +18,12 @@ class TreescoreMetric(BaseMetric):
         return []
 
     def calculate(
-        self, resources: Dict[URLType, List[Any]], artifact_id: int = None
+        self, resources: Dict[URLType, List[Any]], **kwargs
     ) -> Tuple[float, int]:
         start_time = time.time()
+
+        # Extract artifact_id from kwargs
+        artifact_id = kwargs.get("artifact_id")
 
         if not self.registry_handler or artifact_id is None:
             # No registry handler or artifact ID, cannot calculate treescore
@@ -33,7 +36,7 @@ class TreescoreMetric(BaseMetric):
 
         return round(treescore, 2), latency_ms
 
-    def _calculate_treescore(self, artifact_id: int) -> float:
+    def _calculate_treescore(self, artifact_id: Optional[int]) -> float:  # noqa: C901
         """
         Calculate average of parent model scores from lineage graph
 
@@ -44,6 +47,10 @@ class TreescoreMetric(BaseMetric):
             Average net_score of all parent models, or 0.0 if no parents
         """
         try:
+            # Explicit None check for type checker
+            if self.registry_handler is None:
+                return 0.0
+
             # Get lineage information for this artifact
             lineage = self.registry_handler.get_lineage(artifact_id)
 

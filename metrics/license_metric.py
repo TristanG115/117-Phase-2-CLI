@@ -13,7 +13,9 @@ class LicenseMetric(BaseMetric):
         # Only check MODEL license
         return [URLType.MODEL]
 
-    def calculate(self, resources: Dict[URLType, List[Any]]) -> Tuple[float, int]:
+    def calculate(
+        self, resources: Dict[URLType, List[Any]], **kwargs
+    ) -> Tuple[float, int]:
         start_time = time.time()
 
         # Check license compatibility across all available resources

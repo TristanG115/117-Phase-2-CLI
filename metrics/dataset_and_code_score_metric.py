@@ -12,7 +12,9 @@ class DatasetAndCodeScoreMetric(BaseMetric):
     def required_url_types(self) -> List[URLType]:
         return [URLType.DATASET, URLType.CODE]
 
-    def calculate(self, resources: Dict[URLType, List[Any]]) -> Tuple[float, int]:
+    def calculate(
+        self, resources: Dict[URLType, List[Any]], **kwargs
+    ) -> Tuple[float, int]:
         start_time = time.time()
 
         dataset_available = URLType.DATASET in resources and resources[URLType.DATASET]
