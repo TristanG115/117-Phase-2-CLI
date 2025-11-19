@@ -2,19 +2,26 @@ import hashlib
 import json
 import logging
 import os
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
-from API.dynamo import DynamoDB
+# Conditional import with fallback
+try:
+    from API.dynamo import DynamoDB  # type: ignore
+
+    DYNAMO_AVAILABLE = True
+except ImportError:
+    DYNAMO_AVAILABLE = False
+    DynamoDB = None  # type: ignore
 
 # --- Testing fallback (autograder fix) ---
 
 
 class _InMemoryDB:
     def __init__(self):
-        self.data = {}
+        self.data: Dict[str, Any] = {}
 
     def init_table(self):
-        # Called by init_registry() during tests — just reset storage
+        # Called by init_registry() during tests – just reset storage
         self.data = {}
 
     def add_artifact(self, **fields):
@@ -50,13 +57,16 @@ class _InMemoryDB:
     def search_artifacts(self, query, artifact_type=None):
         results = []
         for item in self.data.values():
-            if query.lower() in item["name"].lower() or query.lower() in item["tags"].lower():
+            if (
+                query.lower() in item["name"].lower()
+                or query.lower() in item["tags"].lower()
+            ):
                 if not artifact_type or item["artifact_type"] == artifact_type:
                     results.append(item)
         return results
 
     def get_registry_stats(self):
-        stats: dict[str, int] = {}
+        stats: Dict[str, int] = {}
         for item in self.data.values():
             t = item["artifact_type"]
             stats[t] = stats.get(t, 0) + 1
@@ -67,18 +77,41 @@ class _InMemoryDB:
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Initialize DynamoDB instance
-_db: Optional[Union[DynamoDB, "_InMemoryDB"]] = None
+# Initialize database instance
+_db: Any = None
 
 
-def _get_db():
+def _get_db() -> Any:
     global _db
     if _db is None:
-        # Use in-memory fake DB during tests
+        # Use in-memory fake DB during tests OR if DynamoDB unavailable
         if "PYTEST_CURRENT_TEST" in os.environ:
+            logger.info("Using in-memory DB for tests")
+            _db = _InMemoryDB()
+        elif not DYNAMO_AVAILABLE:
+            error_msg = "DynamoDB module (boto3) not available - falling back to in-memory database"
+            logger.error(error_msg)
+            print(f"⚠️  WARNING: {error_msg}", flush=True)
             _db = _InMemoryDB()
         else:
-            _db = DynamoDB()
+            try:
+                _db = DynamoDB()  # type: ignore
+                logger.info("✓ DynamoDB initialized successfully")
+                print("✓ Using DynamoDB for persistent storage", flush=True)
+            except FileNotFoundError as e:
+                # Config file not found - use in-memory DB as fallback
+                error_msg = (
+                    f"Config file not found - falling back to in-memory database: {e}"
+                )
+                logger.error(error_msg)
+                print(f"⚠️  WARNING: {error_msg}", flush=True)
+                _db = _InMemoryDB()
+            except Exception as e:
+                # Any other error (missing boto3, AWS credentials, etc)
+                error_msg = f"Failed to start, falling back to in-memory database: {type(e).__name__}: {e}"
+                logger.error(error_msg)
+                print(f" WARNING: {error_msg}", flush=True)
+                _db = _InMemoryDB()
     return _db
 
 
@@ -97,6 +130,14 @@ def init_registry():
     try:
         db = _get_db()
         db.init_table()
+
+        if isinstance(db, _InMemoryDB):
+            warning = "⚠️  REGISTRY USING IN-MEMORY DATABASE - DATA WILL NOT PERSIST BETWEEN RESTARTS!"
+            logger.error(warning)
+            print("=" * 80, flush=True)
+            print(warning, flush=True)
+            print("=" * 80, flush=True)
+
         logger.info("Registry initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize registry: {e}")
@@ -130,7 +171,9 @@ def add_artifact(
     )
 
 
-def get_artifact_by_id(artifact_id: str, artifact_type: Optional[str] = None) -> Optional[Dict]:
+def get_artifact_by_id(
+    artifact_id: str, artifact_type: Optional[str] = None
+) -> Optional[Dict]:
     """
     Get an artifact by ID.
     If artifact_type provided, validates the type matches.
@@ -278,7 +321,9 @@ def add_model(
     )
 
 
-def get_artifact_by_name(name: str, artifact_type: Optional[str] = None) -> Optional[Dict]:
+def get_artifact_by_name(
+    name: str, artifact_type: Optional[str] = None
+) -> Optional[Dict]:
     """
     Get an artifact by name instead of ID.
     Useful for looking up artifacts when you only have the name.
@@ -314,19 +359,27 @@ def get_artifacts_by_type_count() -> Dict[str, int]:
 
 def health_check() -> Dict[str, str]:
     """
-    Check if DynamoDB connection is healthy.
+    Check if database connection is healthy.
     """
     try:
         db = _get_db()
         stats = db.get_registry_stats()
+
+        is_in_memory = isinstance(db, _InMemoryDB)
+        if is_in_memory:
+            backend = "In-Memory (WARNING: Data not persistent!)"
+        else:
+            backend = "DynamoDB"
+
         return {
             "status": "healthy",
-            "backend": "DynamoDB",
+            "backend": backend,
             "total_artifacts": str(stats.get("total", 0)),
+            "persistent": "false" if is_in_memory else "true",
         }
     except Exception as e:
         return {
             "status": "unhealthy",
-            "backend": "DynamoDB",
+            "backend": "Unknown",
             "error": str(e),
         }

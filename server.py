@@ -783,8 +783,8 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
     return JSONResponse(status_code=201, content=resp)
 
 
-@app.get("/artifact/model/{artifact_id}/rate")
-async def rate_model(artifact_id: str, request: Request):
+@app.get("/artifact/model/{artifact_id}/rate")  # noqa: C901
+async def rate_model(artifact_id: str, request: Request):  # noqa: C901
     """
     BASELINE: Get ratings for a model artifact.
     Returns all metrics including reproducibility, reviewedness, and treescore.
