@@ -45,17 +45,23 @@ async def log_requests(request: Request, call_next):
     try:
         body = await request.body()
         if body:
+            # Restore the body for FastAPI to read
+            async def receive():
+                return {"type": "http.request", "body": body}
+
+            request._receive = receive
+
             try:
                 json_body = json.loads(body)
                 data_str = json.dumps(json_body, indent=2)
                 if len(data_str) > 500:
                     data_str = data_str[:500] + "... (truncated)"
-                logger.debug(f"[DATA] Request Data:\n{data_str}")
+                logger.info(f"[DATA] Request Data:\n{data_str}")
             except json.JSONDecodeError:
                 body_str = body.decode("utf-8", errors="ignore")
                 if len(body_str) > 200:
                     body_str = body_str[:200] + "... (truncated)"
-                logger.debug(f"[DATA] Request Data: {body_str}")
+                logger.info(f"[DATA] Request Data: {body_str}")
     except Exception:
         pass
 
