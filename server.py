@@ -31,62 +31,15 @@ app = FastAPI(
 )
 
 
-# Clean request/response logging middleware
+# Simple request/response logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """Log clean request/response information with beautilog"""
     method = request.method
     path = request.url.path
-
-    # Log incoming request
     logger.info(f"[REQUEST] {method} {path}")
-
-    # Try to capture and log request body
-    try:
-        body = await request.body()
-        if body:
-            try:
-                json_body = json.loads(body)
-                data_str = json.dumps(json_body, indent=2)
-                if len(data_str) > 500:
-                    data_str = data_str[:500] + "... (truncated)"
-                logger.debug(f"[DATA] Request Data:\n{data_str}")
-            except json.JSONDecodeError:
-                body_str = body.decode("utf-8", errors="ignore")
-                if len(body_str) > 200:
-                    body_str = body_str[:200] + "... (truncated)"
-                logger.debug(f"[DATA] Request Data: {body_str}")
-    except Exception:
-        pass
-
-    # Process request
     response = await call_next(request)
-
-    # Log response status
     logger.info(f"[RESPONSE] {method} {path} -> {response.status_code}")
-
     return response
-
-
-def log_response_data(data, status_code: int):
-    """Helper to log response data"""
-    try:
-        if isinstance(data, (dict, list)):
-            data_str = json.dumps(data, indent=2)
-            if len(data_str) > 500:
-                data_str = data_str[:500] + "... (truncated)"
-            logger.log(
-                logging.INFO, f"Response Data (Status {status_code}):\n{data_str}"
-            )
-        elif data:
-            data_str = str(data)
-            if len(data_str) > 200:
-                data_str = data_str[:200] + "... (truncated)"
-            logger.log(
-                logging.INFO, f"Response Data (Status {status_code}): {data_str}"
-            )
-    except Exception:
-        pass
 
 
 # Setup templates
@@ -99,7 +52,14 @@ try:
 except Exception as e:
     templates = None
     logging.warning(f"Could not load templates directory: {e}")
-# Beautilog is configured via beautilog.ini
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler("server.log"), logging.StreamHandler()],
+)
+
+logger = logging.getLogger(__name__)
 
 
 @app.on_event("startup")
@@ -188,10 +148,18 @@ def _build_artifact_results(queries, artifacts):
     results = []
     seen_ids = set()  # Track seen artifact IDs to avoid duplicates
 
+    print(
+        f"DEBUG _build: Processing {len(queries)} queries against {len(artifacts)} artifacts",
+        flush=True,
+    )
+
     for i, q in enumerate(queries):
+        print(f"DEBUG _build: Query {i}: {q}", flush=True)
         try:
             name, types = _validate_query(q)
+            print(f"DEBUG _build: Validated - name={name}, types={types}", flush=True)
         except Exception as e:
+            print(f"DEBUG _build: Validation failed: {e}", flush=True)
             raise
 
         for a in artifacts:
@@ -202,13 +170,21 @@ def _build_artifact_results(queries, artifacts):
                 continue
 
             # Use standardized type detection
-            actual_type = _get_artifact_type(a)  # Properly check for name containment
+            actual_type = _get_artifact_type(a)
+
+            print(
+                f"DEBUG _build: Artifact {a['name']} has normalized type {actual_type}",
+                flush=True,
+            )
+
+            # Properly check for name containment
             name_matches = (name == "*") or (name in a["name"].lower())
 
             # Check type match
             type_matches = actual_type in [t.lower() for t in types]
 
             if name_matches and type_matches:
+                print(f"DEBUG _build: Adding {a['name']} as {actual_type}", flush=True)
                 results.append(
                     {
                         "name": a["name"],
@@ -217,7 +193,19 @@ def _build_artifact_results(queries, artifacts):
                     }
                 )
                 seen_ids.add(artifact_id)
+            else:
+                if not name_matches:
+                    print(
+                        f"DEBUG _build: Skipping {a['name']} - name '{name}' not in '{a['name'].lower()}'",
+                        flush=True,
+                    )
+                if not type_matches:
+                    print(
+                        f"DEBUG _build: Skipping {a['name']} - type {actual_type} not in {types}",
+                        flush=True,
+                    )
 
+    print(f"DEBUG _build: Returning {len(results)} total results", flush=True)
     return results
 
 
@@ -307,20 +295,32 @@ async def rate_model_background(artifact_id: int, name: str, url: str):
 @app.post("/artifacts")
 async def get_artifacts(request: Request, offset: Optional[str] = None):  # noqa: C901
     """BASELINE: Return artifacts matching the given query list."""
+    logger.info(f"DEBUG /artifacts: All headers = {dict(request.headers)}")
 
     auth_header = request.headers.get("X-Authorization")
+    logger.info(f"DEBUG /artifacts: X-Authorization value = {repr(auth_header)}")
 
     if not auth_header:
-        pass  # Allow for baseline
+        logger.warning("DEBUG: No X-Authorization header - allowing for baseline")
     else:
         require_auth(auth_header)
+
+    print("DEBUG /artifacts: About to read body", flush=True)
+    logger.info("DEBUG /artifacts: About to read body")
 
     try:
         body_bytes = await request.body()
         body_preview = body_bytes[:500].decode("utf-8", "replace")
+        print(f"DEBUG /artifacts: Raw body = {body_preview}", flush=True)
+        logger.info(f"DEBUG /artifacts: Raw body = {body_preview}")
 
         queries = json.loads(body_bytes)
-    except json.JSONDecodeError:
+        logger.info(f"[DATA] Request body: {queries}")
+        print(f"DEBUG /artifacts: Parsed queries = {queries}", flush=True)
+        logger.info(f"DEBUG /artifacts: Parsed queries = {queries}")
+    except json.JSONDecodeError as e:
+        print(f"DEBUG /artifacts: JSON parse error: {e}", flush=True)
+        logger.error(f"DEBUG /artifacts: JSON parse error: {e}")
         raise HTTPException(
             status_code=400,
             detail=(
@@ -332,6 +332,7 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):  # noqa
         print(
             f"DEBUG /artifacts: Unexpected error: {type(e).__name__}: {e}", flush=True
         )
+        logger.error(f"DEBUG /artifacts: Unexpected error: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=400,
             detail=(
@@ -363,9 +364,13 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):  # noqa
             status_code=400, detail="Too many queries. Maximum 100 queries per request."
         )
 
+    print("DEBUG: About to call list_artifacts()", flush=True)
     artifacts = registry_handler.list_artifacts()
+    print(f"DEBUG: Got {len(artifacts)} artifacts", flush=True)
 
+    print("DEBUG: About to build results", flush=True)
     results = _build_artifact_results(queries, artifacts)
+    print(f"DEBUG: Built {len(results)} results", flush=True)
 
     if len(results) > 1000:
         raise HTTPException(status_code=413, detail="Too many artifacts returned.")
@@ -378,13 +383,36 @@ async def get_artifacts(request: Request, offset: Optional[str] = None):  # noqa
         flush=True,
     )
 
+    # --- TEMP DEBUG LOGGING BLOCK ---
+    print("\n===== DEBUG /artifacts FINAL STATE =====", flush=True)
+    print(f"Queries received ({len(queries)}): {queries}", flush=True)
+    print(f"Total artifacts loaded: {len(artifacts)}", flush=True)
+    print(f"Results built ({len(results)}):", flush=True)
+    for r in results[:10]:
+        print(f"  → {r}", flush=True)
+    print(f"Offset header: {headers}", flush=True)
+    print("========================================\n", flush=True)
+
+    # ADDITIONAL DETAILED LOGGING FOR DEBUGGING
+    logger.info("===== ARTIFACTS QUERY RESULTS =====")
+    logger.info(f"Query: {queries}")
+    logger.info(
+        f"Returning {len(results)} results from {len(artifacts)} total artifacts"
+    )
+    for idx, r in enumerate(results):
+        logger.info(f"  Result {idx}: name={r['name']}, id={r['id']}, type={r['type']}")
+    logger.info("=====================================")
+
+    logger.info(f"[DATA] Response: {len(results)} results")
+    return JSONResponse(content=results, headers=headers, status_code=200)
+
 
 @app.delete("/reset")
 def reset_registry(request: Request):
     """BASELINE: Reset registry to a clean state."""
     auth_header = request.headers.get("X-Authorization")
     if not auth_header:
-        pass  # Allow for baseline
+        logger.warning("DEBUG /reset: No auth header - allowing for baseline")
     else:
         if not require_auth(auth_header):
             raise HTTPException(
@@ -522,7 +550,7 @@ def get_artifact_by_name(name: str, request: Request):
         raise HTTPException(status_code=404, detail="No such artifact.")
 
     logger.info(f"Found {len(matches)} artifacts with name '{name}'")
-    # Log response
+    logger.info(f"[DATA] Returning {len(matches)} matches")
     return JSONResponse(content=matches)
 
 
@@ -602,6 +630,7 @@ async def update_artifact(artifact_type: str, artifact_id: str, request: Request
 
     try:
         body = await request.json()
+        logger.info(f"[DATA] Updating artifact type={artifact_type}, id={artifact_id}")
     except Exception:
         raise HTTPException(
             status_code=400,
@@ -668,6 +697,9 @@ async def register_artifact(artifact_type: str, request: Request):
     # Parse request body
     try:
         body = await request.json()
+        logger.info(
+            f"[DATA] Creating artifact type={artifact_type}, body keys: {list(body.keys())}"
+        )
     except Exception:
         raise HTTPException(
             status_code=400,
@@ -750,7 +782,6 @@ async def register_artifact(artifact_type: str, request: Request):
         "data": {"url": url},
     }
 
-    # Log response
     return JSONResponse(status_code=201, content=resp)
 
 
@@ -1003,6 +1034,7 @@ async def license_check(artifact_id: str, request: Request):
         )
 
     github_url = body.get("github_url")
+    logger.info(f"[DATA] License check for artifact={artifact_id}, url={github_url}")
     if not github_url or not isinstance(github_url, str):
         raise HTTPException(
             status_code=400,
@@ -1026,7 +1058,6 @@ async def license_check(artifact_id: str, request: Request):
         )
 
     result = _check_license_compatibility(github_url)
-    # Log response
     return JSONResponse(content=result)
 
 
@@ -1054,6 +1085,7 @@ async def artifact_by_regex(request: Request):
         )
 
     regex = body.get("regex")
+    logger.info(f"[DATA] Regex search: {regex}")
     if not regex or not isinstance(regex, str):
         raise HTTPException(
             status_code=400,
@@ -1133,7 +1165,7 @@ async def artifact_by_regex(request: Request):
             status_code=404, detail="No artifact found under this regex."
         )
 
-    # Log response
+    logger.info(f"[DATA] Returning {len(matches)} matches")
     return JSONResponse(content=matches)
 
 
@@ -1181,7 +1213,7 @@ def get_all_packages(request: Request):
     """
     auth_header = request.headers.get("X-Authorization")
     if not auth_header:
-        pass  # Allow for baseline
+        logger.warning("DEBUG /packages: No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
 
