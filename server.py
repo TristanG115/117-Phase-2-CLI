@@ -3,6 +3,7 @@ import gc
 import hashlib
 import json
 import logging
+import multiprocessing
 import os
 import re
 from typing import Optional
@@ -721,18 +722,17 @@ async def artifact_by_regex(request: Request):  # noqa: C901
             "formed improperly, or is invalid",
         )
 
-    # Cross-platform catastrophic backtracking detection
-    import threading
+    # Cross-platform catastrophic backtracking detection using multiprocessing
 
-    # CRITICAL: Test the regex pattern itself for catastrophic backtracking
+    # Test the regex pattern itself for catastrophic backtracking
     # BEFORE applying it to real artifacts. The hidden tests check if you can
     # detect catastrophic patterns, not if they timeout on your artifacts.
     def test_pattern_safety(pattern_obj, timeout=1.0):
         """
         Test if a regex pattern is susceptible to catastrophic backtracking.
         Returns False if ANY test takes longer than timeout.
+        Uses multiprocessing to actually kill runaway regex operations.
         """
-        import time
 
         # Test strings that trigger catastrophic backtracking
         test_cases = [
@@ -741,36 +741,44 @@ async def artifact_by_regex(request: Request):  # noqa: C901
             "x" * 30 + "y",
         ]
 
+        def _test_regex(pattern_str, flags, test_str, result_queue):
+            """Worker function that runs in separate process"""
+            try:
+                import re
+
+                pattern = re.compile(pattern_str, flags)
+                pattern.search(test_str)
+                result_queue.put("success")
+            except Exception as e:
+                result_queue.put(f"error: {e}")
+
+        pattern_str = pattern_obj.pattern
+        flags = pattern_obj.flags
+
         for test_str in test_cases:
-            result = {"completed": False}
+            result_queue = multiprocessing.Queue()
+            process = multiprocessing.Process(
+                target=_test_regex,
+                args=(pattern_str, flags, test_str, result_queue),
+                daemon=True,
+            )
 
-            def _test():
-                try:
-                    pattern_obj.search(test_str)
-                    result["completed"] = True
-                except Exception:
-                    result["completed"] = True
+            process.start()
+            process.join(timeout=timeout)
 
-            start_time = time.time()
-            thread = threading.Thread(target=_test, daemon=True)
-            thread.start()
-            thread.join(timeout=timeout)
-            elapsed = time.time() - start_time
-
-            # CRITICAL: Check thread.is_alive() IMMEDIATELY after join()
-            # Don't check result["completed"] because the thread might finish
-            # microseconds after the timeout and set it to True
-            if thread.is_alive():
-                # Thread still running after timeout - catastrophic!
-                logger.info(f"[DATA] TIMEOUT: Pattern still running after {timeout}s")
-                return False
-
-            # Thread finished, but did it finish within the timeout?
-            if elapsed >= (timeout - 0.01):  # Small margin for thread cleanup
-                # Took too long even though it finished
+            if process.is_alive():
+                # Process still running - kill it immediately
                 logger.info(
-                    f"[DATA] SLOW: Pattern took {elapsed:.2f}s (limit: {timeout}s)"
+                    f"[DATA] TIMEOUT: Pattern exceeded {timeout}s limit, killing process"
                 )
+                process.terminate()
+                process.join(timeout=0.5)  # Give it a moment to terminate gracefully
+
+                if process.is_alive():
+                    # Force kill if terminate didn't work
+                    process.kill()
+                    process.join()
+
                 return False
 
         logger.info(f"[DATA] Pattern validated as safe (fast on all test strings)")
@@ -814,6 +822,9 @@ async def artifact_by_regex(request: Request):  # noqa: C901
             pass
 
         # Match with reasonable timeout (pattern already validated as safe)
+        # We can still use threading here since the pattern is pre-validated
+        import threading
+
         match_result = {"matched": None, "completed": False}
 
         def _do_match():
