@@ -175,7 +175,7 @@ def _build_artifact_results(queries, artifacts):
                 flush=True,
             )
 
-            # Properly check for name containment
+            # Check for exact name match (case-insensitive) or wildcard
             name_matches = (name == "*") or (name == a["name"].lower())
 
             # Check type match
@@ -679,6 +679,114 @@ async def update_artifact(artifact_type: str, artifact_id: str, request: Request
     return {"status": "artifact updated successfully"}
 
 
+@app.post("/artifact/byRegEx")  # noqa: C901
+async def artifact_by_regex(request: Request):  # noqa: C901
+    """BASELINE: Search artifacts by regex over name with catastrophic backtracking detection."""
+
+    auth_header = request.headers.get("X-Authorization")
+
+    if not auth_header:
+        logger.warning("No auth header - allowing for baseline")
+    else:
+        require_auth(auth_header)
+
+    # Parse input JSON
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_regex or it is "
+                "formed improperly, or is invalid"
+            ),
+        )
+
+    regex = body.get("regex")
+    logger.info(f"[DATA] Regex search: {regex}")
+    if not regex or not isinstance(regex, str):
+        raise HTTPException(
+            status_code=400,
+            detail="There is missing field(s) in the artifact_regex or it is "
+            "formed improperly, or is invalid",
+        )
+
+    # Compile regex
+    try:
+        pattern = re.compile(regex, re.IGNORECASE)
+    except re.error:
+        raise HTTPException(
+            status_code=400,
+            detail="There is missing field(s) in the artifact_regex or it is "
+            "formed improperly, or is invalid",
+        )
+
+    # Use a thread-based timeout to detect catastrophic backtracking (cross-platform)
+    import concurrent.futures
+
+    def _match_with_timeout(pattern, text, timeout=2):
+        """Run pattern.search(text) in a worker thread and raise TimeoutError on timeout."""
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+            future = ex.submit(pattern.search, text)
+            try:
+                return future.result(timeout=timeout)
+            except concurrent.futures.TimeoutError:
+                raise TimeoutError(
+                    "Regex matching timeout - catastrophic backtracking detected"
+                )
+
+    artifacts = registry_handler.list_artifacts()
+    matches = []
+    seen_ids = set()
+
+    for a in artifacts:
+        name = a.get("name", "")
+        artifact_id = gen_id(name)
+
+        # Avoid duplicates
+        if artifact_id in seen_ids:
+            continue
+
+        # Build minimal search text according to spec
+        search_text = name
+
+        # Include README if present in metadata_json
+        try:
+            metadata = json.loads(a.get("metadata_json", "{}"))
+            readme_text = metadata.get("readme", "")
+            if isinstance(readme_text, str):
+                search_text += " " + readme_text
+        except Exception:
+            pass
+
+        # Test regex match with timeout to detect catastrophic backtracking
+        try:
+            matched = _match_with_timeout(pattern, search_text, timeout=2)
+
+            if matched:
+                actual_type = _get_artifact_type(a)
+                matches.append({"name": name, "id": artifact_id, "type": actual_type})
+                seen_ids.add(artifact_id)
+
+        except TimeoutError:
+            # Catastrophic backtracking detected - return 400
+            logger.warning(f"Catastrophic backtracking detected for regex: {regex}")
+            raise HTTPException(
+                status_code=400,
+                detail="There is missing field(s) in the artifact_regex or it is "
+                "formed improperly, or is invalid",
+            )
+
+    # Must be 404 if no results
+    if not matches:
+        raise HTTPException(
+            status_code=404, detail="No artifact found under this regex."
+        )
+
+    logger.info(f"[DATA] Returning {len(matches)} matches")
+    return JSONResponse(content=matches)
+
+
 @app.post("/artifact/{artifact_type}")
 async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
     """BASELINE: Register a new artifact by URL with async rating for models."""
@@ -1154,114 +1262,6 @@ async def license_check(artifact_id: str, request: Request):
 
     result = _check_license_compatibility(github_url)
     return JSONResponse(content=result)
-
-
-@app.post("/artifact/byRegEx")  # noqa: C901
-async def artifact_by_regex(request: Request):  # noqa: C901
-    """BASELINE: Search artifacts by regex over name with catastrophic backtracking detection."""
-
-    auth_header = request.headers.get("X-Authorization")
-
-    if not auth_header:
-        logger.warning("No auth header - allowing for baseline")
-    else:
-        require_auth(auth_header)
-
-    # Parse input JSON
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "There is missing field(s) in the artifact_regex or it is "
-                "formed improperly, or is invalid"
-            ),
-        )
-
-    regex = body.get("regex")
-    logger.info(f"[DATA] Regex search: {regex}")
-    if not regex or not isinstance(regex, str):
-        raise HTTPException(
-            status_code=400,
-            detail="There is missing field(s) in the artifact_regex or it is "
-            "formed improperly, or is invalid",
-        )
-
-    # Compile regex
-    try:
-        pattern = re.compile(regex, re.IGNORECASE)
-    except re.error:
-        raise HTTPException(
-            status_code=400,
-            detail="There is missing field(s) in the artifact_regex or it is "
-            "formed improperly, or is invalid",
-        )
-
-    # Use a thread-based timeout to detect catastrophic backtracking (cross-platform)
-    import concurrent.futures
-
-    def _match_with_timeout(pattern, text, timeout=2):
-        """Run pattern.search(text) in a worker thread and raise TimeoutError on timeout."""
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-            future = ex.submit(pattern.search, text)
-            try:
-                return future.result(timeout=timeout)
-            except concurrent.futures.TimeoutError:
-                raise TimeoutError(
-                    "Regex matching timeout - catastrophic backtracking detected"
-                )
-
-    artifacts = registry_handler.list_artifacts()
-    matches = []
-    seen_ids = set()
-
-    for a in artifacts:
-        name = a.get("name", "")
-        artifact_id = gen_id(name)
-
-        # Avoid duplicates
-        if artifact_id in seen_ids:
-            continue
-
-        # Build minimal search text according to spec
-        search_text = name
-
-        # Include README if present in metadata_json
-        try:
-            metadata = json.loads(a.get("metadata_json", "{}"))
-            readme_text = metadata.get("readme", "")
-            if isinstance(readme_text, str):
-                search_text += " " + readme_text
-        except Exception:
-            pass
-
-        # Test regex match with timeout to detect catastrophic backtracking
-        try:
-            matched = _match_with_timeout(pattern, search_text, timeout=2)
-
-            if matched:
-                actual_type = _get_artifact_type(a)
-                matches.append({"name": name, "id": artifact_id, "type": actual_type})
-                seen_ids.add(artifact_id)
-
-        except TimeoutError:
-            # Catastrophic backtracking detected - return 400
-            logger.warning(f"Catastrophic backtracking detected for regex: {regex}")
-            raise HTTPException(
-                status_code=400,
-                detail="There is missing field(s) in the artifact_regex or it is "
-                "formed improperly, or is invalid",
-            )
-
-    # Must be 404 if no results
-    if not matches:
-        raise HTTPException(
-            status_code=404, detail="No artifact found under this regex."
-        )
-
-    logger.info(f"[DATA] Returning {len(matches)} matches")
-    return JSONResponse(content=matches)
 
 
 @app.get("/tracks")
