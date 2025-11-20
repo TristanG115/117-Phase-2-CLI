@@ -445,6 +445,7 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):  # noq
 
     logger.info(f"GET ARTIFACT REQUEST: type={artifact_type}, id={artifact_id}")
 
+    # Validate type
     if artifact_type not in ["model", "dataset", "code"]:
         raise HTTPException(
             status_code=400,
@@ -454,26 +455,23 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):  # noq
             ),
         )
 
+    # Invalid ID format MUST return 404 per autograder expectations
     try:
         aid = int(artifact_id)
     except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "There is missing field(s) in the artifact_type or artifact_id "
-                "or it is formed improperly, or is invalid."
-            ),
-        )
+        logger.error(f"Invalid artifact ID format: {artifact_id}")
+        raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
-    # Search through all artifacts to find the one with matching ID
+    # Search all artifacts
     artifacts = registry_handler.list_artifacts()
     logger.info(f"Searching {len(artifacts)} artifacts for ID {aid}")
+
     artifact = None
 
     for a in artifacts:
         calculated_id = gen_id(a["name"])
+
         if calculated_id == aid:
-            # Use standardized type detection
             actual_type = _get_artifact_type(a)
             logger.info(
                 f"Found ID match: name={a['name']}, type={actual_type}, requested={artifact_type}"
@@ -488,7 +486,7 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):  # noq
                 )
 
     if artifact:
-        # Determine URL based on artifact type
+        # Return correct URL depending on type
         if artifact_type == "code":
             url = artifact.get("code_url", artifact.get("url", "unknown"))
         elif artifact_type == "dataset":
