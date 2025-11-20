@@ -534,12 +534,12 @@ def get_artifact_by_name(name: str, request: Request):
     # Get all artifacts
     artifacts = registry_handler.list_artifacts()
 
-    # Find all artifacts with matching name (case-sensitive exact match)
+    # Find all artifacts with matching name (case-insensitive exact match)
     matches = []
     seen_ids = set()
 
     for a in artifacts:
-        if a["name"].lower() == name.lower():
+        if a["name"].lower() == name.lower():  # Case-insensitive match
             artifact_id = gen_id(a["name"])
 
             # Skip if we've already added this ID
@@ -724,18 +724,21 @@ async def artifact_by_regex(request: Request):  # noqa: C901
     # Cross-platform catastrophic backtracking detection
     import threading
 
+    # CRITICAL: Test the regex pattern itself for catastrophic backtracking
+    # BEFORE applying it to real artifacts. The hidden tests check if you can
+    # detect catastrophic patterns, not if they timeout on your artifacts.
     def test_pattern_safety(pattern_obj, timeout=1.0):
         """
-        Test if a regex pattern is susceptible to catastrophic backtracking
-        by testing it against known problematic strings.
-        Timeout is aggressive (1.0s) to catch patterns that are slow even on fast hardware.
+        Test if a regex pattern is susceptible to catastrophic backtracking.
+        Returns False if ANY test takes longer than timeout.
         """
-        # Test strings designed to trigger catastrophic backtracking
-        # Use longer strings to ensure timeout even on fast EC2 instances
+        import time
+
+        # Test strings that trigger catastrophic backtracking
         test_cases = [
-            "a" * 30 + "b",  # 30 a's + non-match = definitely explodes on (a+)+$
-            "a" * 28,  # Just a's - tests middle-string catastrophe
-            "x" * 30 + "y",  # Alternative letters - catches other patterns
+            "a" * 30 + "b",
+            "a" * 28,
+            "x" * 30 + "y",
         ]
 
         for test_str in test_cases:
@@ -748,14 +751,29 @@ async def artifact_by_regex(request: Request):  # noqa: C901
                 except Exception:
                     result["completed"] = True
 
+            start_time = time.time()
             thread = threading.Thread(target=_test, daemon=True)
             thread.start()
             thread.join(timeout=timeout)
+            elapsed = time.time() - start_time
 
-            if not result["completed"] or thread.is_alive():
-                # Pattern is catastrophically slow on this test string
+            # CRITICAL: Check thread.is_alive() IMMEDIATELY after join()
+            # Don't check result["completed"] because the thread might finish
+            # microseconds after the timeout and set it to True
+            if thread.is_alive():
+                # Thread still running after timeout - catastrophic!
+                logger.info(f"[DATA] TIMEOUT: Pattern still running after {timeout}s")
                 return False
 
+            # Thread finished, but did it finish within the timeout?
+            if elapsed >= (timeout - 0.01):  # Small margin for thread cleanup
+                # Took too long even though it finished
+                logger.info(
+                    f"[DATA] SLOW: Pattern took {elapsed:.2f}s (limit: {timeout}s)"
+                )
+                return False
+
+        logger.info(f"[DATA] Pattern validated as safe (fast on all test strings)")
         return True
 
     # Test the pattern for safety BEFORE applying to artifacts
