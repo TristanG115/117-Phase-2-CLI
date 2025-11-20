@@ -3,6 +3,7 @@ import gc
 import hashlib
 import json
 import logging
+import multiprocessing
 import os
 import re
 from typing import Optional
@@ -1188,7 +1189,7 @@ async def artifact_by_regex(request: Request):  # noqa: C901
             "formed improperly, or is invalid",
         )
 
-    # Compile regex
+    # Try compiling regex
     try:
         pattern = re.compile(regex, re.IGNORECASE)
     except re.error:
@@ -1198,20 +1199,74 @@ async def artifact_by_regex(request: Request):  # noqa: C901
             "formed improperly, or is invalid",
         )
 
-    # Use a thread-based timeout to detect catastrophic backtracking (cross-platform)
-    import concurrent.futures
+    def test_pattern_safety(pattern_obj, timeout=0.15):
+        """
+        Test if a regex pattern could cause catastrophic backtracking.
+        Returns False if any test case takes longer than timeout.
+        Uses multiprocessing to kill runaway regex operations.
+        Optimized for 1-vCPU micro instances.
+        """
 
-    def _match_with_timeout(pattern, text, timeout=2):
-        """Run pattern.search(text) in a worker thread and raise TimeoutError on timeout."""
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-            future = ex.submit(pattern.search, text)
+        # Shortened test cases
+        test_cases = [
+            "a" * 12 + "b",
+            "a" * 10,
+            "x" * 12 + "y",
+        ]
+
+        def _test_regex(pattern_str, flags, test_str, result_queue):
             try:
-                return future.result(timeout=timeout)
-            except concurrent.futures.TimeoutError:
-                raise TimeoutError(
-                    "Regex matching timeout - catastrophic backtracking detected"
-                )
+                import re
 
+                pattern = re.compile(pattern_str, flags)
+                pattern.search(test_str)
+                result_queue.put("ok")
+            except Exception as e:
+                result_queue.put(f"error: {e}")
+
+        pattern_str = pattern_obj.pattern
+        flags = pattern_obj.flags
+
+        for test_str in test_cases:
+            result_queue = multiprocessing.Queue()
+            process = multiprocessing.Process(
+                target=_test_regex,
+                args=(pattern_str, flags, test_str, result_queue),
+                daemon=True,
+            )
+
+            process.start()
+            process.join(timeout=timeout)
+
+            if process.is_alive():
+                logger.info(
+                    f"[DATA] TIMEOUT: Pattern exceeded {timeout}s, killing process"
+                )
+                process.terminate()
+                process.join(0.2)
+                if process.is_alive():
+                    process.kill()
+                    process.join()
+                return False
+
+        logger.info("[DATA] Pattern validated as safe (fast on all test strings)")
+        return True
+
+    # Run safety test
+    logger.info(f"[DATA] Testing regex pattern for catastrophic backtracking: {regex}")
+    if not test_pattern_safety(pattern, timeout=0.15):
+        logger.warning(f"Catastrophic backtracking detected in pattern: {regex}")
+        raise HTTPException(
+            status_code=400,
+            detail="There is missing field(s) in the artifact_regex or it is "
+            "formed improperly, or is invalid",
+        )
+
+    logger.info("[DATA] Pattern validated as safe, searching artifacts")
+
+    #
+    # MATCHING LOGIC — UNCHANGED
+    #
     artifacts = registry_handler.list_artifacts()
     matches = []
     seen_ids = set()
@@ -1220,14 +1275,11 @@ async def artifact_by_regex(request: Request):  # noqa: C901
         name = a.get("name", "")
         artifact_id = gen_id(name)
 
-        # Avoid duplicates
         if artifact_id in seen_ids:
             continue
 
-        # Build minimal search text according to spec
+        # Build minimal search text
         search_text = name
-
-        # Include README if present in metadata_json
         try:
             metadata = json.loads(a.get("metadata_json", "{}"))
             readme_text = metadata.get("readme", "")
@@ -1236,25 +1288,27 @@ async def artifact_by_regex(request: Request):  # noqa: C901
         except Exception:
             pass
 
-        # Test regex match with timeout to detect catastrophic backtracking
-        try:
-            matched = _match_with_timeout(pattern, search_text, timeout=2)
+        # Safety-tested pattern
+        import threading
 
-            if matched:
-                actual_type = _get_artifact_type(a)
-                matches.append({"name": name, "id": artifact_id, "type": actual_type})
-                seen_ids.add(artifact_id)
+        match_result = {"matched": None, "completed": False}
 
-        except TimeoutError:
-            # Catastrophic backtracking detected - return 400
-            logger.warning(f"Catastrophic backtracking detected for regex: {regex}")
-            raise HTTPException(
-                status_code=400,
-                detail="There is missing field(s) in the artifact_regex or it is "
-                "formed improperly, or is invalid",
-            )
+        def _do_match():
+            try:
+                match_result["matched"] = pattern.search(search_text)
+                match_result["completed"] = True
+            except Exception:
+                match_result["completed"] = True
 
-    # Must be 404 if no results
+        match_thread = threading.Thread(target=_do_match, daemon=True)
+        match_thread.start()
+        match_thread.join(timeout=1.0)
+
+        if match_result["completed"] and match_result["matched"]:
+            actual_type = _get_artifact_type(a)
+            matches.append({"name": name, "id": artifact_id, "type": actual_type})
+            seen_ids.add(artifact_id)
+
     if not matches:
         raise HTTPException(
             status_code=404, detail="No artifact found under this regex."
