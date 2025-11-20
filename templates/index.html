@@ -553,15 +553,15 @@
         });
 
         if (response.ok) {
-          showAlert(`✅ Artifact "${name}" uploaded successfully!`);
+          showAlert(`Artifact "${name}" uploaded successfully!`);
           closeModal('uploadModal');
           setTimeout(() => location.reload(), 1500);
         } else {
           const error = await response.json();
-          showAlert(`❌ Upload failed: ${error.detail || 'Unknown error'}`, 'error');
+          showAlert(`Upload failed: ${error.detail || 'Unknown error'}`, 'error');
         }
       } catch (err) {
-        showAlert(`❌ Upload failed: ${err.message}`, 'error');
+        showAlert(`Upload failed: ${err.message}`, 'error');
       }
     });
 
@@ -574,14 +574,14 @@
       // Extract name from HuggingFace URL
       const match = url.match(/huggingface\.co\/([^\/]+\/[^\/]+)/);
       if (!match) {
-        showAlert('❌ Invalid HuggingFace URL format', 'error');
+        showAlert('Invalid HuggingFace URL format', 'error');
         return;
       }
 
       const name = match[1].replace('/', '-');
 
       try {
-        showAlert('⏳ Ingesting model... This may take a while.');
+        showAlert('Ingesting model... This may take a while.');
 
         const response = await fetch('/artifact/model', {
           method: 'POST',
@@ -590,15 +590,15 @@
         });
 
         if (response.ok) {
-          showAlert(`✅ Model "${name}" ingested successfully!`);
+          showAlert(`Model "${name}" ingested successfully!`);
           closeModal('ingestModal');
           setTimeout(() => location.reload(), 1500);
         } else {
           const error = await response.json();
-          showAlert(`❌ Ingest failed: ${error.detail || 'Model does not meet quality threshold'}`, 'error');
+          showAlert(`Ingest failed: ${error.detail || 'Model does not meet quality threshold'}`, 'error');
         }
       } catch (err) {
-        showAlert(`❌ Ingest failed: ${err.message}`, 'error');
+        showAlert(`Ingest failed: ${err.message}`, 'error');
       }
     });
 
@@ -609,13 +609,13 @@
         const response = await fetch(`/artifact/byName/${encodeURIComponent(name)}`);
 
         if (!response.ok) {
-          showAlert('❌ Failed to find artifact', 'error');
+          showAlert('Failed to find artifact', 'error');
           return;
         }
 
         const artifacts = await response.json();
         if (!artifacts || artifacts.length === 0) {
-          showAlert('❌ Artifact not found', 'error');
+          showAlert('Artifact not found', 'error');
           return;
         }
 
@@ -625,7 +625,7 @@
         const detailResponse = await fetch(`/artifacts/${type}/${artifact.id}`);
 
         if (!detailResponse.ok) {
-          showAlert('❌ Failed to get download URL', 'error');
+          showAlert('Failed to get download URL', 'error');
           return;
         }
 
@@ -634,12 +634,12 @@
 
         if (downloadUrl) {
           window.open(downloadUrl, '_blank');
-          showAlert(`✅ Download started for "${name}"`);
+          showAlert(`Download started for "${name}"`);
         } else {
-          showAlert('❌ No download URL available', 'error');
+          showAlert('No download URL available', 'error');
         }
       } catch (err) {
-        showAlert(`❌ Download failed: ${err.message}`, 'error');
+        showAlert(`Download failed: ${err.message}`, 'error');
       }
     }
 
@@ -782,7 +782,7 @@
             </div>
             <div class="artifact-actions">
               <button onclick="downloadArtifact('${artifact.name}', '${artifact.type}')" class="action-btn btn-download">
-                ⬇️ Download
+                Download
               </button>
             </div>
           </div>
@@ -795,20 +795,20 @@
 
     // Reset registry
     async function resetRegistry() {
-      if (!confirm("⚠️ Are you sure? This will delete ALL artifacts permanently!")) {
+      if (!confirm("Are you sure? This will delete ALL artifacts permanently!")) {
         return;
       }
 
       try {
         const response = await fetch("/reset", { method: "DELETE" });
         if (response.ok) {
-          showAlert("✅ Registry reset successfully");
+          showAlert("Registry reset successfully");
           setTimeout(() => location.reload(), 1500);
         } else {
-          showAlert("❌ Failed to reset registry", 'error');
+          showAlert("Failed to reset registry", 'error');
         }
       } catch (err) {
-        showAlert(`❌ Reset failed: ${err.message}`, 'error');
+        showAlert(`Reset failed: ${err.message}`, 'error');
       }
     }
 
