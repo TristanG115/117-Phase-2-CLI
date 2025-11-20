@@ -331,7 +331,7 @@
 <body>
   <div class="container">
     <header>
-      <h1>Trustworthy Model Registry</h1>
+      <h1>🏛️ Trustworthy Model Registry</h1>
       <p class="subtitle">ECE 461 - Fall 2025 - Phase 2</p>
     </header>
 
@@ -339,10 +339,10 @@
       <div class="search-box">
         <input type="text" id="searchInput" class="form-control" placeholder="Search artifacts by name or regex...">
       </div>
-      <button onclick="searchArtifacts()" class="btn btn-custom">Search</button>
-      <button onclick="showUploadModal()" class="btn btn-custom">Upload Artifact</button>
-      <button onclick="showIngestModal()" class="btn btn-custom">Ingest from HuggingFace</button>
-      <button onclick="resetRegistry()" class="btn btn-danger">Reset Registry</button>
+      <button onclick="searchArtifacts()" class="btn btn-custom">🔍 Search</button>
+      <button onclick="showUploadModal()" class="btn btn-custom">⬆️ Upload Artifact</button>
+      <button onclick="showIngestModal()" class="btn btn-custom">📥 Ingest from HuggingFace</button>
+      <button onclick="resetRegistry()" class="btn btn-danger">🗑️ Reset Registry</button>
     </div>
 
     <div class="stats">
@@ -553,15 +553,15 @@
         });
 
         if (response.ok) {
-          showAlert(`Artifact "${name}" uploaded successfully!`);
+          showAlert(`✅ Artifact "${name}" uploaded successfully!`);
           closeModal('uploadModal');
           setTimeout(() => location.reload(), 1500);
         } else {
           const error = await response.json();
-          showAlert(`Upload failed: ${error.detail || 'Unknown error'}`, 'error');
+          showAlert(`❌ Upload failed: ${error.detail || 'Unknown error'}`, 'error');
         }
       } catch (err) {
-        showAlert(`Upload failed: ${err.message}`, 'error');
+        showAlert(`❌ Upload failed: ${err.message}`, 'error');
       }
     });
 
@@ -574,14 +574,14 @@
       // Extract name from HuggingFace URL
       const match = url.match(/huggingface\.co\/([^\/]+\/[^\/]+)/);
       if (!match) {
-        showAlert('Invalid HuggingFace URL format', 'error');
+        showAlert('❌ Invalid HuggingFace URL format', 'error');
         return;
       }
 
       const name = match[1].replace('/', '-');
 
       try {
-        showAlert('Ingesting model... This may take a while.');
+        showAlert('⏳ Ingesting model... This may take a while.');
 
         const response = await fetch('/artifact/model', {
           method: 'POST',
@@ -590,15 +590,15 @@
         });
 
         if (response.ok) {
-          showAlert(`Model "${name}" ingested successfully!`);
+          showAlert(`✅ Model "${name}" ingested successfully!`);
           closeModal('ingestModal');
           setTimeout(() => location.reload(), 1500);
         } else {
           const error = await response.json();
-          showAlert(`Ingest failed: ${error.detail || 'Model does not meet quality threshold'}`, 'error');
+          showAlert(`❌ Ingest failed: ${error.detail || 'Model does not meet quality threshold'}`, 'error');
         }
       } catch (err) {
-        showAlert(`Ingest failed: ${err.message}`, 'error');
+        showAlert(`❌ Ingest failed: ${err.message}`, 'error');
       }
     });
 
@@ -609,13 +609,13 @@
         const response = await fetch(`/artifact/byName/${encodeURIComponent(name)}`);
 
         if (!response.ok) {
-          showAlert('Failed to find artifact', 'error');
+          showAlert('❌ Failed to find artifact', 'error');
           return;
         }
 
         const artifacts = await response.json();
         if (!artifacts || artifacts.length === 0) {
-          showAlert('Artifact not found', 'error');
+          showAlert('❌ Artifact not found', 'error');
           return;
         }
 
@@ -625,7 +625,7 @@
         const detailResponse = await fetch(`/artifacts/${type}/${artifact.id}`);
 
         if (!detailResponse.ok) {
-          showAlert('Failed to get download URL', 'error');
+          showAlert('❌ Failed to get download URL', 'error');
           return;
         }
 
@@ -634,33 +634,60 @@
 
         if (downloadUrl) {
           window.open(downloadUrl, '_blank');
-          showAlert(`Download started for "${name}"`);
+          showAlert(`✅ Download started for "${name}"`);
         } else {
-          showAlert('No download URL available', 'error');
+          showAlert('❌ No download URL available', 'error');
         }
       } catch (err) {
-        showAlert(`Download failed: ${err.message}`, 'error');
+        showAlert(`❌ Download failed: ${err.message}`, 'error');
       }
     }
 
     // View rating
     async function rateArtifact(name) {
+      console.log('rateArtifact called with name:', name);
       document.getElementById('ratingModal').style.display = 'block';
       document.getElementById('ratingContent').innerHTML = '<div class="loading">Loading rating...</div>';
 
       try {
         // Get artifact ID first
+        console.log('Fetching artifact by name:', name);
         const response = await fetch(`/artifact/byName/${encodeURIComponent(name)}`);
-        if (!response.ok) throw new Error('Artifact not found');
+        console.log('Response status:', response.status);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Failed to fetch artifact:', errorText);
+          throw new Error(`Failed to find artifact: ${response.status}`);
+        }
 
         const artifacts = await response.json();
+        console.log('Artifacts response:', artifacts);
+
+        if (!artifacts || artifacts.length === 0) {
+          throw new Error('No artifacts found with this name');
+        }
+
         const artifact = artifacts[0];
+        console.log('Using artifact:', artifact);
+
+        if (!artifact.id) {
+          throw new Error('Artifact ID is missing');
+        }
 
         // Get rating
+        console.log('Fetching rating for ID:', artifact.id);
         const ratingResponse = await fetch(`/artifact/model/${artifact.id}/rate`);
-        if (!ratingResponse.ok) throw new Error('Rating not available');
+        console.log('Rating response status:', ratingResponse.status);
+
+        if (!ratingResponse.ok) {
+          const errorText = await ratingResponse.text();
+          console.error('Failed to fetch rating:', errorText);
+          throw new Error(`Rating not available: ${ratingResponse.status}`);
+        }
 
         const rating = await ratingResponse.json();
+        console.log('Rating data:', rating);
 
         // Display rating
         let html = `
@@ -680,11 +707,11 @@
         ];
 
         for (const metric of metrics) {
-          if (rating[metric] !== undefined) {
+          if (rating[metric] !== undefined && rating[metric] !== null) {
             html += `
               <div style="display: flex; justify-content: space-between; padding: 10px; background: #f8f9fa; border-radius: 6px;">
                 <strong>${metric.replace(/_/g, ' ').toUpperCase()}:</strong>
-                <span>${rating[metric].toFixed(2)}</span>
+                <span>${typeof rating[metric] === 'number' ? rating[metric].toFixed(2) : rating[metric]}</span>
               </div>
             `;
           }
@@ -693,8 +720,16 @@
         html += '</div>';
         document.getElementById('ratingContent').innerHTML = html;
       } catch (err) {
+        console.error('rateArtifact error:', err);
         document.getElementById('ratingContent').innerHTML = `
-          <div class="alert alert-error">Failed to load rating: ${err.message}</div>
+          <div class="alert alert-error">
+            <strong>Failed to load rating</strong><br>
+            ${err.message}<br><br>
+            <small style="color: #666;">
+              Check browser console (F12) for details.<br>
+              Make sure the model has been rated by the server.
+            </small>
+          </div>
         `;
       }
     }
@@ -747,7 +782,7 @@
             </div>
             <div class="artifact-actions">
               <button onclick="downloadArtifact('${artifact.name}', '${artifact.type}')" class="action-btn btn-download">
-                ⬇ Download
+                ⬇️ Download
               </button>
             </div>
           </div>
@@ -760,20 +795,20 @@
 
     // Reset registry
     async function resetRegistry() {
-      if (!confirm("Are you sure? This will delete ALL artifacts permanently!")) {
+      if (!confirm("⚠️ Are you sure? This will delete ALL artifacts permanently!")) {
         return;
       }
 
       try {
         const response = await fetch("/reset", { method: "DELETE" });
         if (response.ok) {
-          showAlert("Registry reset successfully");
+          showAlert("✅ Registry reset successfully");
           setTimeout(() => location.reload(), 1500);
         } else {
-          showAlert("Failed to reset registry", 'error');
+          showAlert("❌ Failed to reset registry", 'error');
         }
       } catch (err) {
-        showAlert(`Reset failed: ${err.message}`, 'error');
+        showAlert(`❌ Reset failed: ${err.message}`, 'error');
       }
     }
 
