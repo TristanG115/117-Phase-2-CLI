@@ -77,9 +77,12 @@ jobs:
             if [ ! -d "117-Phase-2-CLI" ]; then
               git clone https://github.com/TristanG115/117-Phase-2-CLI.git
             fi
-            cd 117-Phase-2-CLI
+            git reset --hard
             git pull origin main
-            echo "Restarting app..."
-            pkill -f "python3 main.py" || true
-            nohup python3 main.py > app.log 2>&1 &
+
+            pip3 install --user -r requirements.txt
+
+            python3 run.py install
+
+            echo "Deployment completed successfully."
           EOF
