@@ -1138,19 +1138,18 @@ async def artifact_by_regex(request: Request):  # noqa: C901
             "formed improperly, or is invalid",
         )
 
-    def test_pattern_safety(pattern_obj, timeout=0.15):
+    def test_pattern_safety(pattern_obj, timeout=0.5):
         """
         Test if a regex pattern could cause catastrophic backtracking.
         Returns False if any test case takes longer than timeout.
         Uses multiprocessing to kill runaway regex operations.
-        Optimized for 1-vCPU micro instances.
         """
 
-        # Test cases to detect catastrophic backtracking
+        # Test cases specifically designed to trigger catastrophic backtracking
+        # These are longer strings that will expose exponential behavior
         test_cases = [
-            "a" * 12 + "b",
-            "a" * 10,
-            "x" * 12 + "y",
+            "a" * 25 + "b",
+            "a" * 20,
         ]
 
         def _test_regex(pattern_str, flags, test_str, result_queue):
@@ -1193,7 +1192,7 @@ async def artifact_by_regex(request: Request):  # noqa: C901
 
     # Run safety test
     logger.info(f"[DATA] Testing regex pattern for catastrophic backtracking: {regex}")
-    if not test_pattern_safety(pattern, timeout=0.15):
+    if not test_pattern_safety(pattern, timeout=1.0):
         logger.warning(f"Catastrophic backtracking detected in pattern: {regex}")
         raise HTTPException(
             status_code=400,
