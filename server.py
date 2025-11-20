@@ -3,9 +3,10 @@ import gc
 import hashlib
 import json
 import logging
-import multiprocessing
 import os
 import re
+import signal
+from contextlib import contextmanager
 from typing import Optional
 
 from beautilog import logger
@@ -790,6 +791,27 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
     return JSONResponse(status_code=201, content=resp)
 
 
+class TimeoutException(Exception):
+    """Exception raised when operation times out."""
+
+    pass
+
+
+@contextmanager
+def time_limit(seconds):
+    """Context manager to enforce timeout using signals (Unix/Linux only)."""
+
+    def signal_handler(signum, frame):
+        raise TimeoutException("Timed out!")
+
+    signal.signal(signal.SIGALRM, signal_handler)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+
+
 @app.get("/artifact/model/{artifact_id}/rate")  # noqa: C901
 async def rate_model(artifact_id: str, request: Request):  # noqa: C901
     """
@@ -821,6 +843,7 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
     # Try to find artifact - support multiple lookup methods
     artifact = None
     lookup_method = None
+    aid = None
 
     # Method 1: Try as numeric ID
     try:
@@ -837,34 +860,7 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
             f"[RATE REQUEST] '{artifact_id}' is not numeric, trying alternative lookup methods"
         )
 
-    # Method 2: If not found by ID, check if it's a special placeholder that should match by position
-    if not artifact and artifact_id in ["{id}", "invalidId"]:
-        # These are test cases - they should fail with proper error messages
-        logger.warning(
-            f"[RATE REQUEST] Received test/placeholder ID '{artifact_id}' - returning 400 as expected"
-        )
-
-        # Check what the error should be based on the placeholder
-        if artifact_id == "invalidId":
-            # This is testing invalid format
-            logger.error(
-                f"[RATE REQUEST] FAILED - Invalid artifact_id: '{artifact_id}'"
-            )
-            raise HTTPException(
-                status_code=400,
-                detail="There is missing field(s) in the artifact_id or it is formed improperly, or is invalid.",
-            )
-        elif artifact_id == "{id}":
-            # This is testing template variable - also invalid
-            logger.error(
-                f"[RATE REQUEST] FAILED - Template variable '{artifact_id}' used instead of actual ID"
-            )
-            raise HTTPException(
-                status_code=400,
-                detail="There is missing field(s) in the artifact_id or it is formed improperly, or is invalid.",
-            )
-
-    # Method 3: Try matching by name hash (for when names are passed instead of IDs)
+    # Method 2: Try matching by name (for when names are passed instead of IDs)
     if not artifact:
         # Try to see if artifact_id could be a name or partial name
         for a in artifacts:
@@ -875,16 +871,35 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
                 logger.info(f"[RATE REQUEST] Found by exact name match: {artifact_id}")
                 break
 
-    # If still not found, fail with 404
+    # If not found, determine if it's invalid format (400) or not found (404)
     if not artifact:
-        logger.error(
-            f"[RATE REQUEST] Artifact '{artifact_id}' not found using any method. Available IDs: {[gen_id(a['name']) for a in artifacts[:10]]}"
-        )
-        raise HTTPException(status_code=404, detail="Artifact does not exist.")
+        # Check if this looks like an invalid/malformed ID
+        # If it's not a valid number and doesn't match any artifact name, it's invalid
+        is_numeric_attempt = aid is not None  # We tried to parse it as a number
+
+        if not is_numeric_attempt:
+            # It's not a number and doesn't match any artifact - this is an invalid format
+            logger.error(
+                f"[RATE REQUEST] FAILED - Invalid artifact_id format: '{artifact_id}'"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="There is missing field(s) in the artifact_id or it is formed improperly, or is invalid.",
+            )
+        else:
+            # It's a valid number but doesn't exist - this is a 404
+            logger.error(
+                f"[RATE REQUEST] Artifact with ID '{artifact_id}' not found. Available IDs: {[gen_id(a['name']) for a in artifacts[:10]]}"
+            )
+            raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
     logger.info(
         f"[RATE REQUEST] Found artifact using {lookup_method}: name='{artifact.get('name')}', type='{artifact.get('artifact_type')}'"
     )
+
+    # Get the artifact ID for later use
+    if aid is None:
+        aid = gen_id(artifact["name"])
 
     # Get cached rating data from metadata
     try:
@@ -1160,6 +1175,7 @@ async def artifact_by_regex(request: Request):  # noqa: C901
     """
     BASELINE: Search artifacts by regex over name and README text.
     Detects catastrophic backtracking and returns 400 for such regexes.
+    Uses signal-based timeout (optimized for single-core EC2).
     """
 
     auth_header = request.headers.get("X-Authorization")
@@ -1181,103 +1197,66 @@ async def artifact_by_regex(request: Request):  # noqa: C901
         )
 
     regex = body.get("regex")
-    logger.info(f"[REGEX] Incoming regex: {regex!r}")
+    logger.info(f"[REGEX] Received regex search: {regex}")
 
     if not regex or not isinstance(regex, str):
+        logger.error("Missing or invalid regex field")
         raise HTTPException(
             status_code=400,
-            detail=(
-                "There is missing field(s) in the artifact_regex or it is "
-                "formed improperly, or is invalid"
-            ),
+            detail="There is missing field(s) in the artifact_regex or it is formed improperly, or is invalid",
         )
 
     # Try compiling regex
     try:
         pattern = re.compile(regex, re.IGNORECASE)
+        logger.info(f"[REGEX] Successfully compiled regex pattern")
     except re.error as e:
-        logger.error(f"[REGEX] Compile error for {regex!r}: {e}")
+        logger.error(f"Failed to compile regex: {e}")
         raise HTTPException(
             status_code=400,
-            detail=(
-                "There is missing field(s) in the artifact_regex or it is "
-                "formed improperly, or is invalid"
-            ),
+            detail="There is missing field(s) in the artifact_regex or it is formed improperly, or is invalid",
         )
 
-    def is_pattern_safe(pattern_obj, timeout: float = 0.2) -> bool:
-        """
-        Returns False if the pattern shows signs of catastrophic backtracking
-        on adversarial test strings (within a short timeout).
-        Uses a separate process so we can forcibly kill runaway regex matches.
-        """
+    # Test for catastrophic backtracking with simple test cases
+    logger.info("[REGEX] Testing pattern for catastrophic backtracking")
 
-        # These are crafted to tickle patterns like (a+)(a+)...$ on "aaaaab"
-        test_strings = [
-            "a" * 32 + "b",
-            "a" * 32,
-            "x" * 32 + "y",
-        ]
+    test_cases = [
+        "a" * 15 + "b",  # Tests patterns like (a+)+
+        "a" * 15,  # Tests anchored patterns
+        "x" * 15 + "y",  # Tests with different characters
+    ]
 
-        pattern_str = pattern_obj.pattern
-        flags = pattern_obj.flags
+    timeout_seconds = 2  # 2 second timeout as discussed in Piazza
 
-        def _worker(pat: str, fl: int, s: str):
-            import re as _re
-
-            _p = _re.compile(pat, fl)
-            _ = _p.search(s)
-
-        for s in test_strings:
-            proc = multiprocessing.Process(
-                target=_worker,
-                args=(pattern_str, flags, s),
-                daemon=True,
+    for test_str in test_cases:
+        try:
+            with time_limit(timeout_seconds):
+                pattern.search(test_str)
+        except TimeoutException:
+            logger.warning(
+                f"[REGEX] Catastrophic backtracking detected - pattern took >{timeout_seconds}s on test string"
             )
-            proc.start()
-            proc.join(timeout)
+            raise HTTPException(
+                status_code=400,
+                detail="There is missing field(s) in the artifact_regex or it is formed improperly, or is invalid",
+            )
+        except Exception as e:
+            logger.error(f"[REGEX] Error during safety test: {e}")
+            raise HTTPException(
+                status_code=400,
+                detail="There is missing field(s) in the artifact_regex or it is formed improperly, or is invalid",
+            )
 
-            if proc.is_alive():
-                logger.warning(
-                    f"[REGEX] Pattern {pattern_str!r} timed out (> {timeout}s) on test string."
-                )
-                proc.terminate()
-                proc.join(0.1)
-                if proc.is_alive():
-                    proc.kill()
-                    proc.join()
-                return False  # considered "invalid" for our API
+    logger.info("[REGEX] Pattern validated as safe")
 
-            # Non-zero exit could also be treated as invalid
-            if proc.exitcode not in (0, None):
-                logger.warning(
-                    f"[REGEX] Pattern {pattern_str!r} worker exited with code {proc.exitcode}"
-                )
-                return False
-
-        logger.info("[REGEX] Pattern validated as safe (no catastrophic backtracking).")
-        return True
-
-    logger.info("[REGEX] Testing pattern for catastrophic backtracking...")
-    if not is_pattern_safe(pattern, timeout=0.2):
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "There is missing field(s) in the artifact_regex or it is "
-                "formed improperly, or is invalid"
-            ),
-        )
-
-    logger.info("[REGEX] Pattern is safe. Proceeding with artifact search.")
-
+    # Get artifacts and search
     try:
         artifacts = registry_handler.list_artifacts()
     except Exception as e:
-        logger.error(f"[REGEX] Error listing artifacts: {e}")
-        # Spec does NOT define 500 here, but if this happens it's a real server issue
+        logger.error(f"Error listing artifacts: {e}")
         raise HTTPException(
             status_code=500,
-            detail="Internal server error while listing artifacts.",
+            detail="Internal server error while listing artifacts",
         )
 
     matches = []
@@ -1287,38 +1266,47 @@ async def artifact_by_regex(request: Request):  # noqa: C901
         name = a.get("name", "")
         artifact_id = gen_id(name)
 
+        # Skip duplicates
         if artifact_id in seen_ids:
             continue
 
-        # Build search text = name + optionally README from metadata_json
+        # Build search text from name and README
         search_text = name
         try:
             metadata = json.loads(a.get("metadata_json", "{}"))
             readme_text = metadata.get("readme", "")
-            if isinstance(readme_text, str) and readme_text:
+            if isinstance(readme_text, str):
                 search_text += " " + readme_text
-        except Exception:
-            # Don't fail the whole request on bad metadata
-            pass
-
-        # Normal match – pattern already pre-validated for safety
-        try:
-            if pattern.search(search_text):
-                actual_type = _get_artifact_type(a)
-                matches.append({"name": name, "id": artifact_id, "type": actual_type})
-                seen_ids.add(artifact_id)
         except Exception as e:
-            logger.error(
-                f"[REGEX] Error matching pattern against artifact {name!r}: {e}"
+            logger.warning(f"Could not parse metadata for artifact {name}: {e}")
+            # Continue with just the name
+
+        # Apply timeout to each search as well (defense in depth)
+        try:
+            with time_limit(1):  # 1 second per artifact search
+                if pattern.search(search_text):
+                    actual_type = _get_artifact_type(a)
+                    matches.append(
+                        {"name": name, "id": artifact_id, "type": actual_type}
+                    )
+                    seen_ids.add(artifact_id)
+        except TimeoutException:
+            logger.warning(
+                f"[REGEX] Timeout during search on artifact {name} - skipping"
             )
+            # Skip this artifact but continue with others
+            continue
+        except Exception as e:
+            logger.warning(f"[REGEX] Error searching artifact {name}: {e}")
+            continue
 
     if not matches:
+        logger.info("[REGEX] No matches found")
         raise HTTPException(
-            status_code=404,
-            detail="No artifact found under this regex.",
+            status_code=404, detail="No artifact found under this regex."
         )
 
-    logger.info(f"[REGEX] Returning {len(matches)} matches.")
+    logger.info(f"[REGEX] Returning {len(matches)} matches")
     return JSONResponse(content=matches)
 
 
