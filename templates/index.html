@@ -21,7 +21,7 @@
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1400px;
       margin: 0 auto;
       background: white;
       border-radius: 12px;
@@ -44,6 +44,36 @@
     .subtitle {
       opacity: 0.9;
       font-size: 1.1em;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 15px;
+      padding: 20px 30px;
+      background: #f8f9fa;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 300px;
+    }
+
+    .btn-custom {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .btn-custom:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
 
     .stats {
@@ -92,6 +122,7 @@
       border-radius: 8px;
       padding: 20px;
       transition: all 0.3s ease;
+      position: relative;
     }
 
     .artifact-card:hover {
@@ -111,6 +142,51 @@
       font-size: 1.3em;
       font-weight: 600;
       color: #2c3e50;
+    }
+
+    .artifact-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #e9ecef;
+    }
+
+    .action-btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+      font-size: 0.9em;
+    }
+
+    .btn-download {
+      background: #28a745;
+      color: white;
+    }
+
+    .btn-download:hover {
+      background: #218838;
+    }
+
+    .btn-rate {
+      background: #17a2b8;
+      color: white;
+    }
+
+    .btn-rate:hover {
+      background: #138496;
+    }
+
+    .btn-delete {
+      background: #dc3545;
+      color: white;
+    }
+
+    .btn-delete:hover {
+      background: #c82333;
     }
 
     .score-badge {
@@ -137,8 +213,6 @@
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 10px;
       margin-top: 15px;
-      padding-top: 15px;
-      border-top: 1px solid #e9ecef;
     }
 
     .meta-item {
@@ -156,14 +230,64 @@
       word-break: break-all;
     }
 
-    .tag {
-      display: inline-block;
-      background: #e9ecef;
-      color: #495057;
-      padding: 4px 12px;
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+    }
+
+    .modal-content {
+      background-color: white;
+      margin: 5% auto;
+      padding: 30px;
       border-radius: 12px;
-      font-size: 0.8em;
-      margin-right: 5px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .close:hover {
+      color: #000;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e9ecef;
+      border-radius: 6px;
+      font-size: 1em;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #667eea;
     }
 
     .empty-state {
@@ -178,20 +302,28 @@
       color: #2c3e50;
     }
 
-    .api-link {
-      display: inline-block;
-      margin-top: 20px;
-      padding: 12px 24px;
-      background: #667eea;
-      color: white;
-      text-decoration: none;
-      border-radius: 6px;
-      font-weight: 600;
-      transition: background 0.3s ease;
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #667eea;
     }
 
-    .api-link:hover {
-      background: #764ba2;
+    .alert {
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+
+    .alert-success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .alert-error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
     }
   </style>
 </head>
@@ -203,23 +335,27 @@
       <p class="subtitle">ECE 461 - Fall 2025 - Phase 2</p>
     </header>
 
-    <div style="padding: 20px; text-align:right;">
-      <button onclick="resetRegistry()" class="btn btn-danger">
-        Reset Registry
-      </button>
+    <div class="toolbar">
+      <div class="search-box">
+        <input type="text" id="searchInput" class="form-control" placeholder="Search artifacts by name or regex...">
+      </div>
+      <button onclick="searchArtifacts()" class="btn btn-custom">Search</button>
+      <button onclick="showUploadModal()" class="btn btn-custom">Upload Artifact</button>
+      <button onclick="showIngestModal()" class="btn btn-custom">Ingest from HuggingFace</button>
+      <button onclick="resetRegistry()" class="btn btn-danger">Reset Registry</button>
     </div>
 
     <div class="stats">
       <div class="stat-card">
-        <div class="stat-value">{{ models|length }}</div>
+        <div class="stat-value" id="totalCount">{{ models|length }}</div>
         <div class="stat-label">Total Artifacts</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value">{{ models|selectattr('artifact_type', 'equalto', 'model')|list|length }}</div>
+        <div class="stat-value" id="modelCount">{{ models|selectattr('artifact_type', 'equalto', 'model')|list|length }}</div>
         <div class="stat-label">Models</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value">
+        <div class="stat-value" id="avgScore">
           {% set model_list = models|selectattr('artifact_type', 'equalto', 'model')|list %}
           {% if model_list %}
           {{ "%.2f"|format(model_list|sum(attribute='score') / model_list|length) }}
@@ -232,85 +368,421 @@
     </div>
 
     <div class="content">
+      <div id="alertContainer"></div>
+
       <h2 style="margin-bottom: 20px; color: #2c3e50;">Registered Artifacts</h2>
 
-      {% if models %}
-      <div class="artifact-grid">
-        {% for artifact in models %}
-        <div class="artifact-card">
-          <div class="artifact-header">
-            <div class="artifact-name">{{ artifact.name }}</div>
-            {% if artifact.artifact_type == 'model' %}
-              <div class="score-badge">Score: {{ "%.2f"|format(artifact.score) }}</div>
-            {% else %}
-              <div class="type-badge">{{ artifact.artifact_type }}</div>
-            {% endif %}
-          </div>
+      <div id="artifactsContainer">
+        {% if models %}
+        <div class="artifact-grid">
+          {% for artifact in models %}
+          <div class="artifact-card" data-id="{{ artifact.name }}">
+            <div class="artifact-header">
+              <div class="artifact-name">{{ artifact.name }}</div>
+              {% if artifact.artifact_type == 'model' %}
+                <div class="score-badge">Score: {{ "%.2f"|format(artifact.score) }}</div>
+              {% else %}
+                <div class="type-badge">{{ artifact.artifact_type }}</div>
+              {% endif %}
+            </div>
 
-          {% if artifact.tags %}
-          <div style="margin: 10px 0;">
-            <span class="tag">{{ artifact.tags }}</span>
-          </div>
-          {% endif %}
+            <div class="artifact-meta">
+              <div class="meta-item">
+                <div class="meta-label">Type</div>
+                <div class="meta-value">{{ artifact.artifact_type }}</div>
+              </div>
 
-          <div class="artifact-meta">
-            {% if artifact.code_url and artifact.code_url != 'unknown' %}
-            <div class="meta-item">
-              <div class="meta-label">Code URL</div>
-              <div class="meta-value">
-                <a href="{{ artifact.code_url }}" target="_blank" style="color: #667eea;">
-                  {{ artifact.code_url[:50] }}...
-                </a>
+              {% if artifact.code_url and artifact.code_url != 'unknown' %}
+              <div class="meta-item">
+                <div class="meta-label">Code URL</div>
+                <div class="meta-value">
+                  <a href="{{ artifact.code_url }}" target="_blank" style="color: #667eea;">
+                    View
+                  </a>
+                </div>
+              </div>
+              {% endif %}
+
+              <div class="meta-item">
+                <div class="meta-label">Created</div>
+                <div class="meta-value">{{ artifact.created_at[:10] }}</div>
               </div>
             </div>
-            {% endif %}
 
-            {% if artifact.dataset_url and artifact.dataset_url != 'unknown' %}
-            <div class="meta-item">
-              <div class="meta-label">Dataset URL</div>
-              <div class="meta-value">
-                <a href="{{ artifact.dataset_url }}" target="_blank" style="color: #667eea;">
-                  {{ artifact.dataset_url[:50] }}...
-                </a>
-              </div>
-            </div>
-            {% endif %}
-
-            <div class="meta-item">
-              <div class="meta-label">Created</div>
-              <div class="meta-value">{{ artifact.created_at[:10] }}</div>
+            <div class="artifact-actions">
+              <button onclick="downloadArtifact('{{ artifact.name }}', '{{ artifact.artifact_type }}')" class="action-btn btn-download">
+                ⬇️ Download
+              </button>
+              {% if artifact.artifact_type == 'model' %}
+              <button onclick="rateArtifact('{{ artifact.name }}')" class="action-btn btn-rate">
+                ⭐ View Rating
+              </button>
+              {% endif %}
             </div>
           </div>
+          {% endfor %}
         </div>
-        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+          <h2>No artifacts registered yet</h2>
+          <p>Start by uploading or ingesting your first artifact</p>
+          <button onclick="showUploadModal()" class="btn btn-custom" style="margin-top: 20px;">
+            Upload Your First Artifact
+          </button>
+        </div>
+        {% endif %}
       </div>
-      {% else %}
-      <div class="empty-state">
-        <h2>No artifacts registered yet</h2>
-        <p>Start by uploading your first model, dataset, or code artifact</p>
-      </div>
-      {% endif %}
     </div>
   </div>
-</body>
 
-<script>
-    async function resetRegistry() {
-        if (!confirm("Are you sure? This will delete ALL stored artifacts.")) {
-            return false;
-        }
+  <!-- Upload Modal -->
+  <div id="uploadModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('uploadModal')">&times;</span>
+      <h2 style="margin-bottom: 20px;">Upload New Artifact</h2>
+      <form id="uploadForm">
+        <div class="form-group">
+          <label for="artifactType">Artifact Type *</label>
+          <select id="artifactType" required>
+            <option value="">Select type...</option>
+            <option value="model">Model</option>
+            <option value="dataset">Dataset</option>
+            <option value="code">Code</option>
+          </select>
+        </div>
 
-        const response = await fetch("/reset", { method: "DELETE" });
+        <div class="form-group">
+          <label for="artifactName">Name *</label>
+          <input type="text" id="artifactName" placeholder="e.g., bert-base-uncased" required>
+        </div>
+
+        <div class="form-group">
+          <label for="artifactUrl">URL *</label>
+          <input type="url" id="artifactUrl" placeholder="https://huggingface.co/..." required>
+          <small style="color: #666; display: block; margin-top: 5px;">
+            Provide HuggingFace URL or any publicly accessible URL
+          </small>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" class="btn btn-custom" style="flex: 1;">Upload Artifact</button>
+          <button type="button" onclick="closeModal('uploadModal')" class="btn btn-secondary">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Ingest Modal -->
+  <div id="ingestModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('ingestModal')">&times;</span>
+      <h2 style="margin-bottom: 20px;">Ingest from HuggingFace</h2>
+      <p style="margin-bottom: 20px; color: #666;">
+        Models must score ≥0.5 on all non-latency metrics to be ingestible.
+      </p>
+      <form id="ingestForm">
+        <div class="form-group">
+          <label for="ingestUrl">HuggingFace Model URL *</label>
+          <input type="url" id="ingestUrl" placeholder="https://huggingface.co/bert-base-uncased" required>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" class="btn btn-custom" style="flex: 1;">Ingest Model</button>
+          <button type="button" onclick="closeModal('ingestModal')" class="btn btn-secondary">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Rating Modal -->
+  <div id="ratingModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('ratingModal')">&times;</span>
+      <h2 style="margin-bottom: 20px;">Model Rating</h2>
+      <div id="ratingContent" class="loading">Loading rating...</div>
+    </div>
+  </div>
+
+  <script>
+    // Show/hide modals
+    function showUploadModal() {
+      document.getElementById('uploadModal').style.display = 'block';
+    }
+
+    function showIngestModal() {
+      document.getElementById('ingestModal').style.display = 'block';
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+      if (event.target.classList.contains('modal')) {
+        event.target.style.display = 'none';
+      }
+    }
+
+    // Show alert messages
+    function showAlert(message, type = 'success') {
+      const alertHtml = `
+        <div class="alert alert-${type}">
+          ${message}
+        </div>
+      `;
+      document.getElementById('alertContainer').innerHTML = alertHtml;
+      setTimeout(() => {
+        document.getElementById('alertContainer').innerHTML = '';
+      }, 5000);
+    }
+
+    // Upload artifact
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const type = document.getElementById('artifactType').value;
+      const name = document.getElementById('artifactName').value;
+      const url = document.getElementById('artifactUrl').value;
+
+      try {
+        const response = await fetch(`/artifact/${type}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, url })
+        });
 
         if (response.ok) {
-            alert("Registry reset successfully.");
-            location.reload();
+          showAlert(`Artifact "${name}" uploaded successfully!`);
+          closeModal('uploadModal');
+          setTimeout(() => location.reload(), 1500);
         } else {
-            alert("Failed to reset registry.");
+          const error = await response.json();
+          showAlert(`Upload failed: ${error.detail || 'Unknown error'}`, 'error');
+        }
+      } catch (err) {
+        showAlert(`Upload failed: ${err.message}`, 'error');
+      }
+    });
+
+    // Ingest from HuggingFace
+    document.getElementById('ingestForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const url = document.getElementById('ingestUrl').value;
+
+      // Extract name from HuggingFace URL
+      const match = url.match(/huggingface\.co\/([^\/]+\/[^\/]+)/);
+      if (!match) {
+        showAlert('Invalid HuggingFace URL format', 'error');
+        return;
+      }
+
+      const name = match[1].replace('/', '-');
+
+      try {
+        showAlert('Ingesting model... This may take a while.');
+
+        const response = await fetch('/artifact/model', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, url })
+        });
+
+        if (response.ok) {
+          showAlert(`Model "${name}" ingested successfully!`);
+          closeModal('ingestModal');
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          const error = await response.json();
+          showAlert(`Ingest failed: ${error.detail || 'Model does not meet quality threshold'}`, 'error');
+        }
+      } catch (err) {
+        showAlert(`Ingest failed: ${err.message}`, 'error');
+      }
+    });
+
+    // Download artifact
+    async function downloadArtifact(name, type) {
+      try {
+        // First get the artifact details to find the ID
+        const response = await fetch(`/artifact/byName/${encodeURIComponent(name)}`);
+
+        if (!response.ok) {
+          showAlert('Failed to find artifact', 'error');
+          return;
         }
 
-        return false;
-    }
-</script>
+        const artifacts = await response.json();
+        if (!artifacts || artifacts.length === 0) {
+          showAlert('Artifact not found', 'error');
+          return;
+        }
 
+        const artifact = artifacts[0];
+
+        // Get the artifact with download URL
+        const detailResponse = await fetch(`/artifacts/${type}/${artifact.id}`);
+
+        if (!detailResponse.ok) {
+          showAlert('Failed to get download URL', 'error');
+          return;
+        }
+
+        const details = await detailResponse.json();
+        const downloadUrl = details.data?.url;
+
+        if (downloadUrl) {
+          window.open(downloadUrl, '_blank');
+          showAlert(`Download started for "${name}"`);
+        } else {
+          showAlert('No download URL available', 'error');
+        }
+      } catch (err) {
+        showAlert(`Download failed: ${err.message}`, 'error');
+      }
+    }
+
+    // View rating
+    async function rateArtifact(name) {
+      document.getElementById('ratingModal').style.display = 'block';
+      document.getElementById('ratingContent').innerHTML = '<div class="loading">Loading rating...</div>';
+
+      try {
+        // Get artifact ID first
+        const response = await fetch(`/artifact/byName/${encodeURIComponent(name)}`);
+        if (!response.ok) throw new Error('Artifact not found');
+
+        const artifacts = await response.json();
+        const artifact = artifacts[0];
+
+        // Get rating
+        const ratingResponse = await fetch(`/artifact/model/${artifact.id}/rate`);
+        if (!ratingResponse.ok) throw new Error('Rating not available');
+
+        const rating = await ratingResponse.json();
+
+        // Display rating
+        let html = `
+          <h3 style="margin-bottom: 20px;">${name}</h3>
+          <div style="display: grid; gap: 15px;">
+            <div class="stat-card">
+              <div class="stat-value">${rating.net_score?.toFixed(2) || 'N/A'}</div>
+              <div class="stat-label">Net Score</div>
+            </div>
+        `;
+
+        // Add all metric scores
+        const metrics = [
+          'license', 'ramp_up_time', 'bus_factor', 'performance_claims',
+          'dataset_and_code_score', 'dataset_quality', 'code_quality',
+          'reproducibility', 'reviewedness', 'tree_score'
+        ];
+
+        for (const metric of metrics) {
+          if (rating[metric] !== undefined) {
+            html += `
+              <div style="display: flex; justify-content: space-between; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                <strong>${metric.replace(/_/g, ' ').toUpperCase()}:</strong>
+                <span>${rating[metric].toFixed(2)}</span>
+              </div>
+            `;
+          }
+        }
+
+        html += '</div>';
+        document.getElementById('ratingContent').innerHTML = html;
+      } catch (err) {
+        document.getElementById('ratingContent').innerHTML = `
+          <div class="alert alert-error">Failed to load rating: ${err.message}</div>
+        `;
+      }
+    }
+
+    // Search artifacts
+    async function searchArtifacts() {
+      const query = document.getElementById('searchInput').value.trim();
+
+      if (!query) {
+        location.reload();
+        return;
+      }
+
+      try {
+        // Try regex search first
+        const response = await fetch('/artifact/byRegEx', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ regex: query })
+        });
+
+        if (response.ok) {
+          const results = await response.json();
+          displaySearchResults(results);
+        } else if (response.status === 404) {
+          showAlert('No artifacts found matching your search', 'error');
+        } else {
+          showAlert('Search failed - invalid regex pattern', 'error');
+        }
+      } catch (err) {
+        showAlert(`Search failed: ${err.message}`, 'error');
+      }
+    }
+
+    function displaySearchResults(artifacts) {
+      let html = '<div class="artifact-grid">';
+
+      for (const artifact of artifacts) {
+        html += `
+          <div class="artifact-card">
+            <div class="artifact-header">
+              <div class="artifact-name">${artifact.name}</div>
+              <div class="type-badge">${artifact.type}</div>
+            </div>
+            <div class="artifact-meta">
+              <div class="meta-item">
+                <div class="meta-label">ID</div>
+                <div class="meta-value">${artifact.id}</div>
+              </div>
+            </div>
+            <div class="artifact-actions">
+              <button onclick="downloadArtifact('${artifact.name}', '${artifact.type}')" class="action-btn btn-download">
+                ⬇ Download
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      html += '</div>';
+      document.getElementById('artifactsContainer').innerHTML = html;
+    }
+
+    // Reset registry
+    async function resetRegistry() {
+      if (!confirm("Are you sure? This will delete ALL artifacts permanently!")) {
+        return;
+      }
+
+      try {
+        const response = await fetch("/reset", { method: "DELETE" });
+        if (response.ok) {
+          showAlert("Registry reset successfully");
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          showAlert("Failed to reset registry", 'error');
+        }
+      } catch (err) {
+        showAlert(`Reset failed: ${err.message}`, 'error');
+      }
+    }
+
+    // Enable Enter key for search
+    document.getElementById('searchInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        searchArtifacts();
+      }
+    });
+  </script>
+</body>
 </html>
