@@ -331,7 +331,7 @@
 <body>
   <div class="container">
     <header>
-      <h1>🏛️ Trustworthy Model Registry</h1>
+      <h1>Trustworthy Model Registry</h1>
       <p class="subtitle">ECE 461 - Fall 2025 - Phase 2</p>
     </header>
 
@@ -339,10 +339,9 @@
       <div class="search-box">
         <input type="text" id="searchInput" class="form-control" placeholder="Search artifacts by name or regex...">
       </div>
-      <button onclick="searchArtifacts()" class="btn btn-custom">🔍 Search</button>
-      <button onclick="showUploadModal()" class="btn btn-custom">⬆️ Upload Artifact</button>
-      <button onclick="showIngestModal()" class="btn btn-custom">📥 Ingest from HuggingFace</button>
-      <button onclick="resetRegistry()" class="btn btn-danger">🗑️ Reset Registry</button>
+      <button onclick="searchArtifacts()" class="btn btn-custom">Search</button>
+      <button onclick="showUploadModal()" class="btn btn-custom">Upload Artifact</button>
+      <button onclick="resetRegistry()" class="btn btn-danger">Reset Registry</button>
     </div>
 
     <div class="stats">
@@ -411,7 +410,7 @@
 
             <div class="artifact-actions">
               <button onclick="downloadArtifact('{{ artifact.name }}', '{{ artifact.artifact_type }}')" class="action-btn btn-download">
-                ⬇️ Download
+                Download
               </button>
               {% if artifact.artifact_type == 'model' %}
               <button onclick="rateArtifact('{{ artifact.name }}')" class="action-btn btn-rate">
