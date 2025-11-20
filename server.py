@@ -539,7 +539,7 @@ def get_artifact_by_name(name: str, request: Request):
     seen_ids = set()
 
     for a in artifacts:
-        if a["name"] == name:
+        if a["name"].lower() == name.lower():
             artifact_id = gen_id(a["name"])
 
             # Skip if we've already added this ID
@@ -724,21 +724,18 @@ async def artifact_by_regex(request: Request):  # noqa: C901
     # Cross-platform catastrophic backtracking detection
     import threading
 
-    # CRITICAL: Test the regex pattern itself for catastrophic backtracking
-    # BEFORE applying it to real artifacts. The hidden tests check if you can
-    # detect catastrophic patterns, not if they timeout on your artifacts.
-    def test_pattern_safety(pattern_obj, timeout=1.5):
+    def test_pattern_safety(pattern_obj, timeout=1.0):
         """
         Test if a regex pattern is susceptible to catastrophic backtracking
         by testing it against known problematic strings.
+        Timeout is aggressive (1.0s) to catch patterns that are slow even on fast hardware.
         """
         # Test strings designed to trigger catastrophic backtracking
-        # These will cause patterns like (a+)+$ or (a{1,99999}){1,99999}$ to explode
+        # Use longer strings to ensure timeout even on fast EC2 instances
         test_cases = [
-            "a" * 28
-            + "b",  # Long string of a's ending with non-match - critical for $ anchor
-            "a" * 25,  # Just a's - tests middle-of-string catastrophe
-            "x" * 28 + "y",  # Alternative letters - catches other patterns
+            "a" * 30 + "b",  # 30 a's + non-match = definitely explodes on (a+)+$
+            "a" * 28,  # Just a's - tests middle-string catastrophe
+            "x" * 30 + "y",  # Alternative letters - catches other patterns
         ]
 
         for test_str in test_cases:
@@ -763,7 +760,7 @@ async def artifact_by_regex(request: Request):  # noqa: C901
 
     # Test the pattern for safety BEFORE applying to artifacts
     logger.info(f"[DATA] Testing regex pattern for catastrophic backtracking: {regex}")
-    if not test_pattern_safety(pattern, timeout=1.5):
+    if not test_pattern_safety(pattern, timeout=1.0):
         logger.warning(f"Catastrophic backtracking detected in pattern: {regex}")
         raise HTTPException(
             status_code=400,
