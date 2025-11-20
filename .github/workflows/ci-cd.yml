@@ -65,7 +65,10 @@ jobs:
       - name: Copy SSH key from secret
         run: |
           echo "${{ secrets.EC2_SSH_KEY }}" > new-ec2-key.pem
-          chmod 400 new-ec2-key.pem
+          chmod 600 new-ec2-key.pem
+      
+      - name: Debug key hash in Actions
+        run: shasum new-ec2-key.pem
 
       - name: Deploy code to EC2
         run: |
