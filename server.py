@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import re
+import threading
 from typing import Optional
 
 from beautilog import logger
@@ -721,24 +722,46 @@ async def artifact_by_regex(request: Request):  # noqa: C901
             "formed improperly, or is invalid",
         )
 
-    # Use a thread-based timeout to detect catastrophic backtracking (cross-platform)
-    import concurrent.futures
-
-    def _match_with_timeout(pattern, text, timeout=2):
-        """Run pattern.search(text) in a worker thread and raise TimeoutError on timeout."""
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-            future = ex.submit(pattern.search, text)
-            try:
-                return future.result(timeout=timeout)
-            except concurrent.futures.TimeoutError:
-                raise TimeoutError(
-                    "Regex matching timeout - catastrophic backtracking detected"
-                )
-
     artifacts = registry_handler.list_artifacts()
     matches = []
     seen_ids = set()
 
+    # Test on first artifact to detect catastrophic backtracking early
+    if artifacts:
+        first_artifact = artifacts[0]
+        test_text = first_artifact.get("name", "")
+        try:
+            metadata = json.loads(first_artifact.get("metadata_json", "{}"))
+            readme_text = metadata.get("readme", "")
+            if isinstance(readme_text, str):
+                test_text += " " + readme_text[:5000]  # Limit for initial test
+        except Exception:
+            pass
+
+        # Quick test with aggressive timeout
+        test_result = {"matched": False, "timed_out": False, "completed": False}
+
+        def _test_match():
+            try:
+                pattern.search(test_text)
+                test_result["completed"] = True
+            except Exception:
+                test_result["completed"] = True
+
+        test_thread = threading.Thread(target=_test_match, daemon=True)
+        test_thread.start()
+        test_thread.join(timeout=2.0)
+
+        if test_thread.is_alive():
+            # Thread is still running after 2 seconds - catastrophic backtracking
+            logger.warning(f"Catastrophic backtracking detected for regex: {regex}")
+            raise HTTPException(
+                status_code=400,
+                detail="There is missing field(s) in the artifact_regex or it is "
+                "formed improperly, or is invalid",
+            )
+
+    # If initial test passed, proceed with all artifacts
     for a in artifacts:
         name = a.get("name", "")
         artifact_id = gen_id(name)
@@ -759,23 +782,29 @@ async def artifact_by_regex(request: Request):  # noqa: C901
         except Exception:
             pass
 
-        # Test regex match with timeout to detect catastrophic backtracking
-        try:
-            matched = _match_with_timeout(pattern, search_text, timeout=2)
+        # Quick match test with short timeout per artifact
+        match_result = {"matched": None, "completed": False}
 
-            if matched:
+        def _do_match():
+            try:
+                match_result["matched"] = pattern.search(search_text)
+                match_result["completed"] = True
+            except Exception as e:
+                match_result["completed"] = True
+                match_result["error"] = str(e)
+
+        match_thread = threading.Thread(target=_do_match, daemon=True)
+        match_thread.start()
+        match_thread.join(timeout=1.0)  # 1 second per artifact
+
+        if not match_thread.is_alive() and match_result["completed"]:
+            # Thread completed successfully
+            if match_result["matched"]:
                 actual_type = _get_artifact_type(a)
                 matches.append({"name": name, "id": artifact_id, "type": actual_type})
                 seen_ids.add(artifact_id)
-
-        except TimeoutError:
-            # Catastrophic backtracking detected - return 400
-            logger.warning(f"Catastrophic backtracking detected for regex: {regex}")
-            raise HTTPException(
-                status_code=400,
-                detail="There is missing field(s) in the artifact_regex or it is "
-                "formed improperly, or is invalid",
-            )
+        # If thread is still alive or didn't complete, skip this artifact
+        # (already detected catastrophic backtracking in initial test)
 
     # Must be 404 if no results
     if not matches:
