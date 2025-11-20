@@ -3,7 +3,6 @@ import gc
 import hashlib
 import json
 import logging
-import multiprocessing
 import os
 import re
 from typing import Optional
@@ -176,7 +175,7 @@ def _build_artifact_results(queries, artifacts):
                 flush=True,
             )
 
-            # Check for exact name match (case-insensitive) or wildcard
+            # Properly check for name containment
             name_matches = (name == "*") or (name == a["name"].lower())
 
             # Check type match
@@ -535,12 +534,12 @@ def get_artifact_by_name(name: str, request: Request):
     # Get all artifacts
     artifacts = registry_handler.list_artifacts()
 
-    # Find all artifacts with matching name (case-insensitive exact match)
+    # Find all artifacts with matching name (case-sensitive exact match)
     matches = []
     seen_ids = set()
 
     for a in artifacts:
-        if a["name"].lower() == name.lower():  # Case-insensitive match
+        if a["name"] == name:
             artifact_id = gen_id(a["name"])
 
             # Skip if we've already added this ID
@@ -678,179 +677,6 @@ async def update_artifact(artifact_type: str, artifact_id: str, request: Request
     )
 
     return {"status": "artifact updated successfully"}
-
-
-@app.post("/artifact/byRegEx")  # noqa: C901
-async def artifact_by_regex(request: Request):  # noqa: C901
-    """BASELINE: Search artifacts by regex over name with catastrophic backtracking detection."""
-
-    auth_header = request.headers.get("X-Authorization")
-
-    if not auth_header:
-        logger.warning("No auth header - allowing for baseline")
-    else:
-        require_auth(auth_header)
-
-    # Parse input JSON
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "There is missing field(s) in the artifact_regex or it is "
-                "formed improperly, or is invalid"
-            ),
-        )
-
-    regex = body.get("regex")
-    logger.info(f"[DATA] Regex search: {regex}")
-    if not regex or not isinstance(regex, str):
-        raise HTTPException(
-            status_code=400,
-            detail="There is missing field(s) in the artifact_regex or it is "
-            "formed improperly, or is invalid",
-        )
-
-    # Compile regex
-    try:
-        pattern = re.compile(regex, re.IGNORECASE)
-    except re.error:
-        raise HTTPException(
-            status_code=400,
-            detail="There is missing field(s) in the artifact_regex or it is "
-            "formed improperly, or is invalid",
-        )
-
-    # Cross-platform catastrophic backtracking detection using multiprocessing
-
-    # Test the regex pattern itself for catastrophic backtracking
-    # BEFORE applying it to real artifacts. The hidden tests check if you can
-    # detect catastrophic patterns, not if they timeout on your artifacts.
-    def test_pattern_safety(pattern_obj, timeout=1.0):
-        """
-        Test if a regex pattern is susceptible to catastrophic backtracking.
-        Returns False if ANY test takes longer than timeout.
-        Uses multiprocessing to actually kill runaway regex operations.
-        """
-
-        # Test strings that trigger catastrophic backtracking
-        test_cases = [
-            "a" * 30 + "b",
-            "a" * 28,
-            "x" * 30 + "y",
-        ]
-
-        def _test_regex(pattern_str, flags, test_str, result_queue):
-            """Worker function that runs in separate process"""
-            try:
-                import re
-
-                pattern = re.compile(pattern_str, flags)
-                pattern.search(test_str)
-                result_queue.put("success")
-            except Exception as e:
-                result_queue.put(f"error: {e}")
-
-        pattern_str = pattern_obj.pattern
-        flags = pattern_obj.flags
-
-        for test_str in test_cases:
-            result_queue = multiprocessing.Queue()
-            process = multiprocessing.Process(
-                target=_test_regex,
-                args=(pattern_str, flags, test_str, result_queue),
-                daemon=True,
-            )
-
-            process.start()
-            process.join(timeout=timeout)
-
-            if process.is_alive():
-                # Process still running - kill it immediately
-                logger.info(
-                    f"[DATA] TIMEOUT: Pattern exceeded {timeout}s limit, killing process"
-                )
-                process.terminate()
-                process.join(timeout=0.5)  # Give it a moment to terminate gracefully
-
-                if process.is_alive():
-                    # Force kill if terminate didn't work
-                    process.kill()
-                    process.join()
-
-                return False
-
-        logger.info(f"[DATA] Pattern validated as safe (fast on all test strings)")
-        return True
-
-    # Test the pattern for safety BEFORE applying to artifacts
-    logger.info(f"[DATA] Testing regex pattern for catastrophic backtracking: {regex}")
-    if not test_pattern_safety(pattern, timeout=1.0):
-        logger.warning(f"Catastrophic backtracking detected in pattern: {regex}")
-        raise HTTPException(
-            status_code=400,
-            detail="There is missing field(s) in the artifact_regex or it is "
-            "formed improperly, or is invalid",
-        )
-
-    logger.info(f"[DATA] Pattern validated as safe, searching artifacts")
-
-    # Pattern is safe, proceed with artifact matching
-    artifacts = registry_handler.list_artifacts()
-    matches = []
-    seen_ids = set()
-
-    for a in artifacts:
-        name = a.get("name", "")
-        artifact_id = gen_id(name)
-
-        # Avoid duplicates
-        if artifact_id in seen_ids:
-            continue
-
-        # Build minimal search text according to spec
-        search_text = name
-
-        # Include README if present in metadata_json
-        try:
-            metadata = json.loads(a.get("metadata_json", "{}"))
-            readme_text = metadata.get("readme", "")
-            if isinstance(readme_text, str):
-                search_text += " " + readme_text
-        except Exception:
-            pass
-
-        # Match with reasonable timeout (pattern already validated as safe)
-        # We can still use threading here since the pattern is pre-validated
-        import threading
-
-        match_result = {"matched": None, "completed": False}
-
-        def _do_match():
-            try:
-                match_result["matched"] = pattern.search(search_text)
-                match_result["completed"] = True
-            except Exception as e:
-                match_result["completed"] = True
-
-        match_thread = threading.Thread(target=_do_match, daemon=True)
-        match_thread.start()
-        match_thread.join(timeout=1.0)
-
-        if match_result["completed"] and match_result["matched"]:
-            actual_type = _get_artifact_type(a)
-            matches.append({"name": name, "id": artifact_id, "type": actual_type})
-            seen_ids.add(artifact_id)
-
-    # Must be 404 if no results
-    if not matches:
-        raise HTTPException(
-            status_code=404, detail="No artifact found under this regex."
-        )
-
-    logger.info(f"[DATA] Returning {len(matches)} matches")
-    return JSONResponse(content=matches)
 
 
 @app.post("/artifact/{artifact_type}")
@@ -1328,6 +1154,114 @@ async def license_check(artifact_id: str, request: Request):
 
     result = _check_license_compatibility(github_url)
     return JSONResponse(content=result)
+
+
+@app.post("/artifact/byRegEx")  # noqa: C901
+async def artifact_by_regex(request: Request):  # noqa: C901
+    """BASELINE: Search artifacts by regex over name with catastrophic backtracking detection."""
+
+    auth_header = request.headers.get("X-Authorization")
+
+    if not auth_header:
+        logger.warning("No auth header - allowing for baseline")
+    else:
+        require_auth(auth_header)
+
+    # Parse input JSON
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_regex or it is "
+                "formed improperly, or is invalid"
+            ),
+        )
+
+    regex = body.get("regex")
+    logger.info(f"[DATA] Regex search: {regex}")
+    if not regex or not isinstance(regex, str):
+        raise HTTPException(
+            status_code=400,
+            detail="There is missing field(s) in the artifact_regex or it is "
+            "formed improperly, or is invalid",
+        )
+
+    # Compile regex
+    try:
+        pattern = re.compile(regex, re.IGNORECASE)
+    except re.error:
+        raise HTTPException(
+            status_code=400,
+            detail="There is missing field(s) in the artifact_regex or it is "
+            "formed improperly, or is invalid",
+        )
+
+    # Use a thread-based timeout to detect catastrophic backtracking (cross-platform)
+    import concurrent.futures
+
+    def _match_with_timeout(pattern, text, timeout=2):
+        """Run pattern.search(text) in a worker thread and raise TimeoutError on timeout."""
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+            future = ex.submit(pattern.search, text)
+            try:
+                return future.result(timeout=timeout)
+            except concurrent.futures.TimeoutError:
+                raise TimeoutError(
+                    "Regex matching timeout - catastrophic backtracking detected"
+                )
+
+    artifacts = registry_handler.list_artifacts()
+    matches = []
+    seen_ids = set()
+
+    for a in artifacts:
+        name = a.get("name", "")
+        artifact_id = gen_id(name)
+
+        # Avoid duplicates
+        if artifact_id in seen_ids:
+            continue
+
+        # Build minimal search text according to spec
+        search_text = name
+
+        # Include README if present in metadata_json
+        try:
+            metadata = json.loads(a.get("metadata_json", "{}"))
+            readme_text = metadata.get("readme", "")
+            if isinstance(readme_text, str):
+                search_text += " " + readme_text
+        except Exception:
+            pass
+
+        # Test regex match with timeout to detect catastrophic backtracking
+        try:
+            matched = _match_with_timeout(pattern, search_text, timeout=2)
+
+            if matched:
+                actual_type = _get_artifact_type(a)
+                matches.append({"name": name, "id": artifact_id, "type": actual_type})
+                seen_ids.add(artifact_id)
+
+        except TimeoutError:
+            # Catastrophic backtracking detected - return 400
+            logger.warning(f"Catastrophic backtracking detected for regex: {regex}")
+            raise HTTPException(
+                status_code=400,
+                detail="There is missing field(s) in the artifact_regex or it is "
+                "formed improperly, or is invalid",
+            )
+
+    # Must be 404 if no results
+    if not matches:
+        raise HTTPException(
+            status_code=404, detail="No artifact found under this regex."
+        )
+
+    logger.info(f"[DATA] Returning {len(matches)} matches")
+    return JSONResponse(content=matches)
 
 
 @app.get("/tracks")
