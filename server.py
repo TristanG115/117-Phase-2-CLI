@@ -950,7 +950,7 @@ def get_cost(
     for a in artifacts:
         if gen_id(a["name"]) == aid:
             # Verify the artifact's type matches the requested type
-            actual_type = a.get("artifact_type", "model")
+            actual_type = a.get("type", "model")
             if actual_type != artifact_type:
                 # Type mismatch - treat as "not found"
                 logger.warning(
