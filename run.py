@@ -9,7 +9,10 @@ import requests
 
 from handlers import ingest_handler, registry_handler
 from model_evaluator import ModelEvaluator
-
+from storage import StorageUnavailableError
+API_DIR = os.path.join(os.path.dirname(__file__), "API")  # uppercase folder
+if API_DIR not in sys.path:
+    sys.path.append(API_DIR)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REQUIREMENTS = os.path.join(SCRIPT_DIR, "requirements.txt")
 
@@ -210,9 +213,14 @@ def main():  # noqa: C901
             sys.exit(1)
         hf_url = sys.argv[2]
         registry_handler.init_registry()
-        result = ingest_handler.ingest_model(hf_url)
-        print(json.dumps(result, indent=2))
-        sys.exit(0)
+
+        try:
+            result = ingest_handler.ingest_model(hf_url)
+            print(json.dumps(result, indent=2))
+            sys.exit(0)
+        except StorageUnavailableError as e:
+            print(f"ERROR: {e}")
+            sys.exit(1)
 
     elif cmd == "list":
         registry_handler.init_registry()
