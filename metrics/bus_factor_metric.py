@@ -13,7 +13,9 @@ class BusFactorMetric(BaseMetric):
         # Bus factor should consider all related resources
         return [URLType.MODEL, URLType.DATASET, URLType.CODE]
 
-    def calculate(self, resources: Dict[URLType, List[Any]]) -> Tuple[float, int]:
+    def calculate(
+        self, resources: Dict[URLType, List[Any]], **kwargs
+    ) -> Tuple[float, int]:
         start_time = time.time()
 
         contributor_counts = []
@@ -25,7 +27,11 @@ class BusFactorMetric(BaseMetric):
                     contributor_counts.append(contributor_count)
 
         # Calculate bus factor based on contributor diversity
-        avg_contributors = sum(contributor_counts) / len(contributor_counts) if contributor_counts else 0
+        avg_contributors = (
+            sum(contributor_counts) / len(contributor_counts)
+            if contributor_counts
+            else 0
+        )
 
         # Convert to 0-1 score (more contributors = higher score)
         if avg_contributors >= 10:

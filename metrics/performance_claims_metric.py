@@ -13,7 +13,9 @@ class PerformanceClaimsMetric(BaseMetric):
         # Performance claims need model + dataset + evaluation code
         return [URLType.MODEL, URLType.DATASET, URLType.CODE]
 
-    def calculate(self, resources: Dict[URLType, List[Any]]) -> Tuple[float, int]:
+    def calculate(
+        self, resources: Dict[URLType, List[Any]], **kwargs
+    ) -> Tuple[float, int]:
         start_time = time.time()
 
         has_benchmarks = False

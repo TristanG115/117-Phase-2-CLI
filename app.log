@@ -1,1 +1,13 @@
 /Library/Frameworks/Python.framework/Versions/3.13/Resources/Python.app/Contents/MacOS/Python: can't open file '/Users/hadjismac/phase2/117-Phase-2-CLI/main.py': [Errno 2] No such file or directory
+nohup: ignoring input
+Usage: ./run <command>
+
+Commands:
+  install       Install project dependencies
+  test          Run test suite with coverage
+  debug         Run tests with verbose output
+  ingest        Ingest a Hugging Face model into the registry
+  list          List all locally ingested models
+  search        Search local registry by model name or tags
+  reset         Clear all stored models and downloaded files
+  <URL_FILE>    Process and evaluate URLs from file

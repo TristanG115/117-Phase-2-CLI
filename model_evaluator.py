@@ -7,27 +7,42 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from metrics import METRIC_CLASSES
 from metrics.base_metric import BaseMetric
-from resource_handlers import BaseResourceHandler, CodeHandler, DatasetHandler, ModelHandler
+from resource_handlers import (
+    BaseResourceHandler,
+    CodeHandler,
+    DatasetHandler,
+    ModelHandler,
+)
 from url_classifier import URLClassifier, URLType
 
 
 class ModelEvaluator:
     """Main orchestrator for evaluating models with their associated datasets and code"""
 
-    def __init__(self, max_workers: int = 4):
+    def __init__(self, max_workers: int = 4, registry_handler=None):
         self.url_classifier = URLClassifier()
         self.max_workers = max_workers
+        self.registry_handler = registry_handler
         self.logger = logging.getLogger(__name__)
 
         # Initialize metrics
-        self.metrics = {name: metric_class() for name, metric_class in METRIC_CLASSES.items()}  # type: ignore[abstract]
+        self.metrics = {}
+        for name, metric_class in METRIC_CLASSES.items():
+            if name == "treescore":
+                # Treescore needs registry_handler
+                self.metrics[name] = metric_class(registry_handler=registry_handler)
+            else:
+                self.metrics[name] = metric_class()
 
-    def evaluate_urls(self, urls: List[str]) -> List[Dict[str, Any]]:
+    def evaluate_urls(
+        self, urls: List[str], artifact_id: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
         """
         Evaluate a list of URLs and return results for MODEL URLs only
 
         Args:
             urls: List of URLs to evaluate
+            artifact_id: Optional artifact ID for treescore calculation
 
         Returns:
             List of evaluation results for model URLs
@@ -43,49 +58,56 @@ class ModelEvaluator:
 
         results = []
         for model_url in model_urls:
-            result = self._evaluate_single_model(model_url, resources)
+            result = self._evaluate_single_model(model_url, resources, artifact_id)
             if result:
                 results.append(result)
 
         return results
 
-    def _create_resource_handlers(  # noqa: C901
+    def _create_resource_handlers(
         self, grouped_urls: Dict[URLType, List[str]]
     ) -> Dict[URLType, List[BaseResourceHandler]]:
         resources: Dict[URLType, List[BaseResourceHandler]] = {}
 
         if grouped_urls.get(URLType.MODEL):
-            resources[URLType.MODEL] = [ModelHandler(u) for u in grouped_urls[URLType.MODEL]]
+            resources[URLType.MODEL] = [
+                ModelHandler(u) for u in grouped_urls[URLType.MODEL]
+            ]
 
         if grouped_urls.get(URLType.DATASET):
-            resources[URLType.DATASET] = [DatasetHandler(u) for u in grouped_urls[URLType.DATASET]]
+            resources[URLType.DATASET] = [
+                DatasetHandler(u) for u in grouped_urls[URLType.DATASET]
+            ]
 
         if grouped_urls.get(URLType.CODE):
-            resources[URLType.CODE] = [CodeHandler(u) for u in grouped_urls[URLType.CODE]]
+            resources[URLType.CODE] = [
+                CodeHandler(u) for u in grouped_urls[URLType.CODE]
+            ]
 
         return resources
 
     def _evaluate_single_model(
-        self, model_url: str, resources: Dict[URLType, List[BaseResourceHandler]]
+        self,
+        model_url: str,
+        resources: Dict[URLType, List[BaseResourceHandler]],
+        artifact_id: Optional[int] = None,
     ) -> Optional[Dict[str, Any]]:
         """Evaluate a single model with available resources"""
         try:
             model_handler = ModelHandler(model_url)
-            # Extract just the model name part (e.g., "bert-base-uncased" from "google-bert/bert-base-uncased")
             model_id = model_handler.model_id or "unknown"
             if "/" in model_id:
-                model_name = model_id.split("/")[-1]  # Get the last part after the slash
+                model_name = model_id.split("/")[-1]
             else:
                 model_name = model_id
 
             # Calculate metrics in parallel
-            metric_results = self._calculate_metrics_parallel(resources)
+            metric_results = self._calculate_metrics_parallel(resources, artifact_id)
 
             # Calculate net score
             net_score, net_score_latency = self._calculate_net_score(metric_results)
 
             # Build result according to specification
-            # Round size_score dict values
             size_score_dict = metric_results.get("size_score", {}).get("score", {})
             if isinstance(size_score_dict, dict):
                 size_score_dict = {k: round(v, 2) for k, v in size_score_dict.items()}
@@ -95,25 +117,69 @@ class ModelEvaluator:
                 "category": "MODEL",
                 "net_score": net_score,
                 "net_score_latency": net_score_latency,
-                "ramp_up_time": round(metric_results.get("ramp_up_time", {}).get("score", 0.0), 2),
-                "ramp_up_time_latency": metric_results.get("ramp_up_time", {}).get("latency", 0),
-                "bus_factor": round(metric_results.get("bus_factor", {}).get("score", 0.0), 2),
-                "bus_factor_latency": metric_results.get("bus_factor", {}).get("latency", 0),
-                "performance_claims": round(metric_results.get("performance_claims", {}).get("score", 0.0), 2),
-                "performance_claims_latency": metric_results.get("performance_claims", {}).get("latency", 0),
-                "license": round(metric_results.get("license", {}).get("score", 0.0), 2),
+                "ramp_up_time": round(
+                    metric_results.get("ramp_up_time", {}).get("score", 0.0), 2
+                ),
+                "ramp_up_time_latency": metric_results.get("ramp_up_time", {}).get(
+                    "latency", 0
+                ),
+                "bus_factor": round(
+                    metric_results.get("bus_factor", {}).get("score", 0.0), 2
+                ),
+                "bus_factor_latency": metric_results.get("bus_factor", {}).get(
+                    "latency", 0
+                ),
+                "performance_claims": round(
+                    metric_results.get("performance_claims", {}).get("score", 0.0), 2
+                ),
+                "performance_claims_latency": metric_results.get(
+                    "performance_claims", {}
+                ).get("latency", 0),
+                "license": round(
+                    metric_results.get("license", {}).get("score", 0.0), 2
+                ),
                 "license_latency": metric_results.get("license", {}).get("latency", 0),
                 "size_score": size_score_dict,
-                "size_score_latency": metric_results.get("size_score", {}).get("latency", 0),
+                "size_score_latency": metric_results.get("size_score", {}).get(
+                    "latency", 0
+                ),
                 "dataset_and_code_score": round(
                     metric_results.get("dataset_and_code_score", {}).get("score", 0.0),
                     2,
                 ),
-                "dataset_and_code_score_latency": metric_results.get("dataset_and_code_score", {}).get("latency", 0),
-                "dataset_quality": round(metric_results.get("dataset_quality", {}).get("score", 0.0), 2),
-                "dataset_quality_latency": metric_results.get("dataset_quality", {}).get("latency", 0),
-                "code_quality": round(metric_results.get("code_quality", {}).get("score", 0.0), 2),
-                "code_quality_latency": metric_results.get("code_quality", {}).get("latency", 0),
+                "dataset_and_code_score_latency": metric_results.get(
+                    "dataset_and_code_score", {}
+                ).get("latency", 0),
+                "dataset_quality": round(
+                    metric_results.get("dataset_quality", {}).get("score", 0.0), 2
+                ),
+                "dataset_quality_latency": metric_results.get(
+                    "dataset_quality", {}
+                ).get("latency", 0),
+                "code_quality": round(
+                    metric_results.get("code_quality", {}).get("score", 0.0), 2
+                ),
+                "code_quality_latency": metric_results.get("code_quality", {}).get(
+                    "latency", 0
+                ),
+                "reproducibility": round(
+                    metric_results.get("reproducibility", {}).get("score", 0.0), 2
+                ),
+                "reproducibility_latency": metric_results.get(
+                    "reproducibility", {}
+                ).get("latency", 0),
+                "reviewedness": round(
+                    metric_results.get("reviewedness", {}).get("score", -1.0), 2
+                ),
+                "reviewedness_latency": metric_results.get("reviewedness", {}).get(
+                    "latency", 0
+                ),
+                "treescore": round(
+                    metric_results.get("treescore", {}).get("score", 0.0), 2
+                ),
+                "treescore_latency": metric_results.get("treescore", {}).get(
+                    "latency", 0
+                ),
             }
 
             return result
@@ -123,7 +189,9 @@ class ModelEvaluator:
             return None
 
     def _calculate_metrics_parallel(
-        self, resources: Dict[URLType, List[BaseResourceHandler]]
+        self,
+        resources: Dict[URLType, List[BaseResourceHandler]],
+        artifact_id: Optional[int] = None,
     ) -> Dict[str, Dict[str, Any]]:
         """Calculate all metrics in parallel with graceful handling of missing resources"""
         metric_results = {}
@@ -140,9 +208,18 @@ class ModelEvaluator:
                 for url_type in required_types:
                     available_resources[url_type] = resources.get(url_type, [])
 
-                # Always try to calculate the metric, even with partial/missing resources
-                # The metric implementations should handle missing resources gracefully
-                future = executor.submit(self._safe_calculate_metric, metric, available_resources)
+                # For treescore, pass artifact_id
+                if metric_name == "treescore" and artifact_id is not None:
+                    future = executor.submit(
+                        self._safe_calculate_treescore,
+                        metric,
+                        available_resources,
+                        artifact_id,
+                    )
+                else:
+                    future = executor.submit(
+                        self._safe_calculate_metric, metric, available_resources
+                    )
                 future_to_metric[future] = metric_name
 
             # Collect results
@@ -157,7 +234,9 @@ class ModelEvaluator:
 
         return metric_results
 
-    def _safe_calculate_metric(self, metric: BaseMetric, resources: Dict[URLType, List[BaseResourceHandler]]):
+    def _safe_calculate_metric(
+        self, metric: BaseMetric, resources: Dict[URLType, List[BaseResourceHandler]]
+    ):
         """Safely calculate a metric with error handling"""
         try:
             return metric.calculate(resources)
@@ -165,18 +244,37 @@ class ModelEvaluator:
             self.logger.error(f"Error in metric calculation: {e}")
             return 0.0, 0
 
-    def _calculate_net_score(self, metric_results: Dict[str, Dict[str, Any]]) -> Tuple[float, int]:
-        """Calculate weighted net score"""
-        # Define weights based on Sarah's priorities
+    def _safe_calculate_treescore(
+        self,
+        metric: BaseMetric,
+        resources: Dict[URLType, List[BaseResourceHandler]],
+        artifact_id: Optional[int],
+    ):
+        """Safely calculate treescore with artifact_id"""
+        try:
+            # Use keyword argument to pass artifact_id
+            return metric.calculate(resources, artifact_id=artifact_id)
+        except Exception as e:
+            self.logger.error(f"Error in treescore calculation: {e}")
+            return 0.0, 0
+
+    def _calculate_net_score(
+        self, metric_results: Dict[str, Dict[str, Any]]
+    ) -> Tuple[float, int]:
+        """Calculate weighted net score including new metrics"""
+        # Updated weights to include new metrics
         weights = {
-            "license": 0.2,  # High priority - legal compliance
-            "performance_claims": 0.15,  # High priority - proven performance
-            "ramp_up_time": 0.15,  # Important for adoption
-            "bus_factor": 0.1,  # Risk management
-            "size_score": 0.1,  # Deployment considerations
-            "dataset_and_code_score": 0.1,  # Reproducibility
-            "dataset_quality": 0.1,  # Data quality matters
-            "code_quality": 0.1,  # Maintainability
+            "license": 0.15,
+            "performance_claims": 0.12,
+            "ramp_up_time": 0.12,
+            "bus_factor": 0.08,
+            "size_score": 0.08,
+            "dataset_and_code_score": 0.08,
+            "dataset_quality": 0.08,
+            "code_quality": 0.08,
+            "reproducibility": 0.10,
+            "reviewedness": 0.06,
+            "treescore": 0.05,
         }
 
         weighted_sum = 0.0
@@ -190,11 +288,14 @@ class ModelEvaluator:
 
                 # Handle size_score which is a dict
                 if isinstance(score, dict):
-                    # Average the hardware scores
                     if score:
                         score = sum(score.values()) / len(score.values())
                     else:
                         score = 0.0
+
+                # Skip reviewedness if -1 (no GitHub repo)
+                if metric_name == "reviewedness" and score == -1.0:
+                    continue
 
                 weighted_sum += score * weight
                 total_weight += weight
@@ -222,11 +323,13 @@ class ModelEvaluator:
                 for line_num, line in enumerate(f, 1):
                     line = line.strip()
                     if line:
-                        # Split each line by commas and filter out empty URLs
-                        line_urls = [url.strip() for url in line.split(",") if url.strip()]
+                        line_urls = [
+                            url.strip() for url in line.split(",") if url.strip()
+                        ]
                         if line_urls:
-                            self.logger.info(f"Processing line {line_num} with {len(line_urls)} URLs")
-                            # Evaluate each line's URLs as a group
+                            self.logger.info(
+                                f"Processing line {line_num} with {len(line_urls)} URLs"
+                            )
                             line_results = self.evaluate_urls(line_urls)
                             results.extend(line_results)
 
@@ -256,21 +359,15 @@ class ModelEvaluator:
 
         level = logging.INFO if log_level == 1 else logging.DEBUG
 
-        # Re-enable logging first (in case it was disabled)
         logging.disable(logging.NOTSET)
-
-        # Clear any existing handlers first
         logging.getLogger().handlers.clear()
 
         if log_file:
             try:
-                # Validate log file path
                 log_dir = os.path.dirname(log_file)
                 if log_dir and not os.path.exists(log_dir):
-                    # Try to create directory
                     os.makedirs(log_dir, exist_ok=True)
 
-                # Test if we can write to the log file
                 open(log_file, "a").close()
 
                 logging.basicConfig(
@@ -280,7 +377,6 @@ class ModelEvaluator:
                     force=True,
                 )
             except (OSError, PermissionError) as e:
-                # Invalid log file path, fall back to console logging
                 print(f"Warning: Cannot write to log file '{log_file}': {e}")
                 logging.basicConfig(
                     level=level,
