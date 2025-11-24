@@ -432,42 +432,36 @@ def reset_registry(request: Request):
     return {"status": "system reset successful"}
 
 
-@app.delete("/artifacts/{artifact_type}/{id}")
-def delete_artifact(artifact_type: str, id: str, request: Request):
+@app.delete("/artifacts/{artifact_type}/{artifact_id}")
+def delete_artifact(artifact_type: str, artifact_id: str, request: Request):
     """NON-BASELINE: Delete an artifact."""
     auth_header = request.headers.get("X-Authorization")
-
     if not auth_header:
         logger.warning("No auth header - allowing for baseline")
     else:
         require_auth(auth_header)
-
     if artifact_type not in ["model", "dataset", "code"]:
         raise HTTPException(
             status_code=400,
             detail="There is missing field(s) in the artifact_type or artifact_id or invalid",
         )
-
     try:
-        aid = int(id)
+        aid = int(artifact_id)
     except ValueError:
         raise HTTPException(
             status_code=400,
             detail="There is missing field(s) in the artifact_type or artifact_id or invalid",
         )
-
     artifacts = registry_handler.list_artifacts()
     for a in artifacts:
         if gen_id(a["name"]) == aid:
             actual_type = a.get("type", "model")
             if actual_type != artifact_type:
                 raise HTTPException(status_code=404, detail="Artifact does not exist.")
-
             # Delete the artifact
             registry_handler.delete_artifact(a["name"])
             logger.info(f"Deleted artifact: {a['name']} (ID: {aid})")
             return Response(status_code=200)
-
     raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
 
