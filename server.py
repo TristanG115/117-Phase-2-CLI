@@ -705,44 +705,62 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
 
         category = artifact.get("artifact_type") or _get_artifact_type(artifact)
 
+        # Build response with all required fields, ensuring we have defaults for everything
         response = {
             "name": name,
             "category": category.upper() if category else "MODEL",
-            "net_score": metadata.get("net_score", 0.0),
-            "net_score_latency": metadata.get("net_score_latency", 0),
-            "ramp_up_time": metadata.get("ramp_up_time", 0.0),
-            "ramp_up_time_latency": metadata.get("ramp_up_time_latency", 0),
-            "bus_factor": metadata.get("bus_factor", 0.0),
-            "bus_factor_latency": metadata.get("bus_factor_latency", 0),
-            "performance_claims": metadata.get("performance_claims", 0.0),
-            "performance_claims_latency": metadata.get("performance_claims_latency", 0),
-            "license": metadata.get("license", 0.0),
-            "license_latency": metadata.get("license_latency", 0),
-            "dataset_and_code_score": metadata.get("dataset_and_code_score", 0.0),
-            "dataset_and_code_score_latency": metadata.get(
-                "dataset_and_code_score_latency", 0
+            "net_score": float(metadata.get("net_score", 0.0)),
+            "net_score_latency": float(metadata.get("net_score_latency", 0)),
+            "ramp_up_time": float(metadata.get("ramp_up_time", 0.0)),
+            "ramp_up_time_latency": float(metadata.get("ramp_up_time_latency", 0)),
+            "bus_factor": float(metadata.get("bus_factor", 0.0)),
+            "bus_factor_latency": float(metadata.get("bus_factor_latency", 0)),
+            "performance_claims": float(metadata.get("performance_claims", 0.0)),
+            "performance_claims_latency": float(
+                metadata.get("performance_claims_latency", 0)
             ),
-            "dataset_quality": metadata.get("dataset_quality", 0.0),
-            "dataset_quality_latency": metadata.get("dataset_quality_latency", 0),
-            "code_quality": metadata.get("code_quality", 0.0),
-            "code_quality_latency": metadata.get("code_quality_latency", 0),
-            "reproducibility": metadata.get("reproducibility", 0.0),
-            "reproducibility_latency": metadata.get("reproducibility_latency", 0),
-            "reviewedness": metadata.get("reviewedness", -1.0),
-            "reviewedness_latency": metadata.get("reviewedness_latency", 0),
-            "tree_score": metadata.get("tree_score", 0.0),  # FIXED: was "treescore"
-            "tree_score_latency": metadata.get("tree_score_latency", 0),
-            "size_score": metadata.get(
-                "size_score",
-                {
-                    "raspberry_pi": 0.0,
-                    "jetson_nano": 0.0,
-                    "desktop_pc": 0.0,
-                    "aws_server": 0.0,
-                },
+            "license": float(metadata.get("license", 0.0)),
+            "license_latency": float(metadata.get("license_latency", 0)),
+            "dataset_and_code_score": float(
+                metadata.get("dataset_and_code_score", 0.0)
             ),
-            "size_score_latency": metadata.get("size_score_latency", 0),
+            "dataset_and_code_score_latency": float(
+                metadata.get("dataset_and_code_score_latency", 0)
+            ),
+            "dataset_quality": float(metadata.get("dataset_quality", 0.0)),
+            "dataset_quality_latency": float(
+                metadata.get("dataset_quality_latency", 0)
+            ),
+            "code_quality": float(metadata.get("code_quality", 0.0)),
+            "code_quality_latency": float(metadata.get("code_quality_latency", 0)),
+            "reproducibility": float(metadata.get("reproducibility", 0.0)),
+            "reproducibility_latency": float(
+                metadata.get("reproducibility_latency", 0)
+            ),
+            "reviewedness": float(metadata.get("reviewedness", -1.0)),
+            "reviewedness_latency": float(metadata.get("reviewedness_latency", 0)),
+            "tree_score": float(metadata.get("tree_score", 0.0)),
+            "tree_score_latency": float(metadata.get("tree_score_latency", 0)),
         }
+
+        # Handle size_score specially - it can be a dict or missing
+        size_score = metadata.get("size_score")
+        if isinstance(size_score, dict):
+            response["size_score"] = {
+                "raspberry_pi": float(size_score.get("raspberry_pi", 0.0)),
+                "jetson_nano": float(size_score.get("jetson_nano", 0.0)),
+                "desktop_pc": float(size_score.get("desktop_pc", 0.0)),
+                "aws_server": float(size_score.get("aws_server", 0.0)),
+            }
+        else:
+            response["size_score"] = {
+                "raspberry_pi": 0.0,
+                "jetson_nano": 0.0,
+                "desktop_pc": 0.0,
+                "aws_server": 0.0,
+            }
+
+        response["size_score_latency"] = float(metadata.get("size_score_latency", 0))
 
         return JSONResponse(content=response)
 
