@@ -1,15 +1,17 @@
-import time
 import subprocess
 import tempfile
-import logging
-from typing import Dict, List, Any, Tuple
-from base_metric import BaseMetric
-from url_classifier import URLType
+import time
+from typing import Any, Dict, List, Tuple
+
 from API.storage import S3Storage
+from url_classifier import URLType
+
+from .base_metric import BaseMetric
 
 
 class ReproducibilityMetric(BaseMetric):
     """Metric to evaluate whether a model can be run using the demo code"""
+
     def __init__(self):
         super().__init__()
         self.s3 = S3Storage()
@@ -38,15 +40,17 @@ class ReproducibilityMetric(BaseMetric):
         else:
             # Local file
             return code_ref
-        
-    def calculate(self, resources: Dict[URLType, List[Any]]) -> Tuple[float, int]:
+
+    def calculate(
+        self, resources: Dict[URLType, List[Any]], **kwargs
+    ) -> Tuple[float, int]:
         start_time = time.time()
 
         code_resources = resources.get(URLType.CODE, [])
         if not code_resources:
             self.logger.warning("No code provided")
             return 0.0, int((time.time() - start_time) * 1000)
-        
+
         score = 0.0
         for code_handler in code_resources:
             try:

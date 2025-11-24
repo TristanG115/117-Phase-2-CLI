@@ -18,6 +18,7 @@ metrics/__pycache__/__init__.cpython-313.pyc
 handlers/__pycache__/dataset_handler.cpython-313.pyc
 handlers/__pycache__/code_handler.cpython-313.pyc
 __pycache__/test_model_evaluator.cpython-313.pyc
+venv/
 .coverage
 sample_input.txt
 *.pyc

@@ -1,0 +1,12 @@
+nohup: ignoring input
+Usage: ./run <command>
+
+Commands:
+  install       Install project dependencies
+  test          Run test suite with coverage
+  debug         Run tests with verbose output
+  ingest        Ingest a Hugging Face model into the registry
+  list          List all locally ingested models
+  search        Search local registry by model name or tags
+  reset         Clear all stored models and downloaded files
+  <URL_FILE>    Process and evaluate URLs from file
