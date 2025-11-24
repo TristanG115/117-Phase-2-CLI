@@ -949,24 +949,104 @@ def get_cost(
     artifacts = registry_handler.list_artifacts()
     for a in artifacts:
         if gen_id(a["name"]) == aid:
-            if artifact_type == "model":
+            # Verify the artifact's type matches the requested type
+            actual_type = a.get("artifact_type", "model")
+            if actual_type != artifact_type:
+                # Type mismatch - treat as "not found"
+                logger.warning(
+                    f"Type mismatch in cost endpoint: requested {artifact_type}, "
+                    f"but artifact is {actual_type} (ID: {aid})"
+                )
+                raise HTTPException(status_code=404, detail="Artifact does not exist.")
+
+            # Calculate cost based on the artifact's actual type
+            if actual_type == "model":
                 base_cost = 412.5
-            elif artifact_type == "dataset":
-                base_cost = 100.0
+            elif actual_type == "dataset":
+                base_cost = 562.5
+            else:  # code
+                base_cost = 280.0
+
+            if not dependency:
+                # Without dependencies, only return total_cost
+                return {str(aid): {"total_cost": base_cost}}
             else:
-                base_cost = 100.0
+                # With dependencies, return both standalone_cost and total_cost
+                # For this implementation, we'll include the artifact itself
+                # and calculate based on potential dependencies
+                result = {
+                    str(aid): {"standalone_cost": base_cost, "total_cost": base_cost}
+                }
 
-            if dependency:
-                base_cost *= 1.2
+                # Add dependencies if they exist (based on dataset_url or other relationships)
+                total = base_cost
+                dataset_url = a.get("dataset_url")
+                if dataset_url and dataset_url != "unknown":
+                    # Find the dataset dependency
+                    dataset_name = dataset_url.rstrip("/").split("/")[-1]
+                    dataset_id = gen_id(dataset_name)
 
-            return {str(aid): {"total_cost": base_cost}}
+                    for dep in artifacts:
+                        if gen_id(dep["name"]) == dataset_id:
+                            dep_type = dep.get("artifact_type", "dataset")
+                            if dep_type == "dataset":
+                                dep_cost = 562.5
+                            elif dep_type == "model":
+                                dep_cost = 412.5
+                            else:
+                                dep_cost = 280.0
+
+                            result[str(dataset_id)] = {
+                                "standalone_cost": dep_cost,
+                                "total_cost": dep_cost,
+                            }
+                            total += dep_cost
+                            break
+
+                # Update the main artifact's total_cost to include dependencies
+                result[str(aid)]["total_cost"] = total
+
+                return result
 
     raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
 
+def _extract_name_from_url(url: str) -> str:
+    """
+    Extract artifact name from various URL formats
+
+    Examples:
+        https://huggingface.co/datasets/squad -> squad
+        https://github.com/google/bert -> bert
+        https://huggingface.co/google/bert-base -> bert-base
+    """
+    # Remove trailing slashes
+    url = url.rstrip("/")
+
+    # Extract the last component
+    parts = url.split("/")
+
+    # For HuggingFace URLs (org/name format)
+    if "huggingface.co" in url:
+        if len(parts) >= 2:
+            return parts[-1]  # Just the model/dataset name
+
+    # For GitHub URLs
+    elif "github.com" in url:
+        if len(parts) >= 1:
+            return parts[-1]  # Repository name
+
+    # Fallback: return last segment
+    return parts[-1] if parts else "unknown"
+
+
 @app.get("/artifact/model/{artifact_id}/lineage")
 def get_lineage(artifact_id: str, request: Request):
-    """BASELINE: Retrieve lineage graph."""
+    """
+    Retrieve lineage graph for a model
+
+    Returns artifacts and edges
+    """
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
@@ -979,47 +1059,140 @@ def get_lineage(artifact_id: str, request: Request):
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail=(
-                "The lineage graph cannot be computed because the artifact "
-                "metadata is missing or malformed."
-            ),
+            detail="The lineage graph cannot be computed because the artifact metadata is missing or malformed.",
         )
 
+    # Find the model artifact
     artifacts = registry_handler.list_artifacts()
+    model_artifact = None
+
     for a in artifacts:
         if gen_id(a["name"]) == aid:
-            dataset_url = a.get("dataset_url", "unknown")
-            if not dataset_url or dataset_url == "unknown":
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        "The lineage graph cannot be computed because the "
-                        "artifact metadata is missing or malformed."
-                    ),
-                )
+            if _get_artifact_type(a) != "model":
+                raise HTTPException(status_code=404, detail="Artifact does not exist.")
+            model_artifact = a
+            break
 
-            dataset_name = dataset_url.rstrip("/").split("/")[-1]
-            dataset_id = gen_id(dataset_name)
+    if not model_artifact:
+        raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
-            return {
-                "nodes": [
-                    {"artifact_id": aid, "name": a["name"], "source": "config_json"},
+    # Build lineage graph
+    nodes = []
+    edges = []
+    seen_ids = set()
+
+    # Add the model itself as the root node
+    model_node = {
+        "artifact_id": aid,
+        "name": model_artifact["name"],
+        "source": "root_model",
+    }
+    nodes.append(model_node)
+    seen_ids.add(aid)
+
+    # Extract metadata for lineage information
+    try:
+        metadata = json.loads(model_artifact.get("metadata_json", "{}"))
+    except json.JSONDecodeError:
+        metadata = {}
+
+    # Add dataset dependencies
+    dataset_url = model_artifact.get("dataset_url", "unknown")
+    if dataset_url and dataset_url != "unknown":
+        dataset_name = _extract_name_from_url(dataset_url)
+        dataset_id = gen_id(dataset_name)
+
+        if dataset_id not in seen_ids:
+            nodes.append(
+                {
+                    "artifact_id": dataset_id,
+                    "name": dataset_name,
+                    "source": "training_dataset",
+                }
+            )
+            edges.append(
+                {
+                    "from_node_artifact_id": dataset_id,
+                    "to_node_artifact_id": aid,
+                    "relationship": "trained_on",
+                }
+            )
+            seen_ids.add(dataset_id)
+
+    # Add code repository dependencies
+    code_url = model_artifact.get("code_url", "unknown")
+    if code_url and code_url != "unknown":
+        code_name = _extract_name_from_url(code_url)
+        code_id = gen_id(code_name)
+
+        if code_id not in seen_ids:
+            nodes.append(
+                {
+                    "artifact_id": code_id,
+                    "name": code_name,
+                    "source": "implementation_code",
+                }
+            )
+            edges.append(
+                {
+                    "from_node_artifact_id": code_id,
+                    "to_node_artifact_id": aid,
+                    "relationship": "implemented_by",
+                }
+            )
+            seen_ids.add(code_id)
+
+    # Add parent model dependencies
+    parent_model = metadata.get("parent_model")
+    if parent_model:
+        parent_id = gen_id(parent_model)
+
+        if parent_id not in seen_ids:
+            nodes.append(
+                {
+                    "artifact_id": parent_id,
+                    "name": parent_model,
+                    "source": "parent_model",
+                }
+            )
+            edges.append(
+                {
+                    "from_node_artifact_id": parent_id,
+                    "to_node_artifact_id": aid,
+                    "relationship": "fine_tuned_from",
+                }
+            )
+            seen_ids.add(parent_id)
+
+    # Add evaluation datasets from metadata
+    eval_datasets = metadata.get("evaluation_datasets", [])
+    if isinstance(eval_datasets, list):
+        for eval_dataset_name in eval_datasets:
+            eval_id = gen_id(eval_dataset_name)
+
+            if eval_id not in seen_ids:
+                nodes.append(
                     {
-                        "artifact_id": dataset_id,
-                        "name": dataset_name,
-                        "source": "upstream_dataset",
-                    },
-                ],
-                "edges": [
-                    {
-                        "from_node_artifact_id": dataset_id,
-                        "to_node_artifact_id": aid,
-                        "relationship": "fine_tuning_dataset",
+                        "artifact_id": eval_id,
+                        "name": eval_dataset_name,
+                        "source": "evaluation_dataset",
                     }
-                ],
-            }
+                )
+                edges.append(
+                    {
+                        "from_node_artifact_id": eval_id,
+                        "to_node_artifact_id": aid,
+                        "relationship": "evaluated_on",
+                    }
+                )
+                seen_ids.add(eval_id)
 
-    raise HTTPException(status_code=404, detail="Artifact does not exist.")
+    # Validate graph structure
+    if len(nodes) == 1 and len(edges) == 0:
+        # No dependencies found
+        logger.warning(f"Model {aid} has no dependencies in lineage graph")
+
+    return {"nodes": nodes, "edges": edges}
 
 
 def _verify_artifact_exists(artifact_id, artifacts):

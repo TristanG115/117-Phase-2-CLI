@@ -7,6 +7,16 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+import os, sys
+
+ROOT_DIR = os.path.dirname(os.path.dirname(__file__))   
+API_DIR = os.path.join(ROOT_DIR, "API")                 
+
+if API_DIR not in sys.path:
+    sys.path.append(API_DIR)
+
+from storage import StorageUnavailableError
+
 
 from huggingface_hub import HfApi, RepoCard, snapshot_download
 
@@ -473,14 +483,17 @@ def ingest_model(  # noqa: C901
         tags = "model"
 
     # Add to registry
-    artifact_id = registry_handler.add_model(
-        name=model_id,
-        score=result.get("net_score", 0.0),
-        tags=tags,
-        code_url=code_url,
-        dataset_url=dataset_url,
-        metadata_json=json.dumps(result),
-    )
+        try:
+            artifact_id = registry_handler.add_model(
+            name=model_id,
+            score=result.get("net_score", 0.0),
+            tags=tags,
+            code_url=code_url,
+            dataset_url=dataset_url,
+            metadata_json=json.dumps(result),
+            )
+        except StorageUnavailableError:
+            return {"error": "S3 is unavailable — could not store model artifacts"}
 
     return {
         "status": "success",

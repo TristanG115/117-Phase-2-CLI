@@ -11,6 +11,10 @@ from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
 
+class StorageUnavailableError(Exception):
+    """Raised when S3 is unavailable or upload fails."""
+    pass
+
 
 class S3Storage:
     """Handles all AWS S3 operations for the Trustworthy Model Registry"""
@@ -83,7 +87,8 @@ class S3Storage:
             }
         except ClientError as e:
             logger.error(f"S3 upload failed for key {key}: {e}")
-            raise HTTPException(status_code=500, detail=f"S3 upload failed: {e}")
+            raise StorageUnavailableError("S3 unavailable — failed to upload to bucket")
+
 
     def download_url(self, key: str, expiration: int = 3600) -> str:
         """
