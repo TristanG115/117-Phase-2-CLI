@@ -527,22 +527,6 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):  # noq
         else:  # model
             url = artifact.get("url", artifact.get("code_url", "unknown"))
 
-        # Get download_url from metadata or generate if not present
-        metadata = artifact.get("metadata", {})
-        if isinstance(metadata, str):
-            try:
-                import json
-
-                metadata = json.loads(metadata)
-            except:
-                metadata = {}
-
-        download_url = metadata.get("download_url")
-        if not download_url:
-            # Generate download URL if not stored
-            s3_key = f"{artifact_type}/{aid}.zip"
-            download_url = f"https://{s3_storage.bucket_name}.s3.{s3_storage.region}.amazonaws.com/{s3_key}"
-
         logger.info(f"SUCCESS: Returning {artifact['name']}")
         return {
             "metadata": {
@@ -550,7 +534,7 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):  # noq
                 "id": str(aid),
                 "type": artifact_type,
             },
-            "data": {"url": url, "download_url": download_url},
+            "data": {"url": url},
         }
 
     logger.error(f"NOT FOUND: ID {aid}, type {artifact_type}")
@@ -812,10 +796,6 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
         code_url = url
         dataset_url = "unknown"
 
-    # Generate download URL
-    s3_key = f"{artifact_type}/{new_id}.zip"
-    download_url = f"https://{s3_storage.bucket_name}.s3.{s3_storage.region}.amazonaws.com/{s3_key}"
-
     # Save artifact
     artifact_id = registry_handler.add_artifact(
         name=original_name,
@@ -825,12 +805,7 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
         tags=artifact_type,
         code_url=code_url,
         dataset_url=dataset_url,
-        metadata={
-            "type": artifact_type,
-            "rating_calculated": False,
-            "download_url": download_url,
-            "s3_key": s3_key,
-        },
+        metadata={"type": artifact_type, "rating_calculated": False},
     )
     logger.info(f"Registered artifact ID: {artifact_id}")
 
@@ -842,7 +817,7 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
     # Return response
     resp = {
         "metadata": {"name": original_name, "id": new_id, "type": artifact_type},
-        "data": {"url": url, "download_url": download_url},
+        "data": {"url": url},
     }
 
     return JSONResponse(status_code=201, content=resp)
