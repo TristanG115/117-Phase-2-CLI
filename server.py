@@ -1273,118 +1273,43 @@ async def license_check(artifact_id: str, request: Request):
     return JSONResponse(content=result)
 
 
-@app.post("/artifact/byRegEx")  # noqa: C901
-async def artifact_by_regex(request: Request):  # noqa: C901
-    """BASELINE: Search artifacts by regex over name and README with catastrophic backtracking detection."""
+@app.post("/artifact/byRegEx")
+async def artifact_by_regex(request: Request):
+    """BASELINE: Regex search over artifact names ONLY."""
 
+    # --- Baseline auth behavior: allow missing token ---
     auth_header = request.headers.get("X-Authorization")
-
     if not auth_header:
-        logger.warning("No auth header - allowing for baseline")
+        logger.warning("No auth header - allowing baseline")
     else:
-        try:
-            require_auth(auth_header)
-        except Exception:
-            logger.warning("Auth failed - allowing for baseline")
+        require_auth(auth_header)
 
-    # Parse input JSON
+    # --- Parse JSON body ---
     try:
         body = await request.json()
     except Exception:
         raise HTTPException(
             status_code=400,
-            detail=(
-                "There is missing field(s) in the artifact_regex or it is "
-                "formed improperly, or is invalid"
-            ),
+            detail="There is missing field(s) in the artifact_regex or it is formed improperly, or is invalid",
         )
 
     regex = body.get("regex")
-    logger.info(f"[DATA] Regex search: {regex}")
     if not regex or not isinstance(regex, str):
         raise HTTPException(
             status_code=400,
-            detail="There is missing field(s) in the artifact_regex or it is "
-            "formed improperly, or is invalid",
+            detail="There is missing field(s) in the artifact_regex or it is formed improperly, or is invalid",
         )
 
-    # Try compiling regex
+    # --- Compile safely ---
     try:
         pattern = re.compile(regex, re.IGNORECASE)
     except re.error:
         raise HTTPException(
             status_code=400,
-            detail="There is missing field(s) in the artifact_regex or it is "
-            "formed improperly, or is invalid",
+            detail="There is missing field(s) in the artifact_regex or it is formed improperly, or is invalid",
         )
 
-    def test_pattern_safety(pattern_obj, timeout=0.5):
-        """
-        Test if a regex pattern could cause catastrophic backtracking.
-        Returns False if any test case takes longer than timeout.
-        Uses multiprocessing to kill runaway regex operations.
-        """
-
-        # Test cases specifically designed to trigger catastrophic backtracking
-        # These are longer strings that will expose exponential behavior
-        test_cases = [
-            "a" * 25 + "b",
-            "a" * 20,
-        ]
-
-        def _test_regex(pattern_str, flags, test_str, result_queue):
-            try:
-                import re
-
-                pattern = re.compile(pattern_str, flags)
-                pattern.search(test_str)
-                result_queue.put("ok")
-            except Exception as e:
-                result_queue.put(f"error: {e}")
-
-        pattern_str = pattern_obj.pattern
-        flags = pattern_obj.flags
-
-        for test_str in test_cases:
-            result_queue = multiprocessing.Queue()
-            process = multiprocessing.Process(
-                target=_test_regex,
-                args=(pattern_str, flags, test_str, result_queue),
-                daemon=True,
-            )
-
-            process.start()
-            process.join(timeout=timeout)
-
-            if process.is_alive():
-                logger.info(
-                    f"[DATA] TIMEOUT: Pattern exceeded {timeout}s, killing process"
-                )
-                process.terminate()
-                process.join(0.2)
-                if process.is_alive():
-                    process.kill()
-                    process.join()
-                return False
-
-        logger.info("[DATA] Pattern validated as safe (fast on all test strings)")
-        return True
-
-    # Run safety test
-    logger.info(f"[DATA] Testing regex pattern for catastrophic backtracking: {regex}")
-    if not test_pattern_safety(pattern, timeout=1.0):
-        logger.warning(f"Catastrophic backtracking detected in pattern: {regex}")
-        raise HTTPException(
-            status_code=400,
-            detail="There is missing field(s) in the artifact_regex or it is "
-            "formed improperly, or is invalid",
-        )
-
-    logger.info("[DATA] Pattern validated as safe, searching artifacts")
-
-    #
-    # MATCHING LOGIC
-    #
+    # --- Search artifacts by NAME ONLY ---
     artifacts = registry_handler.list_artifacts()
     matches = []
     seen_ids = set()
@@ -1393,46 +1318,22 @@ async def artifact_by_regex(request: Request):  # noqa: C901
         name = a.get("name", "")
         artifact_id = gen_id(name)
 
+        # avoid duplicates
         if artifact_id in seen_ids:
             continue
 
-        # Build search text from name and README
-        search_text = name
-        try:
-            metadata = json.loads(a.get("metadata_json", "{}"))
-            readme_text = metadata.get("readme", "")
-            if isinstance(readme_text, str):
-                search_text += " " + readme_text
-        except Exception:
-            pass
-
-        # Safety-tested pattern with timeout protection
-        import threading
-
-        match_result = {"matched": None, "completed": False}
-
-        def _do_match():
-            try:
-                match_result["matched"] = pattern.search(search_text)
-                match_result["completed"] = True
-            except Exception:
-                match_result["completed"] = True
-
-        match_thread = threading.Thread(target=_do_match, daemon=True)
-        match_thread.start()
-        match_thread.join(timeout=1.0)
-
-        if match_result["completed"] and match_result["matched"]:
+        #  regex against NAME only
+        if pattern.search(name):
             actual_type = _get_artifact_type(a)
             matches.append({"name": name, "id": artifact_id, "type": actual_type})
             seen_ids.add(artifact_id)
 
+    # --- No matching artifacts ---
     if not matches:
         raise HTTPException(
             status_code=404, detail="No artifact found under this regex."
         )
 
-    logger.info(f"[DATA] Returning {len(matches)} matches")
     return JSONResponse(content=matches)
 
 
