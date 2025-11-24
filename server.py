@@ -983,8 +983,8 @@ def get_cost(
     artifacts = registry_handler.list_artifacts()
     for a in artifacts:
         if gen_id(a["name"]) == aid:
-            # Verify the artifact's type matches the requested type
-            actual_type = a.get("artifact_type", "model")
+            # Verify the artifact's type matches the requested type using standardized detection
+            actual_type = _get_artifact_type(a)
             if actual_type != artifact_type:
                 # Type mismatch - treat as "not found"
                 logger.warning(
@@ -1002,27 +1002,31 @@ def get_cost(
                 base_cost = 280.0
 
             if not dependency:
-                # Without dependencies, only return total_cost
+                # Without dependencies, ONLY return total_cost (no standalone_cost)
                 return {str(aid): {"total_cost": base_cost}}
             else:
-                # With dependencies, return both standalone_cost and total_cost
-                # For this implementation, we'll include the artifact itself
-                # and calculate based on potential dependencies
-                result = {
-                    str(aid): {"standalone_cost": base_cost, "total_cost": base_cost}
+                # With dependencies, return both standalone_cost and total_cost for all artifacts
+                result = {}
+                total_cost_sum = base_cost
+
+                # Add the main artifact
+                result[str(aid)] = {
+                    "standalone_cost": base_cost,
+                    "total_cost": base_cost,  # Will be updated with full sum at the end
                 }
 
-                # Add dependencies if they exist (based on dataset_url or other relationships)
-                total = base_cost
+                # Find dependencies based on URLs
+                dependencies_found = []
+
+                # Check dataset_url
                 dataset_url = a.get("dataset_url")
                 if dataset_url and dataset_url != "unknown":
-                    # Find the dataset dependency
-                    dataset_name = dataset_url.rstrip("/").split("/")[-1]
+                    dataset_name = _extract_name_from_url(dataset_url)
                     dataset_id = gen_id(dataset_name)
 
                     for dep in artifacts:
                         if gen_id(dep["name"]) == dataset_id:
-                            dep_type = dep.get("artifact_type", "dataset")
+                            dep_type = _get_artifact_type(dep)
                             if dep_type == "dataset":
                                 dep_cost = 562.5
                             elif dep_type == "model":
@@ -1034,11 +1038,38 @@ def get_cost(
                                 "standalone_cost": dep_cost,
                                 "total_cost": dep_cost,
                             }
-                            total += dep_cost
+                            total_cost_sum += dep_cost
+                            dependencies_found.append(dataset_id)
                             break
 
-                # Update the main artifact's total_cost to include dependencies
-                result[str(aid)]["total_cost"] = total
+                # Check code_url
+                code_url = a.get("code_url")
+                if code_url and code_url != "unknown":
+                    code_name = _extract_name_from_url(code_url)
+                    code_id = gen_id(code_name)
+
+                    # Only add if not already added and not the same as the artifact itself
+                    if code_id not in dependencies_found and code_id != aid:
+                        for dep in artifacts:
+                            if gen_id(dep["name"]) == code_id:
+                                dep_type = _get_artifact_type(dep)
+                                if dep_type == "code":
+                                    dep_cost = 280.0
+                                elif dep_type == "model":
+                                    dep_cost = 412.5
+                                else:
+                                    dep_cost = 562.5
+
+                                result[str(code_id)] = {
+                                    "standalone_cost": dep_cost,
+                                    "total_cost": dep_cost,
+                                }
+                                total_cost_sum += dep_cost
+                                dependencies_found.append(code_id)
+                                break
+
+                # Update the main artifact's total_cost to be the sum of all
+                result[str(aid)]["total_cost"] = total_cost_sum
 
                 return result
 
