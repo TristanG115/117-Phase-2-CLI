@@ -8,6 +8,7 @@ import os
 import re
 from typing import Optional
 
+import requests
 from beautilog import logger
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -948,12 +949,12 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
 
 
 @app.get("/artifact/{artifact_type}/{artifact_id}/cost")
-def get_cost(
+def get_artifact_cost(
     artifact_type: str, artifact_id: str, request: Request, dependency: bool = False
 ):
-    """BASELINE: Return total cost of the artifact."""
-    auth_header = request.headers.get("X-Authorization")
 
+    # --- Validate auth ---
+    auth_header = request.headers.get("X-Authorization")
     if not auth_header:
         logger.warning("No auth header - allowing for baseline")
     else:
@@ -962,86 +963,59 @@ def get_cost(
     if artifact_type not in ["model", "dataset", "code"]:
         raise HTTPException(
             status_code=400,
-            detail=(
-                "There is missing field(s) in the artifact_type or artifact_id "
-                "or it is formed improperly, or is invalid."
-            ),
+            detail="There is missing field(s) in the artifact_type or artifact_id or it is formed improperly, or is invalid.",
         )
 
+    # --- Validate artifact_id ---
     try:
         aid = int(artifact_id)
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail=(
-                "There is missing field(s) in the artifact_type or artifact_id "
-                "or it is formed improperly, or is invalid."
-            ),
+            detail="There is missing field(s) in the artifact_type or artifact_id or it is formed improperly, or is invalid.",
         )
 
+    # --- Find artifact ---
     artifacts = registry_handler.list_artifacts()
+    target = None
+
     for a in artifacts:
         if gen_id(a["name"]) == aid:
-            # Verify the artifact's type matches the requested type
-            actual_type = a.get("artifact_type", "model")
-            if actual_type != artifact_type:
-                # Type mismatch - treat as "not found"
-                logger.warning(
-                    f"Type mismatch in cost endpoint: requested {artifact_type}, "
-                    f"but artifact is {actual_type} (ID: {aid})"
-                )
-                raise HTTPException(status_code=404, detail="Artifact does not exist.")
+            actual_type = _get_artifact_type(a)
+            if actual_type == artifact_type:
+                target = a
+            break
 
-            # Calculate cost based on the artifact's actual type
-            if actual_type == "model":
-                base_cost = 412.5
-            elif actual_type == "dataset":
-                base_cost = 562.5
-            else:  # code
-                base_cost = 280.0
+    if not target:
+        raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
-            if not dependency:
-                # Without dependencies, only return total_cost
-                return {str(aid): {"total_cost": base_cost}}
-            else:
-                # With dependencies, return both standalone_cost and total_cost
-                # For this implementation, we'll include the artifact itself
-                # and calculate based on potential dependencies
-                result = {
-                    str(aid): {"standalone_cost": base_cost, "total_cost": base_cost}
-                }
+    # --- Determine URL ---
+    if artifact_type == "code":
+        url = target.get("code_url", target.get("url", "unknown"))
+    elif artifact_type == "dataset":
+        url = target.get("dataset_url", target.get("url", "unknown"))
+    else:  # model
+        url = target.get("url", target.get("code_url", "unknown"))
 
-                # Add dependencies if they exist (based on dataset_url or other relationships)
-                total = base_cost
-                dataset_url = a.get("dataset_url")
-                if dataset_url and dataset_url != "unknown":
-                    # Find the dataset dependency
-                    dataset_name = dataset_url.rstrip("/").split("/")[-1]
-                    dataset_id = gen_id(dataset_name)
+    # --- Compute cost ---
+    try:
+        head = requests.head(url, timeout=5)
+        size_bytes = int(head.headers.get("Content-Length", "0"))
+        size_mb = round(size_bytes / (1024 * 1024), 1)
+    except Exception:
+        raise HTTPException(
+            status_code=500, detail="The artifact cost calculator encountered an error."
+        )
 
-                    for dep in artifacts:
-                        if gen_id(dep["name"]) == dataset_id:
-                            dep_type = dep.get("artifact_type", "dataset")
-                            if dep_type == "dataset":
-                                dep_cost = 562.5
-                            elif dep_type == "model":
-                                dep_cost = 412.5
-                            else:
-                                dep_cost = 280.0
+    total_cost = size_mb
 
-                            result[str(dataset_id)] = {
-                                "standalone_cost": dep_cost,
-                                "total_cost": dep_cost,
-                            }
-                            total += dep_cost
-                            break
+    # --- Dependency support (simple until lineage is implemented) ---
+    if dependency:
+        # placeholder: no dependencies implemented yet
+        pass
 
-                # Update the main artifact's total_cost to include dependencies
-                result[str(aid)]["total_cost"] = total
-
-                return result
-
-    raise HTTPException(status_code=404, detail="Artifact does not exist.")
+    # --- Return correct JSON format ---
+    return {artifact_id: {"total_cost": total_cost}}
 
 
 def _extract_name_from_url(url: str) -> str:
