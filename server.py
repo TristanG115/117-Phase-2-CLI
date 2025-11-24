@@ -654,6 +654,16 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
         logger.info(f"[RATE REQUEST] Attempting lookup by numeric ID: {aid}")
         for a in artifacts:
             if gen_id(a["name"]) == aid:
+                # CRITICAL: Verify this is actually a model artifact
+                actual_type = _get_artifact_type(a)
+                if actual_type != "model":
+                    logger.warning(
+                        f"[RATE REQUEST] Artifact {aid} is type '{actual_type}', not 'model'"
+                    )
+                    raise HTTPException(
+                        status_code=404, detail="Artifact does not exist."
+                    )
+
                 artifact = a
                 lookup_method = f"numeric_id={aid}"
                 break
@@ -661,6 +671,9 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
         # INVALID ID FORMAT → MUST = 404
         logger.error(f"[RATE REQUEST] Invalid ID format: '{artifact_id}'")
         raise HTTPException(status_code=404, detail="Artifact does not exist.")
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 404 from type mismatch)
+        raise
 
     # If not found after numeric lookup → 404
     if not artifact:
@@ -717,8 +730,8 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
             "reproducibility_latency": metadata.get("reproducibility_latency", 0),
             "reviewedness": metadata.get("reviewedness", -1.0),
             "reviewedness_latency": metadata.get("reviewedness_latency", 0),
-            "tree_score": metadata.get("treescore", 0.0),
-            "tree_score_latency": metadata.get("treescore_latency", 0),
+            "tree_score": metadata.get("tree_score", 0.0),  # FIXED: was "treescore"
+            "tree_score_latency": metadata.get("tree_score_latency", 0),
             "size_score": metadata.get(
                 "size_score",
                 {
