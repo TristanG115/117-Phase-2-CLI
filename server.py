@@ -405,27 +405,6 @@ def _check_license_compatibility(github_url):
 
     import requests
 
-    # Permissive licenses that are compatible for fine-tuning and inference
-    PERMISSIVE_LICENSES = {
-        "apache-2.0",
-        "apache",
-        "apache 2.0",
-        "apache license",
-        "apache license 2.0",
-        "mit",
-        "mit license",
-        "bsd",
-        "bsd-2-clause",
-        "bsd-3-clause",
-        "bsd license",
-        "isc",
-        "cc0-1.0",
-        "unlicense",
-        "wtfpl",
-        "mpl-2.0",
-        "artistic-2.0",
-    }
-
     try:
         # Validate GitHub URL
         if "github.com" not in github_url.lower():
@@ -472,14 +451,49 @@ def _check_license_compatibility(github_url):
 
             page_content = response.text.lower()
 
-            # Look for license information in the page content
-            # Common patterns: "license: apache 2.0", "apache-2.0 license", "MIT License", etc.
+            # First check for restrictive licenses (GPL, LGPL, AGPL, etc.)
+            # These should return False
+            if re.search(r"\bgpl[-\s]*(v?2|v?3|license)\b", page_content):
+                logger.info(f"Found restrictive license: GPL")
+                return False
 
-            # Check for each permissive license in the content
-            for lic in PERMISSIVE_LICENSES:
-                if lic in page_content:
-                    logger.info(f"Found permissive license: {lic}")
-                    return True
+            if re.search(r"\b(l|a)gpl[-\s]*(2|3|license)\b", page_content):
+                logger.info(f"Found restrictive license: LGPL/AGPL")
+                return False
+
+            # Use regex patterns with word boundaries for permissive licenses
+            # Check for Apache licenses
+            if re.search(r"\bapache[-\s]*(2\.0|license|2)\b", page_content):
+                logger.info(f"Found permissive license: Apache")
+                return True
+
+            # Check for MIT license
+            if re.search(r"\bmit\s+license\b|\blicense:\s*mit\b", page_content):
+                logger.info(f"Found permissive license: MIT")
+                return True
+
+            # Check for BSD licenses
+            if re.search(r"\bbsd[-\s]*(license|2|3|clause)\b", page_content):
+                logger.info(f"Found permissive license: BSD")
+                return True
+
+            # Check for ISC license (with word boundary)
+            if re.search(r"\bisc\s+license\b|\blicense:\s*isc\b", page_content):
+                logger.info(f"Found permissive license: ISC")
+                return True
+
+            # Check for other permissive licenses
+            if re.search(r"\bcc0[-\s]*1\.0\b", page_content):
+                logger.info(f"Found permissive license: CC0-1.0")
+                return True
+
+            if re.search(r"\bunlicense\b", page_content):
+                logger.info(f"Found permissive license: Unlicense")
+                return True
+
+            if re.search(r"\bmpl[-\s]*2\.0\b", page_content):
+                logger.info(f"Found permissive license: MPL-2.0")
+                return True
 
             # If we found the word "license" but no permissive license, it's likely restrictive
             if "license" in page_content or "licence" in page_content:
@@ -487,6 +501,7 @@ def _check_license_compatibility(github_url):
                 return False
 
             # No license found - default to not compatible
+            logger.info("No license information found")
             return False
 
         except requests.RequestException as e:
