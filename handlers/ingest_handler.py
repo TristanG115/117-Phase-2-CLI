@@ -474,7 +474,8 @@ def _calculate_artifact_size(url: str, artifact_type: str) -> float:
                     if hasattr(info, "siblings") and info.siblings:
                         # Filter out files with None or 0 size, then sum
                         valid_sizes = [
-                            f.size for f in info.siblings
+                            f.size
+                            for f in info.siblings
                             if hasattr(f, "size") and f.size is not None and f.size > 0
                         ]
 
@@ -517,11 +518,10 @@ def _calculate_artifact_size(url: str, artifact_type: str) -> float:
         logging.error(f"Error calculating artifact size for {url}: {e}")
 
     # Return 0.0 instead of default - NO DEFAULT SIZES
-    logging.warning(f"Could not calculate size for {artifact_type} at {url}, returning 0.0")
+    logging.warning(
+        f"Could not calculate size for {artifact_type} at {url}, returning 0.0"
+    )
     return 0.0
-
-
-def ingest_modelfault_size
 
 
 def ingest_model(  # noqa: C901

@@ -443,104 +443,142 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
 
     if url == "unknown" or not url:
         logger.warning(f"[SIZE] No URL provided for {artifact_type}, returning 0.0")
+        # Don't cache failures - allow retry
         return 0.0
 
     try:
         # For HuggingFace models/datasets
         if "huggingface.co" in url:
             logger.info(f"[SIZE CALC] Detected HuggingFace URL: {url}")
-            # Extract repo_id from URL
-            parts = url.replace("https://", "").replace("http://", "").split("/")
+
+            # Clean URL and extract repo_id
+            clean_url = url.strip().rstrip("/")
+            parts = clean_url.replace("https://", "").replace("http://", "").split("/")
+
+            # Parse URL to extract repo_id
+            repo_id = None
+            is_dataset = False
+
+            # Try to find huggingface.co in parts
             if "huggingface.co" in parts[0]:
-                # URL format: huggingface.co/[datasets/]org/repo
-                if "datasets" in parts:
-                    idx = parts.index("datasets")
-                    repo_id = "/".join(parts[idx + 1 : idx + 3])
+                # Check if it's a dataset URL
+                if len(parts) > 1 and parts[1] == "datasets":
                     is_dataset = True
+                    if len(parts) >= 4:
+                        repo_id = f"{parts[2]}/{parts[3]}"
+                elif len(parts) >= 3:
+                    # Model URL: huggingface.co/org/model
+                    repo_id = f"{parts[1]}/{parts[2]}"
+
+            if not repo_id:
+                logger.warning(f"[SIZE CALC] Could not extract repo_id from URL: {url}")
+                return 0.0
+
+            logger.info(
+                f"[SIZE CALC] Extracted repo_id: {repo_id}, is_dataset: {is_dataset}"
+            )
+
+            # Use HuggingFace API to get repo info
+            try:
+                api = HfApi()
+
+                # Get repo info with timeout
+                if is_dataset:
+                    info = api.dataset_info(repo_id, timeout=10.0)
                 else:
-                    repo_id = "/".join(parts[1:3])
-                    is_dataset = False
+                    info = api.model_info(repo_id, timeout=10.0)
 
-                logger.info(
-                    f"[SIZE CALC] Extracted repo_id: {repo_id}, is_dataset: {is_dataset}"
-                )
+                logger.info(f"[SIZE CALC] Successfully retrieved info for {repo_id}")
 
-                # Use HuggingFace API to get repo info
-                try:
-                    api = HfApi()
-                    if is_dataset:
-                        info = api.dataset_info(repo_id)
+                # Calculate total size from all files
+                if hasattr(info, "siblings") and info.siblings:
+                    total_size_bytes = 0
+                    file_count = 0
+
+                    for file_obj in info.siblings:
+                        if (
+                            hasattr(file_obj, "size")
+                            and file_obj.size is not None
+                            and file_obj.size > 0
+                        ):
+                            total_size_bytes += file_obj.size
+                            file_count += 1
+
+                    if total_size_bytes > 0:
+                        size_mb = total_size_bytes / (
+                            1024 * 1024
+                        )  # Convert bytes to MB
+                        # Truncate to 2 decimal places (per instructor feedback)
+                        size_mb = float(f"{size_mb:.2f}")
+                        logger.info(
+                            f"[SIZE CALC SUCCESS] {repo_id}: {size_mb} MB ({file_count} files, {total_size_bytes} bytes)"
+                        )
+                        # Cache successful result ONLY
+                        SIZE_CACHE[cache_key] = size_mb
+                        return size_mb
                     else:
-                        info = api.model_info(repo_id)
-
-                    # Try to get size from repo info - properly handle None values
-                    if hasattr(info, "siblings") and info.siblings:
-                        # Filter out files with None or 0 size
-                        valid_sizes = [
-                            f.size
-                            for f in info.siblings
-                            if hasattr(f, "size") and f.size is not None and f.size > 0
-                        ]
-
-                        if valid_sizes:
-                            total_size = sum(valid_sizes)
-                            size_mb = total_size / (1024 * 1024)  # Convert bytes to MB
-                            logger.info(
-                                f"[SIZE CALC SUCCESS] {repo_id}: {size_mb:.2f} MB ({len(valid_sizes)} files)"
-                            )
-                            SIZE_CACHE[cache_key] = round(size_mb, 2)
-                            return round(size_mb, 2)
-                        else:
-                            logger.warning(
-                                f"[SIZE CALC] No valid file sizes for {repo_id}"
-                            )
-                except Exception as e:
+                        logger.warning(
+                            f"[SIZE CALC] No valid file sizes found for {repo_id} ({len(info.siblings)} files)"
+                        )
+                else:
                     logger.warning(
-                        f"[SIZE CALC] Could not get HF repo size for {repo_id}: {e}"
+                        f"[SIZE CALC] No siblings attribute or empty siblings for {repo_id}"
                     )
+
+            except Exception as e:
+                logger.error(
+                    f"[SIZE CALC] Error fetching HF repo info for {repo_id}: {type(e).__name__}: {e}"
+                )
 
         # For GitHub repos
         elif "github.com" in url:
             logger.info(f"[SIZE CALC] Detected GitHub URL: {url}")
-            # Try to get repo size via GitHub API
             try:
                 # Extract owner/repo from URL
-                parts = url.replace("https://", "").replace("http://", "").split("/")
+                clean_url = url.strip().rstrip("/")
+                parts = (
+                    clean_url.replace("https://", "").replace("http://", "").split("/")
+                )
+
                 if len(parts) >= 3:
                     owner, repo = parts[1], parts[2]
+                    # Remove .git if present
+                    repo = repo.replace(".git", "")
+
                     api_url = f"https://api.github.com/repos/{owner}/{repo}"
                     logger.info(f"[SIZE CALC] Calling GitHub API: {api_url}")
 
-                    response = requests.get(api_url, timeout=5)
+                    response = requests.get(api_url, timeout=10)
                     if response.status_code == 200:
                         data = response.json()
                         size_kb = data.get("size", 0)  # GitHub returns size in KB
                         if size_kb > 0:
                             size_mb = size_kb / 1024  # Convert KB to MB
+                            # Truncate to 2 decimal places
+                            size_mb = float(f"{size_mb:.2f}")
                             logger.info(
-                                f"[SIZE CALC SUCCESS] Calculated size for {owner}/{repo}: {size_mb:.2f} MB"
+                                f"[SIZE CALC SUCCESS] GitHub {owner}/{repo}: {size_mb} MB"
                             )
-                            SIZE_CACHE[cache_key] = round(size_mb, 2)
-                            return round(size_mb, 2)
+                            SIZE_CACHE[cache_key] = size_mb
+                            return size_mb
                         else:
                             logger.warning(
                                 f"[SIZE CALC] GitHub API returned 0 size for {owner}/{repo}"
                             )
                     else:
                         logger.warning(
-                            f"[SIZE CALC] GitHub API returned status {response.status_code}"
+                            f"[SIZE CALC] GitHub API returned status {response.status_code} for {api_url}"
                         )
             except Exception as e:
-                logger.warning(f"[SIZE CALC] Could not get GitHub repo size: {e}")
+                logger.error(f"[SIZE CALC] GitHub API error: {type(e).__name__}: {e}")
 
     except Exception as e:
-        logger.error(f"[SIZE CALC] Error calculating artifact size for {url}: {e}")
+        logger.error(f"[SIZE CALC] Unexpected error for {url}: {type(e).__name__}: {e}")
 
-    # Return 0.0 instead of default - NO DEFAULT SIZES
+    # Don't cache 0.0 - allow retry on next request
     logger.warning(
         f"[SIZE CALC FAILED] Could not calculate size for {artifact_type} at {url}, returning 0.0"
     )
-    SIZE_CACHE[cache_key] = 0.0
     return 0.0
 
 
