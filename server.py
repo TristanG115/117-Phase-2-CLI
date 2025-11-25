@@ -1209,9 +1209,9 @@ def get_cost(
     )
 
     if not dependency:
-        # Without dependencies, ONLY return total_cost (no standalone_cost)
+        # Without dependencies, return both standalone_cost and total_cost (they're equal)
         logger.info(f"[COST] Returning cost without dependencies for artifact {aid}")
-        return {str(aid): {"total_cost": main_size}}
+        return {str(aid): {"standalone_cost": main_size, "total_cost": main_size}}
     else:
         # With dependencies, return both standalone_cost and total_cost
         result = {}
@@ -1893,7 +1893,6 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         workers=1,
-        limit_concurrency=10,
         timeout_keep_alive=30,
         log_level="info",
     )
