@@ -495,34 +495,6 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
                     total_size_bytes = 0
                     file_count = 0
 
-                    # Debug first file to see structure
-                    if len(info.siblings) > 0:
-                        first_file = info.siblings[0]
-                        logger.info(
-                            f"[SIZE DEBUG] First file: {first_file.rfilename if hasattr(first_file, 'rfilename') else 'unknown'}"
-                        )
-                        logger.info(
-                            f"[SIZE DEBUG] Has 'size': {hasattr(first_file, 'size')}"
-                        )
-                        if hasattr(first_file, "size"):
-                            logger.info(f"[SIZE DEBUG] size value: {first_file.size}")
-                        logger.info(
-                            f"[SIZE DEBUG] Has 'lfs': {hasattr(first_file, 'lfs')}"
-                        )
-                        if hasattr(first_file, "lfs"):
-                            logger.info(f"[SIZE DEBUG] lfs value: {first_file.lfs}")
-                            if first_file.lfs:
-                                logger.info(
-                                    f"[SIZE DEBUG] lfs type: {type(first_file.lfs)}"
-                                )
-                                logger.info(
-                                    f"[SIZE DEBUG] lfs.__dict__: {first_file.lfs.__dict__ if hasattr(first_file.lfs, '__dict__') else 'no dict'}"
-                                )
-                        # Try to get all attributes
-                        logger.info(
-                            f"[SIZE DEBUG] All attrs: {[a for a in dir(first_file) if not a.startswith('_')]}"
-                        )
-
                     for file_obj in info.siblings:
                         # Try direct size attribute first
                         file_size = None
@@ -559,8 +531,54 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
                         return size_mb
                     else:
                         logger.warning(
-                            f"[SIZE CALC] No valid file sizes found for {repo_id} ({len(info.siblings)} files)"
+                            f"[SIZE CALC] API returned no file sizes for {repo_id}, trying web scrape"
                         )
+
+                        # FALLBACK: Scrape size from HuggingFace website
+                        try:
+                            web_url = f"https://huggingface.co/{repo_id}/tree/main"
+                            logger.info(f"[SIZE CALC] Scraping size from {web_url}")
+                            response = requests.get(web_url, timeout=10)
+                            if response.status_code == 200:
+                                html = response.text
+                                # Look for "Total file size" or similar in HTML
+                                # Pattern: "3.45 GB", "440 MB", etc
+                                import re
+
+                                # Try multiple patterns
+                                patterns = [
+                                    r"(\d+\.?\d*)\s*(GB|MB|KB)",  # "3.45 GB" or "440 MB"
+                                    r"Total file size[:\s]*(\d+\.?\d*)\s*(GB|MB|KB)",
+                                ]
+
+                                for pattern in patterns:
+                                    matches = re.findall(pattern, html, re.IGNORECASE)
+                                    if matches:
+                                        # Take the largest size found (likely the total)
+                                        max_size_mb = 0
+                                        for value, unit in matches:
+                                            size_val = float(value)
+                                            if unit.upper() == "GB":
+                                                size_val *= 1024
+                                            elif unit.upper() == "KB":
+                                                size_val /= 1024
+                                            max_size_mb = max(max_size_mb, size_val)
+
+                                        if max_size_mb > 0:
+                                            size_mb = float(f"{max_size_mb:.2f}")
+                                            logger.info(
+                                                f"[SIZE CALC SUCCESS - SCRAPED] {repo_id}: {size_mb} MB from website"
+                                            )
+                                            SIZE_CACHE[cache_key] = size_mb
+                                            return size_mb
+
+                                logger.warning(
+                                    f"[SIZE CALC] Could not find size in HTML for {repo_id}"
+                                )
+                        except Exception as e:
+                            logger.error(
+                                f"[SIZE CALC] Web scraping failed for {repo_id}: {e}"
+                            )
                 else:
                     logger.warning(
                         f"[SIZE CALC] No siblings attribute or empty siblings for {repo_id}"
