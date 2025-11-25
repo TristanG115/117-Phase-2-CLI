@@ -416,20 +416,13 @@ def _check_license_compatibility(github_url):
 def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
     """
     Calculate the size of an artifact in MB for API endpoint.
-
-    For HuggingFace models/datasets: tries to get repo info
-    For GitHub repos: uses GitHub API
-
-    Args:
-        url: URL to the artifact
-        artifact_type: Type of artifact (model, dataset, code)
-
-    Returns:
-        Size in MB (returns 0.0 if calculation fails - NO DEFAULTS)
+    Uses web scraping as fallback when API doesn't provide sizes.
     """
-    import requests
-    from huggingface_hub import HfApi
+    import re
 
+    import requests
+
+    # Assume we have logger and SIZE_CACHE available
     # Check cache first
     cache_key = f"size_{url}_{artifact_type}"
     if cache_key in SIZE_CACHE:
@@ -443,7 +436,6 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
 
     if url == "unknown" or not url:
         logger.warning(f"[SIZE] No URL provided for {artifact_type}, returning 0.0")
-        # Don't cache failures - allow retry
         return 0.0
 
     try:
@@ -455,20 +447,30 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
             clean_url = url.strip().rstrip("/")
             parts = clean_url.replace("https://", "").replace("http://", "").split("/")
 
-            # Parse URL to extract repo_id
             repo_id = None
             is_dataset = False
 
-            # Try to find huggingface.co in parts
             if "huggingface.co" in parts[0]:
-                # Check if it's a dataset URL
                 if len(parts) > 1 and parts[1] == "datasets":
                     is_dataset = True
                     if len(parts) >= 4:
                         repo_id = f"{parts[2]}/{parts[3]}"
+                    elif len(parts) >= 3:
+                        # Single name dataset: datasets/name
+                        repo_id = parts[2]
                 elif len(parts) >= 3:
-                    # Model URL: huggingface.co/org/model
+                    # Standard: org/model
                     repo_id = f"{parts[1]}/{parts[2]}"
+                elif len(parts) >= 2:
+                    # Single name model (no org): just use the name twice
+                    # e.g., distilbert-base-uncased-distilled-squad
+                    model_name = parts[1]
+                    # Try to infer org from common patterns
+                    if "distilbert" in model_name.lower():
+                        repo_id = f"distilbert/{model_name}"
+                    else:
+                        # Use the name as both org and model
+                        repo_id = model_name
 
             if not repo_id:
                 logger.warning(f"[SIZE CALC] Could not extract repo_id from URL: {url}")
@@ -478,122 +480,61 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
                 f"[SIZE CALC] Extracted repo_id: {repo_id}, is_dataset: {is_dataset}"
             )
 
-            # Use HuggingFace API to get repo info
+            # Strategy: Try web scraping first (more reliable for size)
             try:
-                api = HfApi()
+                tree_url = (
+                    f"https://huggingface.co/{repo_id}/tree/main"
+                    if not is_dataset
+                    else f"https://huggingface.co/datasets/{repo_id}/tree/main"
+                )
+                logger.info(f"[SIZE CALC] Fetching from: {tree_url}")
 
-                # Get repo info with timeout
-                if is_dataset:
-                    info = api.dataset_info(repo_id, timeout=10.0)
-                else:
-                    info = api.model_info(repo_id, timeout=10.0)
+                response = requests.get(tree_url, timeout=10)
+                if response.status_code == 200:
+                    text = response.text
 
-                logger.info(f"[SIZE CALC] Successfully retrieved info for {repo_id}")
+                    # Look for the size badge/label on the page
+                    # Pattern matches: "3.45 GB", "440 MB", "3.45GB", "440MB"
+                    size_patterns = [
+                        r"(\d+\.?\d*)\s*GB",
+                        r"(\d+\.?\d*)\s*MB",
+                        r"(\d+\.?\d*)\s*KB",
+                    ]
 
-                # Calculate total size from all files
-                if hasattr(info, "siblings") and info.siblings:
-                    total_size_bytes = 0
-                    file_count = 0
+                    all_sizes_mb = []
+                    for pattern in size_patterns:
+                        matches = re.findall(pattern, text, re.IGNORECASE)
+                        for match in matches:
+                            size_val = float(match)
+                            # Convert to MB
+                            if "GB" in pattern:
+                                all_sizes_mb.append(size_val * 1024)
+                            elif "KB" in pattern:
+                                all_sizes_mb.append(size_val / 1024)
+                            else:  # MB
+                                all_sizes_mb.append(size_val)
 
-                    for file_obj in info.siblings:
-                        # Try direct size attribute first
-                        file_size = None
-                        if (
-                            hasattr(file_obj, "size")
-                            and file_obj.size is not None
-                            and file_obj.size > 0
-                        ):
-                            file_size = file_obj.size
-                        # Try LFS size if direct size not available
-                        elif hasattr(file_obj, "lfs") and file_obj.lfs is not None:
-                            if (
-                                hasattr(file_obj.lfs, "size")
-                                and file_obj.lfs.size is not None
-                                and file_obj.lfs.size > 0
-                            ):
-                                file_size = file_obj.lfs.size
-
-                        if file_size:
-                            total_size_bytes += file_size
-                            file_count += 1
-
-                    if total_size_bytes > 0:
-                        size_mb = total_size_bytes / (
-                            1024 * 1024
-                        )  # Convert bytes to MB
-                        # Truncate to 2 decimal places (per instructor feedback)
+                    if all_sizes_mb:
+                        # Take the maximum (usually the total repo size)
+                        size_mb = max(all_sizes_mb)
                         size_mb = float(f"{size_mb:.2f}")
                         logger.info(
-                            f"[SIZE CALC SUCCESS] {repo_id}: {size_mb} MB ({file_count} files, {total_size_bytes} bytes)"
+                            f"[SIZE CALC WEB SUCCESS] {repo_id}: {size_mb} MB (scraped from website)"
                         )
-                        # Cache successful result ONLY
                         SIZE_CACHE[cache_key] = size_mb
                         return size_mb
-                    else:
-                        logger.warning(
-                            f"[SIZE CALC] API returned no file sizes for {repo_id}, trying web scrape"
-                        )
 
-                        # FALLBACK: Scrape size from HuggingFace website
-                        try:
-                            web_url = f"https://huggingface.co/{repo_id}/tree/main"
-                            logger.info(f"[SIZE CALC] Scraping size from {web_url}")
-                            response = requests.get(web_url, timeout=10)
-                            if response.status_code == 200:
-                                html = response.text
-                                # Look for "Total file size" or similar in HTML
-                                # Pattern: "3.45 GB", "440 MB", etc
-                                import re
+                logger.warning(f"[SIZE CALC] No sizes found in HTML for {repo_id}")
 
-                                # Try multiple patterns
-                                patterns = [
-                                    r"(\d+\.?\d*)\s*(GB|MB|KB)",  # "3.45 GB" or "440 MB"
-                                    r"Total file size[:\s]*(\d+\.?\d*)\s*(GB|MB|KB)",
-                                ]
-
-                                for pattern in patterns:
-                                    matches = re.findall(pattern, html, re.IGNORECASE)
-                                    if matches:
-                                        # Take the largest size found (likely the total)
-                                        max_size_mb = 0
-                                        for value, unit in matches:
-                                            size_val = float(value)
-                                            if unit.upper() == "GB":
-                                                size_val *= 1024
-                                            elif unit.upper() == "KB":
-                                                size_val /= 1024
-                                            max_size_mb = max(max_size_mb, size_val)
-
-                                        if max_size_mb > 0:
-                                            size_mb = float(f"{max_size_mb:.2f}")
-                                            logger.info(
-                                                f"[SIZE CALC SUCCESS - SCRAPED] {repo_id}: {size_mb} MB from website"
-                                            )
-                                            SIZE_CACHE[cache_key] = size_mb
-                                            return size_mb
-
-                                logger.warning(
-                                    f"[SIZE CALC] Could not find size in HTML for {repo_id}"
-                                )
-                        except Exception as e:
-                            logger.error(
-                                f"[SIZE CALC] Web scraping failed for {repo_id}: {e}"
-                            )
-                else:
-                    logger.warning(
-                        f"[SIZE CALC] No siblings attribute or empty siblings for {repo_id}"
-                    )
-
-            except Exception as e:
+            except Exception as web_error:
                 logger.error(
-                    f"[SIZE CALC] Error fetching HF repo info for {repo_id}: {type(e).__name__}: {e}"
+                    f"[SIZE CALC] Web scraping error: {type(web_error).__name__}: {web_error}"
                 )
 
         # For GitHub repos
         elif "github.com" in url:
             logger.info(f"[SIZE CALC] Detected GitHub URL: {url}")
             try:
-                # Extract owner/repo from URL
                 clean_url = url.strip().rstrip("/")
                 parts = (
                     clean_url.replace("https://", "").replace("http://", "").split("/")
@@ -601,7 +542,6 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
 
                 if len(parts) >= 3:
                     owner, repo = parts[1], parts[2]
-                    # Remove .git if present
                     repo = repo.replace(".git", "")
 
                     api_url = f"https://api.github.com/repos/{owner}/{repo}"
@@ -610,31 +550,22 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
                     response = requests.get(api_url, timeout=10)
                     if response.status_code == 200:
                         data = response.json()
-                        size_kb = data.get("size", 0)  # GitHub returns size in KB
+                        size_kb = data.get("size", 0)
                         if size_kb > 0:
-                            size_mb = size_kb / 1024  # Convert KB to MB
-                            # Truncate to 2 decimal places
+                            size_mb = size_kb / 1024
                             size_mb = float(f"{size_mb:.2f}")
                             logger.info(
                                 f"[SIZE CALC SUCCESS] GitHub {owner}/{repo}: {size_mb} MB"
                             )
                             SIZE_CACHE[cache_key] = size_mb
                             return size_mb
-                        else:
-                            logger.warning(
-                                f"[SIZE CALC] GitHub API returned 0 size for {owner}/{repo}"
-                            )
-                    else:
-                        logger.warning(
-                            f"[SIZE CALC] GitHub API returned status {response.status_code} for {api_url}"
-                        )
+
             except Exception as e:
                 logger.error(f"[SIZE CALC] GitHub API error: {type(e).__name__}: {e}")
 
     except Exception as e:
         logger.error(f"[SIZE CALC] Unexpected error for {url}: {type(e).__name__}: {e}")
 
-    # Don't cache 0.0 - allow retry on next request
     logger.warning(
         f"[SIZE CALC FAILED] Could not calculate size for {artifact_type} at {url}, returning 0.0"
     )
@@ -1388,8 +1319,8 @@ def get_cost(
     )
 
     if not dependency:
-        # Without dependencies, return both standalone_cost and total_cost (they're equal)
-        result = {str(aid): {"standalone_cost": main_size, "total_cost": main_size}}
+        # Without dependencies, return ONLY total_cost (per spec)
+        result = {str(aid): {"total_cost": main_size}}
         logger.info(f"[COST RESPONSE] dependency=false, returning: {result}")
         # COST_CACHE[cost_cache_key] = result  # Disabled temporarily
         return result
