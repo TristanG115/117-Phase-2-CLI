@@ -405,9 +405,120 @@ def _check_license_compatibility(github_url):
 
     import requests
 
-    # TEMP: Always return True to see what tests expect
-    logger.info(f"License check for {github_url} - returning True (hardcoded)")
-    return True
+    try:
+        # Validate GitHub URL
+        if "github.com" not in github_url.lower():
+            raise HTTPException(
+                status_code=502,
+                detail="External license information could not be retrieved.",
+            )
+
+        # Extract owner and repo from GitHub URL
+        url_parts = github_url.rstrip("/").split("github.com/")
+        if len(url_parts) < 2:
+            raise HTTPException(
+                status_code=502,
+                detail="External license information could not be retrieved.",
+            )
+
+        path_parts = url_parts[1].split("/")
+        if len(path_parts) < 2:
+            raise HTTPException(
+                status_code=502,
+                detail="External license information could not be retrieved.",
+            )
+
+        owner = path_parts[0]
+        repo = path_parts[1]
+
+        # Try to fetch the main repo page
+        repo_url = f"https://github.com/{owner}/{repo}"
+
+        try:
+            response = requests.get(repo_url, timeout=15, allow_redirects=True)
+
+            if response.status_code == 404:
+                raise HTTPException(
+                    status_code=404,
+                    detail="The artifact or GitHub project could not be found.",
+                )
+
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=502,
+                    detail="External license information could not be retrieved.",
+                )
+
+            page_content = response.text.lower()
+
+            # First check for restrictive licenses (GPL, LGPL, AGPL, etc.)
+            # These should return False
+            if re.search(r"\bgpl[-\s]*(v?2|v?3|license)\b", page_content):
+                logger.info(f"Found restrictive license: GPL")
+                return False
+
+            if re.search(r"\b(l|a)gpl[-\s]*(2|3|license)\b", page_content):
+                logger.info(f"Found restrictive license: LGPL/AGPL")
+                return False
+
+            # Use regex patterns with word boundaries for permissive licenses
+            # Check for Apache licenses
+            if re.search(r"\bapache[-\s]*(2\.0|license|2)\b", page_content):
+                logger.info(f"Found permissive license: Apache")
+                return True
+
+            # Check for MIT license
+            if re.search(r"\bmit\s+license\b|\blicense:\s*mit\b", page_content):
+                logger.info(f"Found permissive license: MIT")
+                return True
+
+            # Check for BSD licenses
+            if re.search(r"\bbsd[-\s]*(license|2|3|clause)\b", page_content):
+                logger.info(f"Found permissive license: BSD")
+                return True
+
+            # Check for ISC license (with word boundary)
+            if re.search(r"\bisc\s+license\b|\blicense:\s*isc\b", page_content):
+                logger.info(f"Found permissive license: ISC")
+                return True
+
+            # Check for other permissive licenses
+            if re.search(r"\bcc0[-\s]*1\.0\b", page_content):
+                logger.info(f"Found permissive license: CC0-1.0")
+                return True
+
+            if re.search(r"\bunlicense\b", page_content):
+                logger.info(f"Found permissive license: Unlicense")
+                return True
+
+            if re.search(r"\bmpl[-\s]*2\.0\b", page_content):
+                logger.info(f"Found permissive license: MPL-2.0")
+                return True
+
+            # If we found the word "license" but no permissive license, it's likely restrictive
+            if "license" in page_content or "licence" in page_content:
+                logger.info("Found license but not permissive")
+                return False
+
+            # No license found - default to not compatible
+            logger.info("No license information found")
+            return False
+
+        except requests.RequestException as e:
+            logger.error(f"Error fetching GitHub page: {e}")
+            raise HTTPException(
+                status_code=502,
+                detail="External license information could not be retrieved.",
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error checking license: {e}")
+        raise HTTPException(
+            status_code=502,
+            detail="External license information could not be retrieved.",
+        )
 
 
 def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
