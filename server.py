@@ -1302,111 +1302,58 @@ def get_cost(
         )
 
 
-def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
+def get_artifact_size(artifact):  # noqa: C901
     """
-    Improved size calculation for HuggingFace + GitHub artifacts.
-    Now uses `total_size` field which matches the HF UI exactly.
+    Determine the correct URL to calculate size from.
+    Priority:
+      model   -> metadata_json['model_url']  OR dataset_url/code_url
+      dataset -> dataset_url
+      code    -> code_url
     """
-    import requests
-    from huggingface_hub import HfApi
+    artifact_name = artifact.get("name", "unknown")
+    atype = _get_artifact_type(artifact)
 
-    cache_key = f"size_{url}_{artifact_type}"
-    if cache_key in SIZE_CACHE:
-        return SIZE_CACHE[cache_key]
+    # Extract metadata JSON
+    try:
+        metadata = json.loads(artifact.get("metadata_json", "{}"))
+    except Exception:
+        metadata = {}
 
+    # === URL RESOLUTION LOGIC ===
+    url = None
+
+    if atype == "model":
+        # Prefer explicit model_url
+        url = metadata.get("model_url")
+
+        # Fall back to URLs discovered during ingestion
+        if not url or url == "unknown":
+            url = artifact.get("url")
+        if not url or url == "unknown":
+            url = artifact.get("dataset_url")
+        if not url or url == "unknown":
+            url = artifact.get("code_url")
+
+    elif atype == "dataset":
+        url = artifact.get("dataset_url")
+
+    elif atype == "code":
+        url = artifact.get("code_url")
+
+    # Final fallback
     if not url or url == "unknown":
+        logger.warning(f"[COST] No usable URL found for {artifact_name}, returning 0.0")
         return 0.0
 
-    logger.info(f"[SIZE CALC] Computing size for {artifact_type}: {url}")
+    logger.info(f"[COST] Calculating size for {artifact_name} using URL: {url}")
 
-    # ---- HANDLE HUGGINGFACE ----
-    if "huggingface.co" in url:
-        try:
-            clean = url.strip().rstrip("/")
-            parts = clean.replace("https://", "").replace("http://", "").split("/")
-
-            repo_id = None
-            is_dataset = False
-
-            if "huggingface.co" in parts[0]:
-                if len(parts) > 1 and parts[1] == "datasets":
-                    is_dataset = True
-                    if len(parts) >= 4:
-                        repo_id = f"{parts[2]}/{parts[3]}"
-                else:
-                    if len(parts) >= 3:
-                        repo_id = f"{parts[1]}/{parts[2]}"
-
-            if not repo_id:
-                logger.warning(f"[SIZE CALC] Failed to extract repo_id for URL={url}")
-                return 0.0
-
-            api = HfApi()
-            info = api.dataset_info(repo_id) if is_dataset else api.model_info(repo_id)
-
-            # ---- THE REAL FIX: total_size ----
-            total_bytes = getattr(info, "total_size", None)
-
-            if total_bytes and total_bytes > 0:
-                size_mb = round(total_bytes / (1024 * 1024), 2)
-                logger.info(
-                    f"[SIZE CALC SUCCESS] {repo_id}: {size_mb} MB (from total_size)"
-                )
-                SIZE_CACHE[cache_key] = size_mb
-                return size_mb
-
-            # ---- FALLBACK: sum siblings ----
-            total_bytes = 0
-            if hasattr(info, "siblings") and info.siblings:
-                for f in info.siblings:
-                    # Safely retrieve file size attributes and ensure they are not None
-                    f_size = getattr(f, "size", None)
-                    if f_size is not None and f_size > 0:
-                        total_bytes += int(f_size)
-                    else:
-                        lfs = getattr(f, "lfs", None)
-                        lfs_size = (
-                            getattr(lfs, "size", None) if lfs is not None else None
-                        )
-                        if lfs_size is not None and lfs_size > 0:
-                            total_bytes += int(lfs_size)
-
-                if total_bytes > 0:
-                    size_mb = round(total_bytes / (1024 * 1024), 2)
-                    logger.info(f"[SIZE CALC FALLBACK] {repo_id}: {size_mb} MB")
-                    SIZE_CACHE[cache_key] = size_mb
-                    return size_mb
-
-            logger.warning(f"[SIZE CALC] No size information found for {repo_id}")
-            return 0.0
-
-        except Exception as e:
-            logger.error(f"[SIZE CALC ERROR] HF error for {url}: {e}")
-            return 0.0
-
-    # ---- HANDLE GITHUB ----
-    if "github.com" in url:
-        try:
-            clean = url.strip().rstrip("/")
-            parts = clean.replace("https://", "").replace("http://", "").split("/")
-            owner, repo = parts[1], parts[2]
-
-            api_url = f"https://api.github.com/repos/{owner}/{repo}"
-            resp = requests.get(api_url, timeout=10)
-
-            if resp.status_code == 200:
-                kb = resp.json().get("size", 0)
-                mb = round(kb / 1024, 2)
-                SIZE_CACHE[cache_key] = mb
-                return mb
-
-            return 0.0
-
-        except Exception as e:
-            logger.error(f"[SIZE CALC] GitHub error: {e}")
-            return 0.0
-
-    return 0.0
+    try:
+        size = _calculate_artifact_size_api(url, atype)
+        logger.info(f"[COST] Size for {artifact_name}: {size} MB")
+        return float(size)
+    except Exception as e:
+        logger.error(f"[COST] Size calculation error for {artifact_name}: {e}")
+        return 0.0
 
 
 @app.get("/artifact/{artifact_type}/{artifact_id}/audit")  # noqa: C901
