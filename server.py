@@ -1340,6 +1340,9 @@ async def license_check(artifact_id: str, request: Request):
         )
 
     result = _check_license_compatibility(github_url)
+    logger.info(
+        f"[LICENSE-CHECK RESULT] Returning: {result} (type: {type(result).__name__}, json: {json.dumps(result)})"
+    )
     return result
 
 
