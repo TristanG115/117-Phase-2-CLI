@@ -1343,7 +1343,11 @@ async def license_check(artifact_id: str, request: Request):
     logger.info(
         f"[LICENSE-CHECK RESULT] Returning: {result} (type: {type(result).__name__}, json: {json.dumps(result)})"
     )
-    return result
+
+    # Return raw JSON boolean
+    return Response(
+        content=json.dumps(result), media_type="application/json", status_code=200
+    )
 
 
 # 3. TYPE-PARAMETERIZED ROUTES WITH ADDITIONAL LITERAL SEGMENTS
