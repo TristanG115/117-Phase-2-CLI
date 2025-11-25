@@ -769,6 +769,10 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
     """
     BASELINE: Get ratings for a model artifact.
     """
+    import time
+
+    request_start = time.time()
+
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
@@ -776,9 +780,7 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
     else:
         require_auth(auth_header)
 
-    logger.info(
-        f"[RATE REQUEST] Received rate request for artifact_id='{artifact_id}' (raw string)"
-    )
+    logger.info(f"[RATE REQUEST START] artifact_id='{artifact_id}' at {request_start}")
 
     # Load artifacts
     try:
@@ -910,12 +912,20 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
         # Log audit event for rating retrieval
         _log_audit_event(aid, artifact["name"], "model", "RATE")
 
+        elapsed = time.time() - request_start
+        logger.info(
+            f"[RATE REQUEST SUCCESS] artifact_id={artifact_id}, elapsed={elapsed:.3f}s"
+        )
+
         return JSONResponse(content=response)
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"[RATE REQUEST] Error retrieving rating: {e}")
+        elapsed = time.time() - request_start
+        logger.error(
+            f"[RATE REQUEST ERROR] artifact_id={artifact_id}, elapsed={elapsed:.3f}s, error={e}"
+        )
         raise HTTPException(
             status_code=500,
             detail="The artifact rating system encountered an error while computing at least one metric.",
@@ -1132,6 +1142,9 @@ def get_cost(
     artifact_type: str, artifact_id: str, request: Request, dependency: bool = False
 ):
     """BASELINE: Return total cost of the artifact."""
+    logger.info(
+        f"[COST REQUEST] type={artifact_type}, id={artifact_id}, dependency={dependency}"
+    )
     auth_header = request.headers.get("X-Authorization")
 
     if not auth_header:
@@ -1210,8 +1223,9 @@ def get_cost(
 
     if not dependency:
         # Without dependencies, return both standalone_cost and total_cost (they're equal)
-        logger.info(f"[COST] Returning cost without dependencies for artifact {aid}")
-        return {str(aid): {"standalone_cost": main_size, "total_cost": main_size}}
+        result = {str(aid): {"standalone_cost": main_size, "total_cost": main_size}}
+        logger.info(f"[COST RESPONSE] dependency=false, returning: {result}")
+        return result
     else:
         # With dependencies, return both standalone_cost and total_cost
         result = {}
@@ -1277,6 +1291,7 @@ def get_cost(
         logger.info(
             f"[COST] Total cost with dependencies for artifact {aid}: {total_sum} MB (main: {main_size}, dependencies: {len(dependencies_found)})"
         )
+        logger.info(f"[COST RESPONSE] dependency=true, returning: {result}")
 
         return result
 
