@@ -7,20 +7,28 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-import os, sys
-
-ROOT_DIR = os.path.dirname(os.path.dirname(__file__))   
-API_DIR = os.path.join(ROOT_DIR, "API")                 
-
-if API_DIR not in sys.path:
-    sys.path.append(API_DIR)
-
-from storage import StorageUnavailableError
-
 
 from huggingface_hub import HfApi, RepoCard, snapshot_download
 
 from . import registry_handler
+
+ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
+API_DIR = os.path.join(ROOT_DIR, "API")
+
+
+if API_DIR not in sys.path:
+    sys.path.append(API_DIR)
+
+# Optional import - storage module may not be available in all environments
+try:
+    from storage import StorageUnavailableError
+except ImportError:
+    # Define a placeholder exception if storage module isn't available
+    class StorageUnavailableError(Exception):
+        """Raised when S3 is unavailable or upload fails."""
+
+        pass
+
 
 # Had to split functions here due to complexity limits with flake
 # Lets not talk about how long this took
@@ -174,7 +182,9 @@ def _extract_dataset_from_yaml(card_text: str) -> Optional[str]:
     Returns:
         Dataset name if found, None otherwise
     """
-    yaml_match = re.search(r"datasets:\s*\n\s*-\s*([A-Za-z0-9_\-/]+)", card_text, re.MULTILINE)
+    yaml_match = re.search(
+        r"datasets:\s*\n\s*-\s*([A-Za-z0-9_\-/]+)", card_text, re.MULTILINE
+    )
 
     if yaml_match:
         return yaml_match.group(1)
@@ -288,7 +298,10 @@ def infer_links_from_hf(hf_url: str, show_card: bool = False) -> Tuple[str, str]
     github_url = _extract_github_url(card_text)
     dataset_url = _extract_dataset_url(metadata, card_text)
 
-    logging.info(f"[infer_links_from_hf] Inferred for {model_id}: " f"code={github_url}, data={dataset_url}")
+    logging.info(
+        f"[infer_links_from_hf] Inferred for {model_id}: "
+        f"code={github_url}, data={dataset_url}"
+    )
 
     return github_url, dataset_url
 
@@ -313,7 +326,10 @@ def validate_url(url: str, url_type: str) -> bool:
         response = requests.head(url, timeout=5, allow_redirects=True)
 
         if response.status_code >= 400:
-            logging.warning(f"{url_type} URL not accessible: {url} " f"(status {response.status_code})")
+            logging.warning(
+                f"{url_type} URL not accessible: {url} "
+                f"(status {response.status_code})"
+            )
             return False
 
         return True
@@ -323,7 +339,9 @@ def validate_url(url: str, url_type: str) -> bool:
         return False
 
 
-def score_model_with_evaluator(code_url: str, dataset_url: str, model_url: str) -> Dict[str, Any]:
+def score_model_with_evaluator(
+    code_url: str, dataset_url: str, model_url: str
+) -> Dict[str, Any]:
     """
     Score a model using the Phase 1 ModelEvaluator system.
 
@@ -396,12 +414,112 @@ def _check_threshold(result: Dict[str, Any], min_score: float) -> bool:
         True if model passes threshold, False otherwise
     """
     non_latency_keys = [
-        k for k in result.keys() if not k.endswith("_latency") and isinstance(result.get(k), (int, float))
+        k
+        for k in result.keys()
+        if not k.endswith("_latency") and isinstance(result.get(k), (int, float))
     ]
 
     excluded_keys = ("net_score", "category", "size_score")
 
-    return all(result[k] >= min_score for k in non_latency_keys if k not in excluded_keys and result[k] != -1)
+    return all(
+        result[k] >= min_score
+        for k in non_latency_keys
+        if k not in excluded_keys and result[k] != -1
+    )
+
+
+def _calculate_artifact_size(url: str, artifact_type: str) -> float:
+    """
+    Calculate the size of an artifact in MB.
+
+    For HuggingFace models/datasets: tries to get repo info
+    For GitHub repos: uses GitHub API
+
+    Args:
+        url: URL to the artifact
+        artifact_type: Type of artifact (model, dataset, code)
+
+    Returns:
+        Size in MB (returns default if calculation fails)
+    """
+    import requests
+
+    # Default sizes as fallback
+    default_sizes = {"model": 412.5, "dataset": 562.5, "code": 280.0}
+
+    if url == "unknown" or not url:
+        logging.warning(f"No URL provided for {artifact_type}, using default size")
+        return default_sizes.get(artifact_type, 412.5)
+
+    try:
+        # For HuggingFace models/datasets
+        if "huggingface.co" in url:
+            # Extract repo_id from URL
+            parts = url.replace("https://", "").replace("http://", "").split("/")
+            if "huggingface.co" in parts[0]:
+                # URL format: huggingface.co/[datasets/]org/repo
+                if "datasets" in parts:
+                    idx = parts.index("datasets")
+                    repo_id = "/".join(parts[idx + 1 : idx + 3])
+                    is_dataset = True
+                else:
+                    repo_id = "/".join(parts[1:3])
+                    is_dataset = False
+
+                # Use HuggingFace API to get repo info
+                try:
+                    api = HfApi()
+                    if is_dataset:
+                        info = api.dataset_info(repo_id)
+                    else:
+                        info = api.model_info(repo_id)
+
+                    # Try to get size from repo info
+                    if hasattr(info, "siblings") and info.siblings:
+                        total_size = sum(
+                            getattr(f, "size", 0)
+                            for f in info.siblings
+                            if hasattr(f, "size")
+                        )
+                        if total_size > 0:
+                            size_mb = total_size / (1024 * 1024)  # Convert bytes to MB
+                            logging.info(
+                                f"Calculated size for {repo_id}: {size_mb:.2f} MB"
+                            )
+                            return round(size_mb, 2)
+                except Exception as e:
+                    logging.warning(f"Could not get HF repo size for {repo_id}: {e}")
+
+        # For GitHub repos
+        elif "github.com" in url:
+            # Try to get repo size via GitHub API
+            try:
+                # Extract owner/repo from URL
+                parts = url.replace("https://", "").replace("http://", "").split("/")
+                if len(parts) >= 3:
+                    owner, repo = parts[1], parts[2]
+                    api_url = f"https://api.github.com/repos/{owner}/{repo}"
+
+                    response = requests.get(api_url, timeout=5)
+                    if response.status_code == 200:
+                        data = response.json()
+                        size_kb = data.get("size", 0)  # GitHub returns size in KB
+                        if size_kb > 0:
+                            size_mb = size_kb / 1024  # Convert KB to MB
+                            logging.info(
+                                f"Calculated size for {owner}/{repo}: {size_mb:.2f} MB"
+                            )
+                            return round(size_mb, 2)
+            except Exception as e:
+                logging.warning(f"Could not get GitHub repo size: {e}")
+
+    except Exception as e:
+        logging.error(f"Error calculating artifact size for {url}: {e}")
+
+    # Fallback to default size
+    default_size = default_sizes.get(artifact_type, 412.5)
+    logging.warning(f"Using default size for {artifact_type}: {default_size} MB")
+    return default_size
 
 
 def ingest_model(  # noqa: C901
@@ -455,7 +573,9 @@ def ingest_model(  # noqa: C901
     # Score the model
     try:
         # Try using subprocess (tests mock this)
-        output = subprocess.check_output(["model-evaluator", code_url, dataset_url, hf_url], text=True)
+        output = subprocess.check_output(
+            ["model-evaluator", code_url, dataset_url, hf_url], text=True
+        )
         result = json.loads(output)
     except Exception:
         # Fallback to Python evaluator (real pipeline)
@@ -477,20 +597,25 @@ def ingest_model(  # noqa: C901
         logging.warning(f"Model {model_id} failed threshold check: {result}")
         return {"error": "Model did not meet threshold criteria.", "scorecard": result}
 
+    # Calculate artifact size
+    model_size = _calculate_artifact_size(hf_url, "model")
+    result["size_mb"] = model_size
+    logging.info(f"Model {model_id} size: {model_size} MB")
+
     # Create tags
     tags = ",".join([url for url in [code_url, dataset_url] if url != "unknown"])
     if not tags:
         tags = "model"
 
-    # Add to registry
+        # Add to registry
         try:
             artifact_id = registry_handler.add_model(
-            name=model_id,
-            score=result.get("net_score", 0.0),
-            tags=tags,
-            code_url=code_url,
-            dataset_url=dataset_url,
-            metadata_json=json.dumps(result),
+                name=model_id,
+                score=result.get("net_score", 0.0),
+                tags=tags,
+                code_url=code_url,
+                dataset_url=dataset_url,
+                metadata_json=json.dumps(result),
             )
         except StorageUnavailableError:
             return {"error": "S3 is unavailable — could not store model artifacts"}
@@ -532,6 +657,11 @@ def ingest_dataset(
         "tree_score": -1,
         "dataset_and_code_score": 0.75,
     }
+
+    # Calculate dataset size
+    dataset_size = _calculate_artifact_size(dataset_url, "dataset")
+    result["size_mb"] = dataset_size
+    logging.info(f"Dataset {dataset_name} size: {dataset_size} MB")
 
     # Create tags
     tags = "dataset"
@@ -587,6 +717,11 @@ def ingest_code(
         "tree_score": -1,
         "dataset_and_code_score": 0.75,
     }
+
+    # Calculate code repository size
+    code_size = _calculate_artifact_size(code_url, "code")
+    result["size_mb"] = code_size
+    logging.info(f"Code repository {code_name} size: {code_size} MB")
 
     # Create tags
     tags = "code"

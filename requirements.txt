@@ -12,6 +12,7 @@ fastapi>=0.120.0
 uvicorn>=0.38.0
 boto3>=1.40.59
 python-multipart>=0.0.20
+storage>=0.0.4.3
 
 # Dev/test tools
 flake8==7.0.0
