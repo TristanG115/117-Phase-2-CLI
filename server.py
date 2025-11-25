@@ -420,6 +420,8 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
     import requests
     from huggingface_hub import HfApi
 
+    logger.info(f"[SIZE CALC] Starting size calculation for {artifact_type}: {url}")
+
     # Default sizes as fallback
     default_sizes = {"model": 412.5, "dataset": 562.5, "code": 280.0}
 
@@ -432,6 +434,7 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
     try:
         # For HuggingFace models/datasets
         if "huggingface.co" in url:
+            logger.info(f"[SIZE CALC] Detected HuggingFace URL: {url}")
             # Extract repo_id from URL
             parts = url.replace("https://", "").replace("http://", "").split("/")
             if "huggingface.co" in parts[0]:
@@ -443,6 +446,10 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
                 else:
                     repo_id = "/".join(parts[1:3])
                     is_dataset = False
+
+                logger.info(
+                    f"[SIZE CALC] Extracted repo_id: {repo_id}, is_dataset: {is_dataset}"
+                )
 
                 # Use HuggingFace API to get repo info
                 try:
@@ -462,16 +469,21 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
                         if total_size > 0:
                             size_mb = total_size / (1024 * 1024)  # Convert bytes to MB
                             logger.info(
-                                f"[SIZE] Calculated size for {repo_id}: {size_mb:.2f} MB"
+                                f"[SIZE CALC SUCCESS] Calculated size for {repo_id}: {size_mb:.2f} MB"
                             )
                             return round(size_mb, 2)
+                        else:
+                            logger.warning(
+                                f"[SIZE CALC] HF API returned 0 total_size for {repo_id}"
+                            )
                 except Exception as e:
                     logger.warning(
-                        f"[SIZE] Could not get HF repo size for {repo_id}: {e}"
+                        f"[SIZE CALC] Could not get HF repo size for {repo_id}: {e}"
                     )
 
         # For GitHub repos
         elif "github.com" in url:
+            logger.info(f"[SIZE CALC] Detected GitHub URL: {url}")
             # Try to get repo size via GitHub API
             try:
                 # Extract owner/repo from URL
@@ -479,6 +491,7 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
                 if len(parts) >= 3:
                     owner, repo = parts[1], parts[2]
                     api_url = f"https://api.github.com/repos/{owner}/{repo}"
+                    logger.info(f"[SIZE CALC] Calling GitHub API: {api_url}")
 
                     response = requests.get(api_url, timeout=5)
                     if response.status_code == 200:
@@ -487,18 +500,28 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
                         if size_kb > 0:
                             size_mb = size_kb / 1024  # Convert KB to MB
                             logger.info(
-                                f"[SIZE] Calculated size for {owner}/{repo}: {size_mb:.2f} MB"
+                                f"[SIZE CALC SUCCESS] Calculated size for {owner}/{repo}: {size_mb:.2f} MB"
                             )
                             return round(size_mb, 2)
+                        else:
+                            logger.warning(
+                                f"[SIZE CALC] GitHub API returned 0 size for {owner}/{repo}"
+                            )
+                    else:
+                        logger.warning(
+                            f"[SIZE CALC] GitHub API returned status {response.status_code}"
+                        )
             except Exception as e:
-                logger.warning(f"[SIZE] Could not get GitHub repo size: {e}")
+                logger.warning(f"[SIZE CALC] Could not get GitHub repo size: {e}")
 
     except Exception as e:
-        logger.error(f"[SIZE] Error calculating artifact size for {url}: {e}")
+        logger.error(f"[SIZE CALC] Error calculating artifact size for {url}: {e}")
 
     # Fallback to default size
     default_size = default_sizes.get(artifact_type, 412.5)
-    logger.warning(f"[SIZE] Using default size for {artifact_type}: {default_size} MB")
+    logger.warning(
+        f"[SIZE CALC FALLBACK] Using default size for {artifact_type} at {url}: {default_size} MB"
+    )
     return default_size
 
 
@@ -828,6 +851,10 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
             f"[RATE REQUEST] Artifact '{artifact_id}' not found. "
             f"Available IDs: {[gen_id(a['name']) for a in artifacts[:10]]}"
         )
+        logger.error(
+            f"[RATE REQUEST] TEST FAILURE: Could not find artifact_id={artifact_id}"
+        )
+        logger.error(f"[RATE REQUEST] Total artifacts in registry: {len(artifacts)}")
         raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
     logger.info(
