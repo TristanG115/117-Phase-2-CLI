@@ -1749,22 +1749,6 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
     size_mb = _calculate_artifact_size_api(url, artifact_type)
     logger.info(f"[SIZE] Artifact {original_name} ({artifact_type}) size: {size_mb} MB")
 
-    # Download and upload to S3
-    logger.info(f"[INGEST] Downloading and uploading {original_name}")
-    try:
-        download_result = _download_and_upload_artifact(
-            url, original_name, artifact_type
-        )
-        s3_key = download_result["s3_key"]
-        download_url = download_result["download_url"]
-        logger.info(f"[INGEST] Download URL: {download_url}")
-    except Exception as e:
-        logger.error(f"[INGEST] Failed: {e}")
-        raise HTTPException(
-            status_code=424,
-            detail="Artifact is not registered due to the disqualified rating.",
-        )
-
     # Save artifact with size in metadata
     artifact_id = registry_handler.add_artifact(
         name=original_name,
@@ -1778,7 +1762,6 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
             "type": artifact_type,
             "rating_calculated": False,
             "size_mb": size_mb,
-            "s3_key": s3_key,
         },
     )
     logger.info(f"Registered artifact ID: {artifact_id}")
@@ -1791,10 +1774,10 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
         asyncio.create_task(rate_model_background(new_id, original_name, url))
         logger.info(f"Started background rating task for model {original_name}")
 
-    # Return response with download_url
+    # Return response
     resp = {
         "metadata": {"name": original_name, "id": new_id, "type": artifact_type},
-        "data": {"url": url, "download_url": download_url},
+        "data": {"url": url},
     }
 
     return JSONResponse(status_code=201, content=resp)
