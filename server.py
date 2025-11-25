@@ -1294,8 +1294,8 @@ def get_lineage(artifact_id: str, request: Request):
     return {"nodes": nodes, "edges": edges}
 
 
-@app.post("/artifact/model/{artifact_id}/license-check")
-async def license_check(artifact_id: str, request: Request):
+@app.post("/artifact/model/{artifact_id}/license-check", response_model=bool)
+async def license_check(artifact_id: str, request: Request) -> bool:
     """BASELINE: License compatibility analysis."""
     auth_header = request.headers.get("X-Authorization")
 
@@ -1340,14 +1340,8 @@ async def license_check(artifact_id: str, request: Request):
         )
 
     result = _check_license_compatibility(github_url)
-    logger.info(
-        f"[LICENSE-CHECK RESULT] Returning: {result} (type: {type(result).__name__}, json: {json.dumps(result)})"
-    )
-
-    # Return raw JSON boolean
-    return Response(
-        content=json.dumps(result), media_type="application/json", status_code=200
-    )
+    logger.info(f"[LICENSE-CHECK] Result={result}, will return directly")
+    return result
 
 
 # 3. TYPE-PARAMETERIZED ROUTES WITH ADDITIONAL LITERAL SEGMENTS
