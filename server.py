@@ -430,23 +430,28 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
     import requests
     from huggingface_hub import HfApi
 
-    # Check cache first
-    cache_key = f"size_{url}_{artifact_type}"
-    if cache_key in SIZE_CACHE:
-        logger.info(
-            f"[SIZE CACHE HIT] Returning cached size for {url}: {SIZE_CACHE[cache_key]} MB"
-        )
-        return SIZE_CACHE[cache_key]
-
-    logger.info(f"[SIZE CALC] Starting size calculation for {artifact_type}: {url}")
-
     # Default sizes as fallback
     default_sizes = {"model": 412.5, "dataset": 562.5, "code": 280.0}
 
+    # Check cache first
+    cache_key = f"size_{url}_{artifact_type}"
+    if cache_key in SIZE_CACHE:
+        cached_size = SIZE_CACHE[cache_key]
+        # Only use cache if it's not a default value
+        if cached_size not in [412.5, 562.5, 280.0]:
+            logger.info(
+                f"[SIZE CACHE HIT] Returning cached REAL size for {url}: {cached_size} MB"
+            )
+            return cached_size
+        else:
+            logger.warning(
+                f"[SIZE CACHE] Cached default found, will try to recalculate..."
+            )
+
+    logger.info(f"[SIZE CALC] Starting size calculation for {artifact_type}: {url}")
+
     if url == "unknown" or not url:
-        logger.warning(
-            f"[SIZE] No URL provided for {artifact_type}, using default size"
-        )
+        logger.warning(f"[SIZE] No URL provided for {artifact_type}, using default")
         return default_sizes.get(artifact_type, 412.5)
 
     try:
@@ -542,6 +547,7 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
     logger.warning(
         f"[SIZE CALC FALLBACK] Using default size for {artifact_type} at {url}: {default_size} MB"
     )
+    SIZE_CACHE[cache_key] = default_size
     return default_size
 
 
@@ -1219,13 +1225,12 @@ def get_cost(
     )
     auth_header = request.headers.get("X-Authorization")
 
-    # Check cache first
-    cost_cache_key = f"cost_{artifact_type}_{artifact_id}_{dependency}"
-    if cost_cache_key in COST_CACHE:
-        logger.info(
-            f"[COST CACHE HIT] Returning cached cost for {artifact_type}/{artifact_id}, dependency={dependency}"
-        )
-        return COST_CACHE[cost_cache_key]
+    # Temporarily disable cache to ensure we calculate real sizes
+    # TODO: Re-enable once we verify sizes are correct
+    # cost_cache_key = f"cost_{artifact_type}_{artifact_id}_{dependency}"
+    # if cost_cache_key in COST_CACHE:
+    #     logger.info(f"[COST CACHE HIT] Returning cached cost for {artifact_type}/{artifact_id}, dependency={dependency}")
+    #     return COST_CACHE[cost_cache_key]
 
     if not auth_header:
         logger.warning("No auth header - allowing for baseline")
@@ -1253,45 +1258,27 @@ def get_cost(
         )
 
     def get_artifact_size(artifact):
-        """Get the size of an artifact from metadata, recalculating if it's a default value."""
+        """Get the size of an artifact by calculating from URL."""
         artifact_name = artifact.get("name", "unknown")
+        atype = _get_artifact_type(artifact)
+        url = artifact.get("url", "unknown")
+
+        logger.info(f"[COST] Getting size for {artifact_name} from URL: {url}")
 
         try:
-            metadata = json.loads(artifact.get("metadata_json", "{}"))
-            size = metadata.get("size_mb")
-
-            # If we have a stored size and it's NOT a default, use it
-            atype = _get_artifact_type(artifact)
+            size = _calculate_artifact_size_api(url, atype)
+            logger.info(f"[COST] Size for {artifact_name}: {size} MB")
+            return float(size)
+        except Exception as e:
+            logger.error(f"[COST] Error getting size for {artifact_name}: {e}")
+            # Return default as fallback
             default_size = (
                 412.5 if atype == "model" else (562.5 if atype == "dataset" else 280.0)
             )
-
-            if size is not None and size != default_size:
-                logger.info(f"[COST] Using stored size for {artifact_name}: {size} MB")
-                return float(size)
-            else:
-                # Size is missing or is a default - recalculate it
-                logger.warning(
-                    f"[COST] Stored size is default or missing for {artifact_name}, recalculating..."
-                )
-                url = artifact.get("url", "unknown")
-                recalculated_size = _calculate_artifact_size_api(url, atype)
-                logger.info(
-                    f"[COST] Recalculated size for {artifact_name}: {recalculated_size} MB"
-                )
-                return recalculated_size
-        except Exception as e:
-            logger.warning(f"[COST] Error reading metadata for {artifact_name}: {e}")
-
-        # Fallback to default
-        atype = _get_artifact_type(artifact)
-        default_size = (
-            412.5 if atype == "model" else (562.5 if atype == "dataset" else 280.0)
-        )
-        logger.warning(
-            f"[COST] Using default size for {artifact_name} ({atype}): {default_size} MB"
-        )
-        return default_size
+            logger.warning(
+                f"[COST] Using default {default_size} MB for {artifact_name}"
+            )
+            return float(default_size)
 
     artifacts = registry_handler.list_artifacts()
     main_artifact = None
@@ -1317,7 +1304,7 @@ def get_cost(
         # Without dependencies, return both standalone_cost and total_cost (they're equal)
         result = {str(aid): {"standalone_cost": main_size, "total_cost": main_size}}
         logger.info(f"[COST RESPONSE] dependency=false, returning: {result}")
-        COST_CACHE[cost_cache_key] = result
+        # COST_CACHE[cost_cache_key] = result  # Disabled temporarily
         return result
     else:
         # With dependencies, return both standalone_cost and total_cost
@@ -1386,7 +1373,7 @@ def get_cost(
         )
         logger.info(f"[COST RESPONSE] dependency=true, returning: {result}")
 
-        COST_CACHE[cost_cache_key] = result
+        # COST_CACHE[cost_cache_key] = result  # Disabled temporarily
         return result
 
 
