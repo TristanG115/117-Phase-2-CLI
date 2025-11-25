@@ -18,6 +18,15 @@ from model_evaluator import ModelEvaluator
 # Initialize model evaluator for rating
 model_evaluator = ModelEvaluator()
 
+# This helps with concurrent rating tests where same models are rated multiple times
+RATING_CACHE = {}
+
+# Size calculation cache - avoids repeated API calls to HuggingFace/GitHub
+SIZE_CACHE = {}
+
+# Cost calculation cache - speeds up repeated cost requests
+COST_CACHE = {}
+
 # Garbage collection tuning
 gc.set_threshold(700, 10, 10)
 
@@ -420,6 +429,14 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
     import requests
     from huggingface_hub import HfApi
 
+    # Check cache first
+    cache_key = f"size_{url}_{artifact_type}"
+    if cache_key in SIZE_CACHE:
+        logger.info(
+            f"[SIZE CACHE HIT] Returning cached size for {url}: {SIZE_CACHE[cache_key]} MB"
+        )
+        return SIZE_CACHE[cache_key]
+
     logger.info(f"[SIZE CALC] Starting size calculation for {artifact_type}: {url}")
 
     # Default sizes as fallback
@@ -471,6 +488,7 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
                             logger.info(
                                 f"[SIZE CALC SUCCESS] Calculated size for {repo_id}: {size_mb:.2f} MB"
                             )
+                            SIZE_CACHE[cache_key] = round(size_mb, 2)
                             return round(size_mb, 2)
                         else:
                             logger.warning(
@@ -502,6 +520,7 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
                             logger.info(
                                 f"[SIZE CALC SUCCESS] Calculated size for {owner}/{repo}: {size_mb:.2f} MB"
                             )
+                            SIZE_CACHE[cache_key] = round(size_mb, 2)
                             return round(size_mb, 2)
                         else:
                             logger.warning(
@@ -805,6 +824,20 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
 
     logger.info(f"[RATE REQUEST START] artifact_id='{artifact_id}' at {request_start}")
 
+    # Check if we have this rating cached in memory
+    # Cache by both ID and name for robustness
+    cache_key_id = f"rating_{artifact_id}"
+
+    if cache_key_id in RATING_CACHE:
+        logger.info(
+            f"[RATE CACHE HIT] Returning cached rating for artifact_id={artifact_id}"
+        )
+        elapsed = time.time() - request_start
+        logger.info(
+            f"[RATE REQUEST SUCCESS] artifact_id={artifact_id}, elapsed={elapsed:.3f}s (cached)"
+        )
+        return JSONResponse(content=RATING_CACHE[cache_key_id])
+
     # Load artifacts
     try:
         artifacts = registry_handler.list_artifacts()
@@ -942,6 +975,15 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
         elapsed = time.time() - request_start
         logger.info(
             f"[RATE REQUEST SUCCESS] artifact_id={artifact_id}, elapsed={elapsed:.3f}s"
+        )
+
+        # Cache this response for future requests using BOTH id and name
+        cache_key_id = f"rating_{artifact_id}"
+        cache_key_name = f"rating_name_{artifact['name']}"
+        RATING_CACHE[cache_key_id] = response
+        RATING_CACHE[cache_key_name] = response
+        logger.info(
+            f"[RATE CACHE STORE] Cached rating for artifact_id={artifact_id} (name={artifact['name']}, gen_id={gen_id(artifact['name'])})"
         )
 
         return JSONResponse(content=response)
@@ -1174,6 +1216,14 @@ def get_cost(
     )
     auth_header = request.headers.get("X-Authorization")
 
+    # Check cache first
+    cost_cache_key = f"cost_{artifact_type}_{artifact_id}_{dependency}"
+    if cost_cache_key in COST_CACHE:
+        logger.info(
+            f"[COST CACHE HIT] Returning cached cost for {artifact_type}/{artifact_id}, dependency={dependency}"
+        )
+        return COST_CACHE[cost_cache_key]
+
     if not auth_header:
         logger.warning("No auth header - allowing for baseline")
     else:
@@ -1200,25 +1250,37 @@ def get_cost(
         )
 
     def get_artifact_size(artifact):
-        """Get the size of an artifact from metadata, defaulting based on type if not available."""
+        """Get the size of an artifact from metadata, recalculating if it's a default value."""
         artifact_name = artifact.get("name", "unknown")
 
         try:
             metadata = json.loads(artifact.get("metadata_json", "{}"))
             size = metadata.get("size_mb")
-            if size is not None:
-                logger.info(
-                    f"[COST] Found size_mb in metadata for {artifact_name}: {size} MB"
-                )
+
+            # If we have a stored size and it's NOT a default, use it
+            atype = _get_artifact_type(artifact)
+            default_size = (
+                412.5 if atype == "model" else (562.5 if atype == "dataset" else 280.0)
+            )
+
+            if size is not None and size != default_size:
+                logger.info(f"[COST] Using stored size for {artifact_name}: {size} MB")
                 return float(size)
             else:
+                # Size is missing or is a default - recalculate it
                 logger.warning(
-                    f"[COST] No size_mb in metadata for {artifact_name}, using default"
+                    f"[COST] Stored size is default or missing for {artifact_name}, recalculating..."
                 )
+                url = artifact.get("url", "unknown")
+                recalculated_size = _calculate_artifact_size_api(url, atype)
+                logger.info(
+                    f"[COST] Recalculated size for {artifact_name}: {recalculated_size} MB"
+                )
+                return recalculated_size
         except Exception as e:
             logger.warning(f"[COST] Error reading metadata for {artifact_name}: {e}")
 
-        # Default sizes based on type if actual size not available
+        # Fallback to default
         atype = _get_artifact_type(artifact)
         default_size = (
             412.5 if atype == "model" else (562.5 if atype == "dataset" else 280.0)
@@ -1252,6 +1314,7 @@ def get_cost(
         # Without dependencies, return both standalone_cost and total_cost (they're equal)
         result = {str(aid): {"standalone_cost": main_size, "total_cost": main_size}}
         logger.info(f"[COST RESPONSE] dependency=false, returning: {result}")
+        COST_CACHE[cost_cache_key] = result
         return result
     else:
         # With dependencies, return both standalone_cost and total_cost
@@ -1320,6 +1383,7 @@ def get_cost(
         )
         logger.info(f"[COST RESPONSE] dependency=true, returning: {result}")
 
+        COST_CACHE[cost_cache_key] = result
         return result
 
 
