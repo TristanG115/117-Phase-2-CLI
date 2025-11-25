@@ -400,13 +400,106 @@ def _verify_artifact_exists(artifact_id, artifacts):
 
 
 def _check_license_compatibility(github_url):
-    """Check license compatibility based on URL patterns."""
-    url_lower = github_url.lower()
-    if "apache" in url_lower or "google" in url_lower:
-        return True
-    elif "github" in url_lower:
-        return False
-    else:
+    """Check license compatibility by scraping GitHub page."""
+    import re
+
+    import requests
+
+    # Permissive licenses that are compatible for fine-tuning and inference
+    PERMISSIVE_LICENSES = {
+        "apache-2.0",
+        "apache",
+        "apache 2.0",
+        "apache license",
+        "apache license 2.0",
+        "mit",
+        "mit license",
+        "bsd",
+        "bsd-2-clause",
+        "bsd-3-clause",
+        "bsd license",
+        "isc",
+        "cc0-1.0",
+        "unlicense",
+        "wtfpl",
+        "mpl-2.0",
+        "artistic-2.0",
+    }
+
+    try:
+        # Validate GitHub URL
+        if "github.com" not in github_url.lower():
+            raise HTTPException(
+                status_code=502,
+                detail="External license information could not be retrieved.",
+            )
+
+        # Extract owner and repo from GitHub URL
+        url_parts = github_url.rstrip("/").split("github.com/")
+        if len(url_parts) < 2:
+            raise HTTPException(
+                status_code=502,
+                detail="External license information could not be retrieved.",
+            )
+
+        path_parts = url_parts[1].split("/")
+        if len(path_parts) < 2:
+            raise HTTPException(
+                status_code=502,
+                detail="External license information could not be retrieved.",
+            )
+
+        owner = path_parts[0]
+        repo = path_parts[1]
+
+        # Try to fetch the main repo page
+        repo_url = f"https://github.com/{owner}/{repo}"
+
+        try:
+            response = requests.get(repo_url, timeout=15, allow_redirects=True)
+
+            if response.status_code == 404:
+                raise HTTPException(
+                    status_code=404,
+                    detail="The artifact or GitHub project could not be found.",
+                )
+
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=502,
+                    detail="External license information could not be retrieved.",
+                )
+
+            page_content = response.text.lower()
+
+            # Look for license information in the page content
+            # Common patterns: "license: apache 2.0", "apache-2.0 license", "MIT License", etc.
+
+            # Check for each permissive license in the content
+            for lic in PERMISSIVE_LICENSES:
+                if lic in page_content:
+                    logger.info(f"Found permissive license: {lic}")
+                    return True
+
+            # If we found the word "license" but no permissive license, it's likely restrictive
+            if "license" in page_content or "licence" in page_content:
+                logger.info("Found license but not permissive")
+                return False
+
+            # No license found - default to not compatible
+            return False
+
+        except requests.RequestException as e:
+            logger.error(f"Error fetching GitHub page: {e}")
+            raise HTTPException(
+                status_code=502,
+                detail="External license information could not be retrieved.",
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error checking license: {e}")
         raise HTTPException(
             status_code=502,
             detail="External license information could not be retrieved.",
@@ -1232,7 +1325,7 @@ async def license_check(artifact_id: str, request: Request):
         )
 
     result = _check_license_compatibility(github_url)
-    return JSONResponse(content=result)
+    return result
 
 
 # 3. TYPE-PARAMETERIZED ROUTES WITH ADDITIONAL LITERAL SEGMENTS
