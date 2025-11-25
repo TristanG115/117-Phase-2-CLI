@@ -15,7 +15,6 @@ from . import registry_handler
 ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
 API_DIR = os.path.join(ROOT_DIR, "API")
 
-
 if API_DIR not in sys.path:
     sys.path.append(API_DIR)
 

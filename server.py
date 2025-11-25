@@ -403,6 +403,105 @@ def _check_license_compatibility(github_url):
         )
 
 
+def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
+    """
+    Calculate the size of an artifact in MB for API endpoint.
+
+    For HuggingFace models/datasets: tries to get repo info
+    For GitHub repos: uses GitHub API
+
+    Args:
+        url: URL to the artifact
+        artifact_type: Type of artifact (model, dataset, code)
+
+    Returns:
+        Size in MB (returns default if calculation fails)
+    """
+    import requests
+    from huggingface_hub import HfApi
+
+    # Default sizes as fallback
+    default_sizes = {"model": 412.5, "dataset": 562.5, "code": 280.0}
+
+    if url == "unknown" or not url:
+        logger.warning(
+            f"[SIZE] No URL provided for {artifact_type}, using default size"
+        )
+        return default_sizes.get(artifact_type, 412.5)
+
+    try:
+        # For HuggingFace models/datasets
+        if "huggingface.co" in url:
+            # Extract repo_id from URL
+            parts = url.replace("https://", "").replace("http://", "").split("/")
+            if "huggingface.co" in parts[0]:
+                # URL format: huggingface.co/[datasets/]org/repo
+                if "datasets" in parts:
+                    idx = parts.index("datasets")
+                    repo_id = "/".join(parts[idx + 1 : idx + 3])
+                    is_dataset = True
+                else:
+                    repo_id = "/".join(parts[1:3])
+                    is_dataset = False
+
+                # Use HuggingFace API to get repo info
+                try:
+                    api = HfApi()
+                    if is_dataset:
+                        info = api.dataset_info(repo_id)
+                    else:
+                        info = api.model_info(repo_id)
+
+                    # Try to get size from repo info
+                    if hasattr(info, "siblings") and info.siblings:
+                        total_size = sum(
+                            getattr(f, "size", 0)
+                            for f in info.siblings
+                            if hasattr(f, "size")
+                        )
+                        if total_size > 0:
+                            size_mb = total_size / (1024 * 1024)  # Convert bytes to MB
+                            logger.info(
+                                f"[SIZE] Calculated size for {repo_id}: {size_mb:.2f} MB"
+                            )
+                            return round(size_mb, 2)
+                except Exception as e:
+                    logger.warning(
+                        f"[SIZE] Could not get HF repo size for {repo_id}: {e}"
+                    )
+
+        # For GitHub repos
+        elif "github.com" in url:
+            # Try to get repo size via GitHub API
+            try:
+                # Extract owner/repo from URL
+                parts = url.replace("https://", "").replace("http://", "").split("/")
+                if len(parts) >= 3:
+                    owner, repo = parts[1], parts[2]
+                    api_url = f"https://api.github.com/repos/{owner}/{repo}"
+
+                    response = requests.get(api_url, timeout=5)
+                    if response.status_code == 200:
+                        data = response.json()
+                        size_kb = data.get("size", 0)  # GitHub returns size in KB
+                        if size_kb > 0:
+                            size_mb = size_kb / 1024  # Convert KB to MB
+                            logger.info(
+                                f"[SIZE] Calculated size for {owner}/{repo}: {size_mb:.2f} MB"
+                            )
+                            return round(size_mb, 2)
+            except Exception as e:
+                logger.warning(f"[SIZE] Could not get GitHub repo size: {e}")
+
+    except Exception as e:
+        logger.error(f"[SIZE] Error calculating artifact size for {url}: {e}")
+
+    # Fallback to default size
+    default_size = default_sizes.get(artifact_type, 412.5)
+    logger.warning(f"[SIZE] Using default size for {artifact_type}: {default_size} MB")
+    return default_size
+
+
 def _log_audit_event(
     artifact_id: int,
     artifact_name: str,
@@ -1343,7 +1442,11 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
         code_url = url
         dataset_url = "unknown"
 
-    # Save artifact
+    # Calculate artifact size
+    size_mb = _calculate_artifact_size_api(url, artifact_type)
+    logger.info(f"[SIZE] Artifact {original_name} ({artifact_type}) size: {size_mb} MB")
+
+    # Save artifact with size in metadata
     artifact_id = registry_handler.add_artifact(
         name=original_name,
         artifact_type=artifact_type,
@@ -1352,7 +1455,11 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
         tags=artifact_type,
         code_url=code_url,
         dataset_url=dataset_url,
-        metadata={"type": artifact_type, "rating_calculated": False},
+        metadata={
+            "type": artifact_type,
+            "rating_calculated": False,
+            "size_mb": size_mb,
+        },
     )
     logger.info(f"Registered artifact ID: {artifact_id}")
 
