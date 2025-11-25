@@ -5,16 +5,12 @@ import json
 import logging
 import os
 import re
-import tempfile
-import zipfile
-from pathlib import Path
 from typing import Optional
 
 from beautilog import logger
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
-from huggingface_hub import snapshot_download
 
 from handlers import registry_handler
 from model_evaluator import ModelEvaluator
@@ -401,82 +397,6 @@ def _verify_artifact_exists(artifact_id, artifacts):
         if gen_id(a["name"]) == artifact_id:
             return True
     return False
-
-
-def _download_and_upload_artifact(url: str, artifact_name: str, artifact_type: str):
-    """Download artifact, zip it, upload to S3, return download URL."""
-    from API.storage import S3Storage
-
-    s3 = S3Storage()
-    s3_key = f"{artifact_name}.zip"
-
-    # Check cache first (per instructor: keep models in S3 after reset)
-    if s3.file_exists(s3_key):
-        logger.info(f"[CACHE HIT] {artifact_name}")
-        return {
-            "s3_key": s3_key,
-            "download_url": s3.download_url(s3_key, expiration=3600),
-            "cached": True,
-        }
-
-    logger.info(f"[CACHE MISS] Downloading {artifact_name}")
-
-    # Download and upload
-    with tempfile.TemporaryDirectory() as tmpdir:
-        local_dir = Path(tmpdir) / artifact_name
-        local_dir.mkdir(parents=True, exist_ok=True)
-
-        # Download from HuggingFace
-        if "huggingface.co" in url:
-            if "/datasets/" in url:
-                repo_id = url.split("huggingface.co/datasets/")[-1].strip("/")
-                snapshot_download(
-                    repo_id=repo_id,
-                    repo_type="dataset",
-                    local_dir=local_dir,
-                    max_workers=4,
-                )
-            else:
-                repo_id = url.split("huggingface.co/")[-1].strip("/")
-                snapshot_download(repo_id=repo_id, local_dir=local_dir, max_workers=4)
-        elif "github.com" in url:
-            import subprocess
-
-            subprocess.run(
-                ["git", "clone", "--depth=1", url, str(local_dir)],
-                check=True,
-                capture_output=True,
-            )
-            git_dir = local_dir / ".git"
-            if git_dir.exists():
-                import shutil
-
-                shutil.rmtree(git_dir)
-
-        # Create ZIP
-        zip_path = Path(tmpdir) / f"{artifact_name}.zip"
-        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-            for file_path in local_dir.rglob("*"):
-                if file_path.is_file():
-                    zipf.write(file_path, arcname=file_path.relative_to(local_dir))
-
-        # Upload to S3
-        with open(zip_path, "rb") as f:
-            s3.upload(
-                f,
-                s3_key,
-                metadata={
-                    "artifact_name": artifact_name,
-                    "artifact_type": artifact_type,
-                    "source_url": url,
-                },
-            )
-
-        return {
-            "s3_key": s3_key,
-            "download_url": s3.download_url(s3_key, expiration=3600),
-            "cached": False,
-        }
 
 
 def _check_license_compatibility(github_url):
