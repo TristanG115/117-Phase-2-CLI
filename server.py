@@ -495,6 +495,34 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
                     total_size_bytes = 0
                     file_count = 0
 
+                    # Debug first file to see structure
+                    if len(info.siblings) > 0:
+                        first_file = info.siblings[0]
+                        logger.info(
+                            f"[SIZE DEBUG] First file: {first_file.rfilename if hasattr(first_file, 'rfilename') else 'unknown'}"
+                        )
+                        logger.info(
+                            f"[SIZE DEBUG] Has 'size': {hasattr(first_file, 'size')}"
+                        )
+                        if hasattr(first_file, "size"):
+                            logger.info(f"[SIZE DEBUG] size value: {first_file.size}")
+                        logger.info(
+                            f"[SIZE DEBUG] Has 'lfs': {hasattr(first_file, 'lfs')}"
+                        )
+                        if hasattr(first_file, "lfs"):
+                            logger.info(f"[SIZE DEBUG] lfs value: {first_file.lfs}")
+                            if first_file.lfs:
+                                logger.info(
+                                    f"[SIZE DEBUG] lfs type: {type(first_file.lfs)}"
+                                )
+                                logger.info(
+                                    f"[SIZE DEBUG] lfs.__dict__: {first_file.lfs.__dict__ if hasattr(first_file.lfs, '__dict__') else 'no dict'}"
+                                )
+                        # Try to get all attributes
+                        logger.info(
+                            f"[SIZE DEBUG] All attrs: {[a for a in dir(first_file) if not a.startswith('_')]}"
+                        )
+
                     for file_obj in info.siblings:
                         # Try direct size attribute first
                         file_size = None
@@ -1054,8 +1082,8 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
         )
 
 
-@app.get("/artifact/model/{artifact_id}/lineage")  # noqa: C901
-def get_lineage(artifact_id: str, request: Request):  # noqa: C901
+@app.get("/artifact/model/{artifact_id}/lineage")
+def get_lineage(artifact_id: str, request: Request):
     """
     Retrieve lineage graph for a model
 
@@ -1301,163 +1329,125 @@ def get_cost(
             ),
         )
 
+    def get_artifact_size(artifact):
+        """Get the size of an artifact by calculating from URL."""
+        artifact_name = artifact.get("name", "unknown")
+        atype = _get_artifact_type(artifact)
+        url = artifact.get("url", "unknown")
 
-def get_artifact_size(artifact):
-    """
-    Determine size of an artifact using correct HF repo total_size
-    and fallback rules.
-    """
-    artifact_name = artifact.get("name", "unknown")
-    atype = _get_artifact_type(artifact)
+        logger.info(f"[COST] Getting size for {artifact_name} from URL: {url}")
 
-    # Extract metadata JSON
-    try:
-        metadata = json.loads(artifact.get("metadata_json", "{}"))
-    except Exception:
-        metadata = {}
-
-    # ---- FIGURE OUT THE CORRECT URL TO USE ----
-    url = None
-
-    if atype == "model":
-        # Prefer the real HF model URL if available
-        url = metadata.get("model_url")
-
-        # Fallbacks
-        if not url or url == "unknown":
-            url = artifact.get("url")
-        if not url or url == "unknown":
-            url = artifact.get("dataset_url")
-        if not url or url == "unknown":
-            url = artifact.get("code_url")
-
-    elif atype == "dataset":
-        url = artifact.get("dataset_url")
-
-    elif atype == "code":
-        url = artifact.get("code_url")
-
-    # Final fallback
-    if not url or url == "unknown":
-        logger.warning(f"[COST] No usable URL for {artifact_name}, returning 0.0")
-        return 0.0
-
-    logger.info(f"[COST] Calculating size for {artifact_name} using URL: {url}")
-
-    # ---- CALL THE FIXED HF SIZE DETECTOR ----
-    try:
-        size = _calculate_artifact_size_api(url, atype)
-        logger.info(f"[COST] Size for {artifact_name}: {size} MB")
-        return float(size)
-    except Exception as e:
-        logger.error(f"[COST] Error getting size for {artifact_name}: {e}")
-        return 0.0
-
-
-def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
-    """
-    Improved size calculation for HuggingFace + GitHub artifacts.
-    Now uses `total_size` field which matches the HF UI exactly.
-    """
-    import requests
-    from huggingface_hub import HfApi
-
-    cache_key = f"size_{url}_{artifact_type}"
-    if cache_key in SIZE_CACHE:
-        return SIZE_CACHE[cache_key]
-
-    if not url or url == "unknown":
-        return 0.0
-
-    logger.info(f"[SIZE CALC] Computing size for {artifact_type}: {url}")
-
-    # ---- HANDLE HUGGINGFACE ----
-    if "huggingface.co" in url:
         try:
-            clean = url.strip().rstrip("/")
-            parts = clean.replace("https://", "").replace("http://", "").split("/")
-
-            repo_id = None
-            is_dataset = False
-
-            if "huggingface.co" in parts[0]:
-                if len(parts) > 1 and parts[1] == "datasets":
-                    is_dataset = True
-                    if len(parts) >= 4:
-                        repo_id = f"{parts[2]}/{parts[3]}"
-                else:
-                    if len(parts) >= 3:
-                        repo_id = f"{parts[1]}/{parts[2]}"
-
-            if not repo_id:
-                logger.warning(f"[SIZE CALC] Failed to extract repo_id for URL={url}")
-                return 0.0
-
-            api = HfApi()
-            info = api.dataset_info(repo_id) if is_dataset else api.model_info(repo_id)
-
-            # ---- THE REAL FIX: total_size ----
-            total_bytes = getattr(info, "total_size", None)
-
-            if total_bytes and total_bytes > 0:
-                size_mb = round(total_bytes / (1024 * 1024), 2)
-                logger.info(
-                    f"[SIZE CALC SUCCESS] {repo_id}: {size_mb} MB (from total_size)"
-                )
-                SIZE_CACHE[cache_key] = size_mb
-                return size_mb
-
-            # ---- FALLBACK: sum siblings ----
-            total_bytes = 0
-            if hasattr(info, "siblings") and info.siblings:
-                for f in info.siblings:
-                    if getattr(f, "size", None):
-                        total_bytes += f.size
-                    elif getattr(f, "lfs", None) and getattr(f.lfs, "size", None):
-                        total_bytes += f.lfs.size
-
-                if total_bytes > 0:
-                    size_mb = round(total_bytes / (1024 * 1024), 2)
-                    logger.info(f"[SIZE CALC FALLBACK] {repo_id}: {size_mb} MB")
-                    SIZE_CACHE[cache_key] = size_mb
-                    return size_mb
-
-            logger.warning(f"[SIZE CALC] No size information found for {repo_id}")
-            return 0.0
-
+            size = _calculate_artifact_size_api(url, atype)
+            logger.info(f"[COST] Size for {artifact_name}: {size} MB")
+            return float(size)
         except Exception as e:
-            logger.error(f"[SIZE CALC ERROR] HF error for {url}: {e}")
+            logger.error(f"[COST] Error getting size for {artifact_name}: {e}")
+            # Return 0.0 instead of default
+            logger.warning(
+                f"[COST] Could not calculate size for {artifact_name}, returning 0.0"
+            )
             return 0.0
 
-    # ---- HANDLE GITHUB ----
-    if "github.com" in url:
-        try:
-            clean = url.strip().rstrip("/")
-            parts = clean.replace("https://", "").replace("http://", "").split("/")
-            owner, repo = parts[1], parts[2]
+    artifacts = registry_handler.list_artifacts()
+    main_artifact = None
 
-            api_url = f"https://api.github.com/repos/{owner}/{repo}"
-            resp = requests.get(api_url, timeout=10)
+    # Find the main artifact
+    for a in artifacts:
+        if gen_id(a["name"]) == aid:
+            actual_type = _get_artifact_type(a)
+            if actual_type == artifact_type:
+                main_artifact = a
+                break
 
-            if resp.status_code == 200:
-                kb = resp.json().get("size", 0)
-                mb = round(kb / 1024, 2)
-                SIZE_CACHE[cache_key] = mb
-                return mb
+    if not main_artifact:
+        raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
-            return 0.0
+    # Get the main artifact's size
+    main_size = get_artifact_size(main_artifact)
+    logger.info(
+        f"[COST] Main artifact {main_artifact.get('name')} size: {main_size} MB"
+    )
 
-        except Exception as e:
-            logger.error(f"[SIZE CALC] GitHub error: {e}")
-            return 0.0
+    if not dependency:
+        # Without dependencies, return both standalone_cost and total_cost (they're equal)
+        result = {str(aid): {"standalone_cost": main_size, "total_cost": main_size}}
+        logger.info(f"[COST RESPONSE] dependency=false, returning: {result}")
+        # COST_CACHE[cost_cache_key] = result  # Disabled temporarily
+        return result
+    else:
+        # With dependencies, return both standalone_cost and total_cost
+        result = {}
+        dependencies_found = {}  # artifact_id -> artifact
 
-    return 0.0
+        # Add the main artifact
+        result[str(aid)] = {
+            "standalone_cost": main_size,
+            "total_cost": main_size,  # Will be updated after adding dependencies
+        }
+
+        # Find dependencies based on URLs
+        dataset_url = main_artifact.get("dataset_url")
+        if dataset_url and dataset_url != "unknown":
+            dataset_name = _extract_name_from_url(dataset_url)
+            dataset_id = gen_id(dataset_name)
+            logger.info(
+                f"[COST] Looking for dataset dependency: {dataset_name} (ID: {dataset_id})"
+            )
+
+            for dep in artifacts:
+                if gen_id(dep["name"]) == dataset_id:
+                    dep_size = get_artifact_size(dep)
+                    result[str(dataset_id)] = {
+                        "standalone_cost": dep_size,
+                        "total_cost": dep_size,
+                    }
+                    dependencies_found[dataset_id] = dep
+                    logger.info(
+                        f"[COST] Added dataset dependency: {dataset_name} with size {dep_size} MB"
+                    )
+                    break
+
+        code_url = main_artifact.get("code_url")
+        if code_url and code_url != "unknown":
+            code_name = _extract_name_from_url(code_url)
+            code_id = gen_id(code_name)
+            logger.info(
+                f"[COST] Looking for code dependency: {code_name} (ID: {code_id})"
+            )
+
+            # Only add if not already added and not the same as the artifact itself
+            if code_id not in dependencies_found and code_id != aid:
+                for dep in artifacts:
+                    if gen_id(dep["name"]) == code_id:
+                        dep_size = get_artifact_size(dep)
+                        result[str(code_id)] = {
+                            "standalone_cost": dep_size,
+                            "total_cost": dep_size,
+                        }
+                        dependencies_found[code_id] = dep
+                        logger.info(
+                            f"[COST] Added code dependency: {code_name} with size {dep_size} MB"
+                        )
+                        break
+
+        # Calculate total_cost for main artifact (sum of all)
+        total_sum = main_size
+        for dep_id, dep_artifact in dependencies_found.items():
+            total_sum += get_artifact_size(dep_artifact)
+
+        result[str(aid)]["total_cost"] = total_sum
+        logger.info(
+            f"[COST] Total cost with dependencies for artifact {aid}: {total_sum} MB (main: {main_size}, dependencies: {len(dependencies_found)})"
+        )
+        logger.info(f"[COST RESPONSE] dependency=true, returning: {result}")
+
+        # COST_CACHE[cost_cache_key] = result  # Disabled temporarily
+        return result
 
 
-@app.get("/artifact/{artifact_type}/{artifact_id}/audit")  # noqa: C901
-def get_audit_trail(
-    artifact_type: str, artifact_id: str, request: Request
-):  # noqa: C901
+@app.get("/artifact/{artifact_type}/{artifact_id}/audit")
+def get_audit_trail(artifact_type: str, artifact_id: str, request: Request):
     """NON-BASELINE (High Assurance Track): Retrieve audit trail for an artifact."""
     auth_header = request.headers.get("X-Authorization")
 
