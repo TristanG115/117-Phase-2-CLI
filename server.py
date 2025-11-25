@@ -496,12 +496,25 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
                     file_count = 0
 
                     for file_obj in info.siblings:
+                        # Try direct size attribute first
+                        file_size = None
                         if (
                             hasattr(file_obj, "size")
                             and file_obj.size is not None
                             and file_obj.size > 0
                         ):
-                            total_size_bytes += file_obj.size
+                            file_size = file_obj.size
+                        # Try LFS size if direct size not available
+                        elif hasattr(file_obj, "lfs") and file_obj.lfs is not None:
+                            if (
+                                hasattr(file_obj.lfs, "size")
+                                and file_obj.lfs.size is not None
+                                and file_obj.lfs.size > 0
+                            ):
+                                file_size = file_obj.lfs.size
+
+                        if file_size:
+                            total_size_bytes += file_size
                             file_count += 1
 
                     if total_size_bytes > 0:
