@@ -425,34 +425,25 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
         artifact_type: Type of artifact (model, dataset, code)
 
     Returns:
-        Size in MB (returns default if calculation fails)
+        Size in MB (returns 0.0 if calculation fails - NO DEFAULTS)
     """
     import requests
     from huggingface_hub import HfApi
-
-    # Default sizes as fallback
-    default_sizes = {"model": 412.5, "dataset": 562.5, "code": 280.0}
 
     # Check cache first
     cache_key = f"size_{url}_{artifact_type}"
     if cache_key in SIZE_CACHE:
         cached_size = SIZE_CACHE[cache_key]
-        # Only use cache if it's not a default value
-        if cached_size not in [412.5, 562.5, 280.0]:
-            logger.info(
-                f"[SIZE CACHE HIT] Returning cached REAL size for {url}: {cached_size} MB"
-            )
-            return cached_size
-        else:
-            logger.warning(
-                f"[SIZE CACHE] Cached default found, will try to recalculate..."
-            )
+        logger.info(
+            f"[SIZE CACHE HIT] Returning cached size for {url}: {cached_size} MB"
+        )
+        return cached_size
 
     logger.info(f"[SIZE CALC] Starting size calculation for {artifact_type}: {url}")
 
     if url == "unknown" or not url:
-        logger.warning(f"[SIZE] No URL provided for {artifact_type}, using default")
-        return default_sizes.get(artifact_type, 412.5)
+        logger.warning(f"[SIZE] No URL provided for {artifact_type}, returning 0.0")
+        return 0.0
 
     try:
         # For HuggingFace models/datasets
@@ -482,23 +473,26 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
                     else:
                         info = api.model_info(repo_id)
 
-                    # Try to get size from repo info
+                    # Try to get size from repo info - properly handle None values
                     if hasattr(info, "siblings") and info.siblings:
-                        total_size = sum(
-                            getattr(f, "size", 0)
+                        # Filter out files with None or 0 size
+                        valid_sizes = [
+                            f.size
                             for f in info.siblings
-                            if hasattr(f, "size")
-                        )
-                        if total_size > 0:
+                            if hasattr(f, "size") and f.size is not None and f.size > 0
+                        ]
+
+                        if valid_sizes:
+                            total_size = sum(valid_sizes)
                             size_mb = total_size / (1024 * 1024)  # Convert bytes to MB
                             logger.info(
-                                f"[SIZE CALC SUCCESS] Calculated size for {repo_id}: {size_mb:.2f} MB"
+                                f"[SIZE CALC SUCCESS] {repo_id}: {size_mb:.2f} MB ({len(valid_sizes)} files)"
                             )
                             SIZE_CACHE[cache_key] = round(size_mb, 2)
                             return round(size_mb, 2)
                         else:
                             logger.warning(
-                                f"[SIZE CALC] HF API returned 0 total_size for {repo_id}"
+                                f"[SIZE CALC] No valid file sizes for {repo_id}"
                             )
                 except Exception as e:
                     logger.warning(
@@ -542,13 +536,12 @@ def _calculate_artifact_size_api(url: str, artifact_type: str) -> float:
     except Exception as e:
         logger.error(f"[SIZE CALC] Error calculating artifact size for {url}: {e}")
 
-    # Fallback to default size
-    default_size = default_sizes.get(artifact_type, 412.5)
+    # Return 0.0 instead of default - NO DEFAULT SIZES
     logger.warning(
-        f"[SIZE CALC FALLBACK] Using default size for {artifact_type} at {url}: {default_size} MB"
+        f"[SIZE CALC FAILED] Could not calculate size for {artifact_type} at {url}, returning 0.0"
     )
-    SIZE_CACHE[cache_key] = default_size
-    return default_size
+    SIZE_CACHE[cache_key] = 0.0
+    return 0.0
 
 
 def _log_audit_event(
@@ -1271,14 +1264,11 @@ def get_cost(
             return float(size)
         except Exception as e:
             logger.error(f"[COST] Error getting size for {artifact_name}: {e}")
-            # Return default as fallback
-            default_size = (
-                412.5 if atype == "model" else (562.5 if atype == "dataset" else 280.0)
-            )
+            # Return 0.0 instead of default
             logger.warning(
-                f"[COST] Using default {default_size} MB for {artifact_name}"
+                f"[COST] Could not calculate size for {artifact_name}, returning 0.0"
             )
-            return float(default_size)
+            return 0.0
 
     artifacts = registry_handler.list_artifacts()
     main_artifact = None

@@ -439,16 +439,13 @@ def _calculate_artifact_size(url: str, artifact_type: str) -> float:
         artifact_type: Type of artifact (model, dataset, code)
 
     Returns:
-        Size in MB (returns default if calculation fails)
+        Size in MB (returns 0.0 if calculation fails - NO DEFAULTS)
     """
     import requests
 
-    # Default sizes as fallback
-    default_sizes = {"model": 412.5, "dataset": 562.5, "code": 280.0}
-
     if url == "unknown" or not url:
-        logging.warning(f"No URL provided for {artifact_type}, using default size")
-        return default_sizes.get(artifact_type, 412.5)
+        logging.warning(f"No URL provided for {artifact_type}, returning size 0.0")
+        return 0.0
 
     try:
         # For HuggingFace models/datasets
@@ -473,19 +470,23 @@ def _calculate_artifact_size(url: str, artifact_type: str) -> float:
                     else:
                         info = api.model_info(repo_id)
 
-                    # Try to get size from repo info
+                    # Try to get size from repo info - properly handle None values
                     if hasattr(info, "siblings") and info.siblings:
-                        total_size = sum(
-                            getattr(f, "size", 0)
-                            for f in info.siblings
-                            if hasattr(f, "size")
-                        )
-                        if total_size > 0:
+                        # Filter out files with None or 0 size, then sum
+                        valid_sizes = [
+                            f.size for f in info.siblings
+                            if hasattr(f, "size") and f.size is not None and f.size > 0
+                        ]
+
+                        if valid_sizes:
+                            total_size = sum(valid_sizes)
                             size_mb = total_size / (1024 * 1024)  # Convert bytes to MB
                             logging.info(
-                                f"Calculated size for {repo_id}: {size_mb:.2f} MB"
+                                f"Calculated size for {repo_id}: {size_mb:.2f} MB ({len(valid_sizes)} files)"
                             )
                             return round(size_mb, 2)
+                        else:
+                            logging.warning(f"No valid file sizes found for {repo_id}")
                 except Exception as e:
                     logging.warning(f"Could not get HF repo size for {repo_id}: {e}")
 
@@ -515,10 +516,12 @@ def _calculate_artifact_size(url: str, artifact_type: str) -> float:
     except Exception as e:
         logging.error(f"Error calculating artifact size for {url}: {e}")
 
-    # Fallback to default size
-    default_size = default_sizes.get(artifact_type, 412.5)
-    logging.warning(f"Using default size for {artifact_type}: {default_size} MB")
-    return default_size
+    # Return 0.0 instead of default - NO DEFAULT SIZES
+    logging.warning(f"Could not calculate size for {artifact_type} at {url}, returning 0.0")
+    return 0.0
+
+
+def ingest_modelfault_size
 
 
 def ingest_model(  # noqa: C901
