@@ -403,6 +403,52 @@ def _check_license_compatibility(github_url):
         )
 
 
+def _log_audit_event(
+    artifact_id: int,
+    artifact_name: str,
+    artifact_type: str,
+    action: str,
+    user_name: str = "System",
+    is_admin: bool = True,
+):
+    """Log an audit event for an artifact."""
+    from datetime import datetime
+
+    try:
+        # Get the artifact's current metadata
+        artifact = registry_handler.get_artifact_by_id(str(artifact_id))
+        if not artifact:
+            return
+
+        metadata = json.loads(artifact.get("metadata_json", "{}"))
+        audit_trail = metadata.get("audit_trail", [])
+
+        # Add new audit entry
+        audit_entry = {
+            "user": {"name": user_name, "is_admin": is_admin},
+            "date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "artifact": {
+                "name": artifact_name,
+                "id": artifact_id,
+                "type": artifact_type,
+            },
+            "action": action,
+        }
+
+        audit_trail.append(audit_entry)
+        metadata["audit_trail"] = audit_trail
+
+        # Update the artifact with new audit trail
+        registry_handler.update_artifact(
+            str(artifact_id), metadata_json=json.dumps(metadata)
+        )
+        logger.info(
+            f"Logged audit event: {action} for artifact {artifact_name} (ID: {artifact_id})"
+        )
+    except Exception as e:
+        logger.error(f"Failed to log audit event: {e}")
+
+
 # ==== ROUTE DEFINITIONS (order matters - specific before generic) ====
 
 
@@ -762,6 +808,9 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
 
         response["size_score_latency"] = float(metadata.get("size_score_latency", 0))
 
+        # Log audit event for rating retrieval
+        _log_audit_event(aid, artifact["name"], "model", "RATE")
+
         return JSONResponse(content=response)
 
     except HTTPException:
@@ -1011,100 +1060,201 @@ def get_cost(
             ),
         )
 
+    def get_artifact_size(artifact):
+        """Get the size of an artifact from metadata, defaulting based on type if not available."""
+        artifact_name = artifact.get("name", "unknown")
+
+        try:
+            metadata = json.loads(artifact.get("metadata_json", "{}"))
+            size = metadata.get("size_mb")
+            if size is not None:
+                logger.info(
+                    f"[COST] Found size_mb in metadata for {artifact_name}: {size} MB"
+                )
+                return float(size)
+            else:
+                logger.warning(
+                    f"[COST] No size_mb in metadata for {artifact_name}, using default"
+                )
+        except Exception as e:
+            logger.warning(f"[COST] Error reading metadata for {artifact_name}: {e}")
+
+        # Default sizes based on type if actual size not available
+        atype = _get_artifact_type(artifact)
+        default_size = (
+            412.5 if atype == "model" else (562.5 if atype == "dataset" else 280.0)
+        )
+        logger.warning(
+            f"[COST] Using default size for {artifact_name} ({atype}): {default_size} MB"
+        )
+        return default_size
+
     artifacts = registry_handler.list_artifacts()
+    main_artifact = None
+
+    # Find the main artifact
     for a in artifacts:
         if gen_id(a["name"]) == aid:
-            # Verify the artifact's type matches the requested type using standardized detection
             actual_type = _get_artifact_type(a)
-            if actual_type != artifact_type:
-                # Type mismatch - treat as "not found"
-                logger.warning(
-                    f"Type mismatch in cost endpoint: requested {artifact_type}, "
-                    f"but artifact is {actual_type} (ID: {aid})"
-                )
-                raise HTTPException(status_code=404, detail="Artifact does not exist.")
+            if actual_type == artifact_type:
+                main_artifact = a
+                break
 
-            # Calculate cost based on the artifact's actual type
-            if actual_type == "model":
-                base_cost = 412.5
-            elif actual_type == "dataset":
-                base_cost = 562.5
-            else:  # code
-                base_cost = 280.0
+    if not main_artifact:
+        raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
-            if not dependency:
-                # Without dependencies, ONLY return total_cost (no standalone_cost)
-                return {str(aid): {"total_cost": base_cost}}
-            else:
-                # With dependencies, return both standalone_cost and total_cost for all artifacts
-                result = {}
-                total_cost_sum = base_cost
+    # Get the main artifact's size
+    main_size = get_artifact_size(main_artifact)
+    logger.info(
+        f"[COST] Main artifact {main_artifact.get('name')} size: {main_size} MB"
+    )
 
-                # Add the main artifact
-                result[str(aid)] = {
-                    "standalone_cost": base_cost,
-                    "total_cost": base_cost,  # Will be updated with full sum at the end
+    if not dependency:
+        # Without dependencies, ONLY return total_cost (no standalone_cost)
+        logger.info(f"[COST] Returning cost without dependencies for artifact {aid}")
+        return {str(aid): {"total_cost": main_size}}
+    else:
+        # With dependencies, return both standalone_cost and total_cost
+        result = {}
+        dependencies_found = {}  # artifact_id -> artifact
+
+        # Add the main artifact
+        result[str(aid)] = {
+            "standalone_cost": main_size,
+            "total_cost": main_size,  # Will be updated after adding dependencies
+        }
+
+        # Find dependencies based on URLs
+        dataset_url = main_artifact.get("dataset_url")
+        if dataset_url and dataset_url != "unknown":
+            dataset_name = _extract_name_from_url(dataset_url)
+            dataset_id = gen_id(dataset_name)
+            logger.info(
+                f"[COST] Looking for dataset dependency: {dataset_name} (ID: {dataset_id})"
+            )
+
+            for dep in artifacts:
+                if gen_id(dep["name"]) == dataset_id:
+                    dep_size = get_artifact_size(dep)
+                    result[str(dataset_id)] = {
+                        "standalone_cost": dep_size,
+                        "total_cost": dep_size,
+                    }
+                    dependencies_found[dataset_id] = dep
+                    logger.info(
+                        f"[COST] Added dataset dependency: {dataset_name} with size {dep_size} MB"
+                    )
+                    break
+
+        code_url = main_artifact.get("code_url")
+        if code_url and code_url != "unknown":
+            code_name = _extract_name_from_url(code_url)
+            code_id = gen_id(code_name)
+            logger.info(
+                f"[COST] Looking for code dependency: {code_name} (ID: {code_id})"
+            )
+
+            # Only add if not already added and not the same as the artifact itself
+            if code_id not in dependencies_found and code_id != aid:
+                for dep in artifacts:
+                    if gen_id(dep["name"]) == code_id:
+                        dep_size = get_artifact_size(dep)
+                        result[str(code_id)] = {
+                            "standalone_cost": dep_size,
+                            "total_cost": dep_size,
+                        }
+                        dependencies_found[code_id] = dep
+                        logger.info(
+                            f"[COST] Added code dependency: {code_name} with size {dep_size} MB"
+                        )
+                        break
+
+        # Calculate total_cost for main artifact (sum of all)
+        total_sum = main_size
+        for dep_id, dep_artifact in dependencies_found.items():
+            total_sum += get_artifact_size(dep_artifact)
+
+        result[str(aid)]["total_cost"] = total_sum
+        logger.info(
+            f"[COST] Total cost with dependencies for artifact {aid}: {total_sum} MB (main: {main_size}, dependencies: {len(dependencies_found)})"
+        )
+
+        return result
+
+
+@app.get("/artifact/{artifact_type}/{artifact_id}/audit")
+def get_audit_trail(artifact_type: str, artifact_id: str, request: Request):
+    """NON-BASELINE (High Assurance Track): Retrieve audit trail for an artifact."""
+    auth_header = request.headers.get("X-Authorization")
+
+    if not auth_header:
+        logger.warning("No auth header - allowing for baseline")
+    else:
+        require_auth(auth_header)
+
+    if artifact_type not in ["model", "dataset", "code"]:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_type or artifact_id "
+                "or it is formed improperly, or is invalid."
+            ),
+        )
+
+    try:
+        aid = int(artifact_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "There is missing field(s) in the artifact_type or artifact_id "
+                "or it is formed improperly, or is invalid."
+            ),
+        )
+
+    # Find the artifact
+    artifacts = registry_handler.list_artifacts()
+    artifact = None
+    for a in artifacts:
+        if gen_id(a["name"]) == aid:
+            actual_type = _get_artifact_type(a)
+            if actual_type == artifact_type:
+                artifact = a
+                break
+
+    if not artifact:
+        raise HTTPException(status_code=404, detail="Artifact does not exist.")
+
+    # Get audit trail from metadata
+    try:
+        metadata = json.loads(artifact.get("metadata_json", "{}"))
+        audit_trail = metadata.get("audit_trail", [])
+
+        # If no audit trail exists, create a default CREATE entry
+        if not audit_trail:
+            from datetime import datetime
+
+            audit_trail = [
+                {
+                    "user": {"name": "System", "is_admin": True},
+                    "date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "artifact": {
+                        "name": artifact["name"],
+                        "id": aid,
+                        "type": artifact_type,
+                    },
+                    "action": "CREATE",
                 }
+            ]
 
-                # Find dependencies based on URLs
-                dependencies_found = []
+        # Log audit event for accessing audit trail
+        _log_audit_event(aid, artifact["name"], artifact_type, "AUDIT")
 
-                # Check dataset_url
-                dataset_url = a.get("dataset_url")
-                if dataset_url and dataset_url != "unknown":
-                    dataset_name = _extract_name_from_url(dataset_url)
-                    dataset_id = gen_id(dataset_name)
-
-                    for dep in artifacts:
-                        if gen_id(dep["name"]) == dataset_id:
-                            dep_type = _get_artifact_type(dep)
-                            if dep_type == "dataset":
-                                dep_cost = 562.5
-                            elif dep_type == "model":
-                                dep_cost = 412.5
-                            else:
-                                dep_cost = 280.0
-
-                            result[str(dataset_id)] = {
-                                "standalone_cost": dep_cost,
-                                "total_cost": dep_cost,
-                            }
-                            total_cost_sum += dep_cost
-                            dependencies_found.append(dataset_id)
-                            break
-
-                # Check code_url
-                code_url = a.get("code_url")
-                if code_url and code_url != "unknown":
-                    code_name = _extract_name_from_url(code_url)
-                    code_id = gen_id(code_name)
-
-                    # Only add if not already added and not the same as the artifact itself
-                    if code_id not in dependencies_found and code_id != aid:
-                        for dep in artifacts:
-                            if gen_id(dep["name"]) == code_id:
-                                dep_type = _get_artifact_type(dep)
-                                if dep_type == "code":
-                                    dep_cost = 280.0
-                                elif dep_type == "model":
-                                    dep_cost = 412.5
-                                else:
-                                    dep_cost = 562.5
-
-                                result[str(code_id)] = {
-                                    "standalone_cost": dep_cost,
-                                    "total_cost": dep_cost,
-                                }
-                                total_cost_sum += dep_cost
-                                dependencies_found.append(code_id)
-                                break
-
-                # Update the main artifact's total_cost to be the sum of all
-                result[str(aid)]["total_cost"] = total_cost_sum
-
-                return result
-
-    raise HTTPException(status_code=404, detail="Artifact does not exist.")
+        return JSONResponse(content=audit_trail)
+    except Exception as e:
+        logger.error(f"Error retrieving audit trail: {e}")
+        # Return empty audit trail if there's an error
+        return JSONResponse(content=[])
 
 
 # 4. GENERIC TYPE-PARAMETERIZED ROUTES (most likely to match)
@@ -1205,6 +1355,9 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
         metadata={"type": artifact_type, "rating_calculated": False},
     )
     logger.info(f"Registered artifact ID: {artifact_id}")
+
+    # Log audit event for creation
+    _log_audit_event(new_id, original_name, artifact_type, "CREATE")
 
     # Start background rating task for models
     if artifact_type == "model":
@@ -1481,6 +1634,9 @@ async def update_artifact(artifact_type: str, artifact_id: str, request: Request
         code_url=artifact.get("code_url", "unknown"),
         dataset_url=artifact.get("dataset_url", "unknown"),
     )
+
+    # Log audit event for update
+    _log_audit_event(int(artifact_id), artifact["name"], artifact_type, "UPDATE")
 
     return {"status": "artifact updated successfully"}
 
