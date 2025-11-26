@@ -1379,13 +1379,7 @@ def get_cost(
     try:
         aid = int(artifact_id)
     except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "There is missing field(s) in the artifact_type or artifact_id "
-                "or it is formed improperly, or is invalid."
-            ),
-        )
+        raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
     def get_artifact_size(artifact):
         """Get the size of an artifact by calculating from URL."""
