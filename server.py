@@ -17,9 +17,8 @@ from model_evaluator import ModelEvaluator
 
 # Import S3 storage and artifact downloader
 try:
-    from artifact_downloader import process_artifact_for_s3
-
     from API.storage import S3Storage
+    from artifact_downloader import process_artifact_for_s3
 
     S3_AVAILABLE = True
     s3_storage = S3Storage()
