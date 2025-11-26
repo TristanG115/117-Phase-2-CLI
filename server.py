@@ -15,6 +15,20 @@ from fastapi.templating import Jinja2Templates
 from handlers import registry_handler
 from model_evaluator import ModelEvaluator
 
+# Import S3 storage and artifact downloader
+try:
+    from artifact_downloader import process_artifact_for_s3
+
+    from API.storage import S3Storage
+
+    S3_AVAILABLE = True
+    s3_storage = S3Storage()
+    logger.info("S3 Storage initialized successfully")
+except Exception as e:
+    S3_AVAILABLE = False
+    s3_storage = None
+    logger.warning(f"S3 Storage not available: {e}")
+
 # Initialize model evaluator for rating
 model_evaluator = ModelEvaluator()
 
@@ -1663,7 +1677,30 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
     size_mb = _calculate_artifact_size_api(url, artifact_type)
     logger.info(f"[SIZE] Artifact {original_name} ({artifact_type}) size: {size_mb} MB")
 
-    # Save artifact with size in metadata
+    # Process artifact for S3 (download, zip, upload, get download URL)
+    s3_key = None
+    download_url = None
+
+    if S3_AVAILABLE and s3_storage:
+        try:
+            logger.info(f"[S3] Processing {original_name} for S3 storage")
+            s3_key, download_url = process_artifact_for_s3(
+                s3_storage, url, original_name, artifact_type
+            )
+            if s3_key and download_url:
+                logger.info(f"[S3] Successfully stored {original_name} in S3")
+            else:
+                logger.warning(
+                    f"[S3] Failed to store {original_name} in S3, continuing without download_url"
+                )
+        except Exception as e:
+            logger.error(f"[S3] Error processing {original_name} for S3: {e}")
+    else:
+        logger.warning(
+            "[S3] S3 storage not available, skipping download URL generation"
+        )
+
+    # Save artifact with size and S3 info in metadata
     artifact_id = registry_handler.add_artifact(
         name=original_name,
         artifact_type=artifact_type,
@@ -1676,6 +1713,8 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
             "type": artifact_type,
             "rating_calculated": False,
             "size_mb": size_mb,
+            "s3_key": s3_key,
+            "download_url": download_url,
         },
     )
     logger.info(f"Registered artifact ID: {artifact_id}")
@@ -1693,6 +1732,10 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
         "metadata": {"name": original_name, "id": new_id, "type": artifact_type},
         "data": {"url": url},
     }
+
+    # Add download_url if available
+    if download_url:
+        resp["data"]["download_url"] = download_url
 
     return JSONResponse(status_code=201, content=resp)
 
@@ -1981,15 +2024,18 @@ def delete_artifact(artifact_type: str, artifact_id: str, request: Request):
     try:
         aid = int(artifact_id)
     except ValueError:
-        raise HTTPException(status_code=404, detail="Artifact does not exist.")
+        raise HTTPException(
+            status_code=400,
+            detail="There is missing field(s) in the artifact_type or artifact_id or invalid",
+        )
     artifacts = registry_handler.list_artifacts()
     for a in artifacts:
         if gen_id(a["name"]) == aid:
-            actual_type = _get_artifact_type(a)
+            actual_type = a.get("type", "model")
             if actual_type != artifact_type:
                 raise HTTPException(status_code=404, detail="Artifact does not exist.")
-            artifact_id_to_delete = a.get("artifact_id") or a["name"]
-            registry_handler.delete_artifact(artifact_id_to_delete)
+            # Delete the artifact
+            registry_handler.delete_artifact(a["name"])
             logger.info(f"Deleted artifact: {a['name']} (ID: {aid})")
             return Response(status_code=200)
     raise HTTPException(status_code=404, detail="Artifact does not exist.")
@@ -2009,8 +2055,13 @@ def reset_registry(request: Request):
                 detail="You do not have permission to reset the registry.",
             )
 
+    # IMPORTANT: We only reset the DynamoDB database, NOT S3
+    # This is an optimization - we keep artifacts in S3 after reset
+    # so subsequent ingests can reuse existing files (much faster)
+    # Per instructor guidance: "keep models in S3 after a reset"
     registry_handler.reset_registry()
     gc.collect()
+    logger.info("[RESET] Database cleared (S3 artifacts preserved for caching)")
     return {"status": "system reset successful"}
 
 
