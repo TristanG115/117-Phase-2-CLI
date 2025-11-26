@@ -220,9 +220,9 @@ def download_github_repo(url: str, artifact_name: str, temp_dir: str) -> bool:
 
 def download_and_zip_artifact(
     url: str, artifact_name: str, artifact_type: str
-) -> Optional[io.BytesIO]:
+) -> Optional[str]:
     """
-    Download an artifact from a URL and zip it.
+    Download an artifact from a URL and zip it TO A FILE ON DISK (not memory).
 
     Args:
         url: Source URL (HuggingFace or GitHub)
@@ -230,9 +230,11 @@ def download_and_zip_artifact(
         artifact_type: Type (model, dataset, code)
 
     Returns:
-        BytesIO object containing the zipped artifact, or None if failed
+        Path to the zipped file on disk, or None if failed
     """
     temp_dir = None
+    zip_file_path = None
+
     try:
         logger.info(f"[DOWNLOAD] Starting REAL download for {artifact_name} from {url}")
 
@@ -264,13 +266,13 @@ def download_and_zip_artifact(
             logger.error(f"[DOWNLOAD] Failed to download {artifact_name}")
             return None
 
-        # Create zip file from downloaded content
+        # Create zip file ON DISK (not in memory to avoid OOM on large models)
         logger.info(f"[DOWNLOAD] Creating zip archive for {artifact_name}")
-        zip_buffer = io.BytesIO()
+        zip_file_path = os.path.join(base_temp_dir, f"{artifact_name}.zip")
 
         artifact_dir = os.path.join(temp_dir, artifact_name)
 
-        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+        with zipfile.ZipFile(zip_file_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             # Walk through the downloaded directory and add all files
             for root, dirs, files in os.walk(artifact_dir):
                 for file in files:
@@ -290,13 +292,12 @@ Download completed but no files were found.
 """
                 zipf.writestr(f"{artifact_name}/metadata.txt", metadata_content)
 
-        zip_buffer.seek(0)
-        zip_size_mb = len(zip_buffer.getvalue()) / (1024 * 1024)
+        zip_size_mb = os.path.getsize(zip_file_path) / (1024 * 1024)
         logger.info(
-            f"[DOWNLOAD] Successfully created zip for {artifact_name} (size: {zip_size_mb:.2f} MB)"
+            f"[DOWNLOAD] Successfully created zip file at {zip_file_path} (size: {zip_size_mb:.2f} MB)"
         )
 
-        return zip_buffer
+        return zip_file_path
 
     except Exception as e:
         logger.error(f"[DOWNLOAD] Error downloading/zipping {artifact_name}: {e}")
@@ -329,16 +330,16 @@ def get_s3_key_for_artifact(artifact_name: str, artifact_type: str) -> str:
 
 
 def upload_artifact_to_s3(
-    s3_storage, artifact_name: str, artifact_type: str, zip_buffer: io.BytesIO
+    s3_storage, artifact_name: str, artifact_type: str, zip_file_path: str
 ) -> Optional[str]:
     """
-    Upload a zipped artifact to S3.
+    Upload a zipped artifact to S3 FROM A FILE ON DISK.
 
     Args:
         s3_storage: S3Storage instance
         artifact_name: Name of the artifact
         artifact_type: Type (model, dataset, code)
-        zip_buffer: BytesIO containing the zipped artifact
+        zip_file_path: Path to the zip file on disk
 
     Returns:
         S3 key if successful, None otherwise
@@ -348,16 +349,32 @@ def upload_artifact_to_s3(
 
         logger.info(f"[S3 UPLOAD] Uploading {artifact_name} to S3: {s3_key}")
 
-        # Upload to S3
+        # Upload file from disk to S3
         metadata = {"artifact_name": artifact_name, "artifact_type": artifact_type}
 
-        result = s3_storage.upload(zip_buffer, s3_key, metadata=metadata)
+        # Open file and upload
+        with open(zip_file_path, "rb") as f:
+            result = s3_storage.upload(f, s3_key, metadata=metadata)
 
         logger.info(f"[S3 UPLOAD] Successfully uploaded {artifact_name} to S3")
+
+        # Clean up the zip file after successful upload
+        try:
+            os.remove(zip_file_path)
+            logger.info(f"[S3 UPLOAD] Cleaned up zip file: {zip_file_path}")
+        except Exception as e:
+            logger.warning(f"[S3 UPLOAD] Failed to clean up zip file: {e}")
+
         return s3_key
 
     except Exception as e:
         logger.error(f"[S3 UPLOAD] Error uploading {artifact_name} to S3: {e}")
+        # Try to clean up zip file even on failure
+        try:
+            if os.path.exists(zip_file_path):
+                os.remove(zip_file_path)
+        except:
+            pass
         return None
 
 
@@ -453,15 +470,15 @@ def process_artifact_for_s3(
             )
             return s3_key, download_url
 
-        # Download and zip the artifact
-        zip_buffer = download_and_zip_artifact(url, artifact_name, artifact_type)
-        if not zip_buffer:
+        # Download and zip the artifact (returns file path on disk)
+        zip_file_path = download_and_zip_artifact(url, artifact_name, artifact_type)
+        if not zip_file_path:
             logger.error(f"[S3 PROCESS] Failed to download/zip {artifact_name}")
             return None, None
 
-        # Upload to S3
+        # Upload to S3 (this will clean up the zip file after upload)
         s3_key = upload_artifact_to_s3(
-            s3_storage, artifact_name, artifact_type, zip_buffer
+            s3_storage, artifact_name, artifact_type, zip_file_path
         )
         if not s3_key:
             logger.error(f"[S3 PROCESS] Failed to upload {artifact_name} to S3")
