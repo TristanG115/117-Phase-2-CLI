@@ -29,6 +29,9 @@ def download_huggingface_artifact(url: str, artifact_name: str, temp_dir: str) -
         True if successful, False otherwise
     """
     try:
+        # Set HF_HOME to use larger disk (not /tmp which is too small)
+        os.environ["HF_HOME"] = "/home/ec2-user/.cache/huggingface"
+
         # Try using huggingface_hub library for proper downloading
         try:
             from huggingface_hub import snapshot_download
@@ -126,9 +129,6 @@ def download_huggingface_artifact(url: str, artifact_name: str, temp_dir: str) -
                     continue
 
             return True
-
-        # If none of the download methods succeeded, return False to satisfy the declared bool return type
-        return False
 
     except Exception as e:
         logger.error(f"[HF DOWNLOAD] Failed to download HuggingFace artifact: {e}")
@@ -236,8 +236,15 @@ def download_and_zip_artifact(
     try:
         logger.info(f"[DOWNLOAD] Starting REAL download for {artifact_name} from {url}")
 
+        # Use a temp directory on the root filesystem (not /tmp which is too small)
+        # /tmp only has ~333MB, but root has 16GB available
+        base_temp_dir = "/home/ec2-user/temp"
+        os.makedirs(base_temp_dir, exist_ok=True)
+
         # Create temporary directory
-        temp_dir = tempfile.mkdtemp(prefix=f"artifact_{artifact_type}_")
+        temp_dir = tempfile.mkdtemp(
+            prefix=f"artifact_{artifact_type}_", dir=base_temp_dir
+        )
         logger.info(f"[DOWNLOAD] Using temp directory: {temp_dir}")
 
         # Download based on source
