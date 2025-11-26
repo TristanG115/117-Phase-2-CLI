@@ -1,75 +1,79 @@
-11/26/25 10:37:47 PM : INFO : API.storage : Config loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json
-11/26/25 10:37:47 PM : INFO : botocore.credentials : Found credentials from IAM Role: TrustworthyRegistryEC2Role
-11/26/25 10:37:47 PM : INFO : API.storage : S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
-11/26/25 10:37:47 PM : INFO : root : S3 Storage initialized successfully
-11/26/25 10:37:47 PM : INFO : API.storage : Config loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json
-11/26/25 10:37:47 PM : INFO : API.storage : S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
-11/26/25 10:37:47 PM : INFO : root : Loaded templates from: /home/ec2-user/117-Phase-2-CLI/templates
-11/26/25 10:37:47 PM : INFO : API.dynamo : Config loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json
-11/26/25 10:37:48 PM : INFO : API.dynamo : DynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2
-11/26/25 10:37:48 PM : INFO : handlers.registry_handler : ✓ DynamoDB initialized successfully
-11/26/25 10:37:47 PM : INFO : API.storage : [36mConfig loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json[0m
-11/26/25 10:37:47 PM : INFO : botocore.credentials : [36mFound credentials from IAM Role: TrustworthyRegistryEC2Role[0m
-11/26/25 10:37:47 PM : INFO : API.storage : [36mS3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2[0m
-11/26/25 10:37:47 PM : INFO : root : [36mS3 Storage initialized successfully[0m
-11/26/25 10:37:47 PM : INFO : API.storage : [36mConfig loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json[0m
-11/26/25 10:37:47 PM : INFO : API.storage : [36mS3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2[0m
-11/26/25 10:37:47 PM : INFO : root : [36mLoaded templates from: /home/ec2-user/117-Phase-2-CLI/templates[0m
-11/26/25 10:37:47 PM : INFO : API.dynamo : [36mConfig loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json[0m
-11/26/25 10:37:48 PM : INFO : API.dynamo : [36mDynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2[0m
-11/26/25 10:37:48 PM : INFO : handlers.registry_handler : [36m✓ DynamoDB initialized successfully[0m
+11/26/25 11:07:40 PM : INFO : API.storage : Config loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json
+11/26/25 11:07:40 PM : INFO : botocore.credentials : Found credentials from IAM Role: TrustworthyRegistryEC2Role
+11/26/25 11:07:40 PM : INFO : API.storage : S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
+11/26/25 11:07:40 PM : INFO : root : S3 Storage initialized successfully
+11/26/25 11:07:40 PM : INFO : API.storage : Config loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json
+11/26/25 11:07:40 PM : INFO : API.storage : S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
+11/26/25 11:07:40 PM : INFO : root : Loaded templates from: /home/ec2-user/117-Phase-2-CLI/templates
+11/26/25 11:07:40 PM : INFO : API.dynamo : Config loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json
+11/26/25 11:07:40 PM : INFO : API.dynamo : DynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2
+11/26/25 11:07:40 PM : INFO : handlers.registry_handler : ✓ DynamoDB initialized successfully
+11/26/25 11:07:40 PM : INFO : API.storage : [36mConfig loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json[0m
+11/26/25 11:07:40 PM : INFO : botocore.credentials : [36mFound credentials from IAM Role: TrustworthyRegistryEC2Role[0m
+11/26/25 11:07:40 PM : INFO : API.storage : [36mS3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2[0m
+11/26/25 11:07:40 PM : INFO : root : [36mS3 Storage initialized successfully[0m
+11/26/25 11:07:40 PM : INFO : API.storage : [36mConfig loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json[0m
+11/26/25 11:07:40 PM : INFO : API.storage : [36mS3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2[0m
+11/26/25 11:07:40 PM : INFO : root : [36mLoaded templates from: /home/ec2-user/117-Phase-2-CLI/templates[0m
+11/26/25 11:07:40 PM : INFO : API.dynamo : [36mConfig loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json[0m
+11/26/25 11:07:40 PM : INFO : API.dynamo : [36mDynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2[0m
+11/26/25 11:07:40 PM : INFO : handlers.registry_handler : [36m✓ DynamoDB initialized successfully[0m
 ✓ Using DynamoDB for persistent storage
-11/26/25 10:37:48 PM : INFO : API.dynamo : Table TrustworthyModelRegDB already exists
-11/26/25 10:37:48 PM : INFO : handlers.registry_handler : Registry initialized successfully
-11/26/25 10:37:48 PM : INFO : root : Registry initialized successfully
-11/26/25 10:42:03 PM : INFO : root : [REQUEST] GET /health
-11/26/25 10:42:03 PM : INFO : root : Health check called
-11/26/25 10:42:03 PM : INFO : root : [RESPONSE] GET /health -> 200
-11/26/25 10:42:03 PM : INFO : root : [REQUEST] GET /tracks
-11/26/25 10:42:03 PM : INFO : root : [RESPONSE] GET /tracks -> 200
-11/26/25 10:42:03 PM : INFO : root : [REQUEST] GET /tracks
-11/26/25 10:42:03 PM : INFO : root : [RESPONSE] GET /tracks -> 200
-11/26/25 10:42:03 PM : INFO : root : [REQUEST] DELETE /reset
-11/26/25 10:42:03 PM : WARNING : root : DEBUG /reset: No auth header - allowing for baseline
-11/26/25 10:42:03 PM : INFO : API.dynamo : Registry reset - all artifacts deleted
-11/26/25 10:42:03 PM : INFO : handlers.registry_handler : Registry has been reset successfully.
-11/26/25 10:42:03 PM : INFO : root : [RESET] Database cleared (S3 artifacts preserved for caching)
-11/26/25 10:42:03 PM : INFO : root : [RESPONSE] DELETE /reset -> 200
-11/26/25 10:42:03 PM : INFO : root : [REQUEST] POST /artifacts
-11/26/25 10:42:03 PM : INFO : root : DEBUG /artifacts: All headers = {'host': '18.191.29.29:8000', 'user-agent': 'python-requests/2.32.3', 'accept-encoding': 'gzip, deflate', 'accept': '*/*', 'connection': 'keep-alive', 'content-length': '28', 'content-type': 'application/json'}
-11/26/25 10:42:03 PM : INFO : root : DEBUG /artifacts: X-Authorization value = None
-11/26/25 10:42:03 PM : WARNING : root : DEBUG: No X-Authorization header - allowing for baseline
-11/26/25 10:37:48 PM : INFO : API.dynamo : [36mTable TrustworthyModelRegDB already exists[0m
-11/26/25 10:37:48 PM : INFO : handlers.registry_handler : [36mRegistry initialized successfully[0m
-11/26/25 10:37:48 PM : INFO : root : [36mRegistry initialized successfully[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[REQUEST] GET /health[0m
-11/26/25 10:42:03 PM : INFO : root : [36mHealth check called[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[RESPONSE] GET /health -> 200[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[REQUEST] GET /tracks[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[RESPONSE] GET /tracks -> 200[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[REQUEST] GET /tracks[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[RESPONSE] GET /tracks -> 200[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[REQUEST] DELETE /reset[0m
-11/26/25 10:42:03 PM : WARNING : root : [33mDEBUG /reset: No auth header - allowing for baseline[0m
-11/26/25 10:42:03 PM : INFO : API.dynamo : [36mRegistry reset - all artifacts deleted[0m
-11/26/25 10:42:03 PM : INFO : handlers.registry_handler : [36mRegistry has been reset successfully.[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[RESET] Database cleared (S3 artifacts preserved for caching)[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[RESPONSE] DELETE /reset -> 200[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[REQUEST] POST /artifacts[0m
-11/26/25 10:42:03 PM : INFO : root : [36mDEBUG /artifacts: All headers = {'host': '18.191.29.29:8000', 'user-agent': 'python-requests/2.32.3', 'accept-encoding': 'gzip, deflate', 'accept': '*/*', 'connection': 'keep-alive', 'content-length': '28', 'content-type': 'application/json'}[0m
-11/26/25 10:42:03 PM : INFO : root : [36mDEBUG /artifacts: X-Authorization value = None[0m
-11/26/25 10:42:03 PM : WARNING : root : [33mDEBUG: No X-Authorization header - allowing for baseline[0m
+11/26/25 11:07:40 PM : INFO : API.dynamo : Table TrustworthyModelRegDB already exists
+11/26/25 11:07:40 PM : INFO : handlers.registry_handler : Registry initialized successfully
+11/26/25 11:07:40 PM : INFO : root : Registry initialized successfully
+11/26/25 11:26:13 PM : INFO : root : [REQUEST] GET /
+11/26/25 11:26:13 PM : INFO : root : [RESPONSE] GET / -> 200
+11/26/25 11:52:39 PM : INFO : root : [REQUEST] GET /health
+11/26/25 11:52:39 PM : INFO : root : Health check called
+11/26/25 11:52:39 PM : INFO : root : [RESPONSE] GET /health -> 200
+11/26/25 11:52:39 PM : INFO : root : [REQUEST] GET /tracks
+11/26/25 11:52:39 PM : INFO : root : [RESPONSE] GET /tracks -> 200
+11/26/25 11:52:39 PM : INFO : root : [REQUEST] GET /tracks
+11/26/25 11:52:39 PM : INFO : root : [RESPONSE] GET /tracks -> 200
+11/26/25 11:52:39 PM : INFO : root : [REQUEST] DELETE /reset
+11/26/25 11:52:39 PM : WARNING : root : DEBUG /reset: No auth header - allowing for baseline
+11/26/25 11:52:39 PM : INFO : API.dynamo : Registry reset - all artifacts deleted
+11/26/25 11:52:39 PM : INFO : handlers.registry_handler : Registry has been reset successfully.
+11/26/25 11:52:39 PM : INFO : root : [RESET] Database cleared (S3 artifacts preserved for caching)
+11/26/25 11:52:39 PM : INFO : root : [RESPONSE] DELETE /reset -> 200
+11/26/25 11:52:39 PM : INFO : root : [REQUEST] POST /artifacts
+11/26/25 11:52:39 PM : INFO : root : DEBUG /artifacts: All headers = {'host': '18.191.29.29:8000', 'user-agent': 'python-requests/2.32.3', 'accept-encoding': 'gzip, deflate', 'accept': '*/*', 'connection': 'keep-alive', 'content-length': '28', 'content-type': 'application/json'}
+11/26/25 11:52:39 PM : INFO : root : DEBUG /artifacts: X-Authorization value = None
+11/26/25 11:52:39 PM : WARNING : root : DEBUG: No X-Authorization header - allowing for baseline
+11/26/25 11:07:40 PM : INFO : API.dynamo : [36mTable TrustworthyModelRegDB already exists[0m
+11/26/25 11:07:40 PM : INFO : handlers.registry_handler : [36mRegistry initialized successfully[0m
+11/26/25 11:07:40 PM : INFO : root : [36mRegistry initialized successfully[0m
+11/26/25 11:26:13 PM : INFO : root : [36m[REQUEST] GET /[0m
+11/26/25 11:26:13 PM : INFO : root : [36m[RESPONSE] GET / -> 200[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[REQUEST] GET /health[0m
+11/26/25 11:52:39 PM : INFO : root : [36mHealth check called[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[RESPONSE] GET /health -> 200[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[REQUEST] GET /tracks[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[RESPONSE] GET /tracks -> 200[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[REQUEST] GET /tracks[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[RESPONSE] GET /tracks -> 200[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[REQUEST] DELETE /reset[0m
+11/26/25 11:52:39 PM : WARNING : root : [33mDEBUG /reset: No auth header - allowing for baseline[0m
+11/26/25 11:52:39 PM : INFO : API.dynamo : [36mRegistry reset - all artifacts deleted[0m
+11/26/25 11:52:39 PM : INFO : handlers.registry_handler : [36mRegistry has been reset successfully.[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[RESET] Database cleared (S3 artifacts preserved for caching)[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[RESPONSE] DELETE /reset -> 200[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[REQUEST] POST /artifacts[0m
+11/26/25 11:52:39 PM : INFO : root : [36mDEBUG /artifacts: All headers = {'host': '18.191.29.29:8000', 'user-agent': 'python-requests/2.32.3', 'accept-encoding': 'gzip, deflate', 'accept': '*/*', 'connection': 'keep-alive', 'content-length': '28', 'content-type': 'application/json'}[0m
+11/26/25 11:52:39 PM : INFO : root : [36mDEBUG /artifacts: X-Authorization value = None[0m
+11/26/25 11:52:39 PM : WARNING : root : [33mDEBUG: No X-Authorization header - allowing for baseline[0m
 DEBUG /artifacts: About to read body
-11/26/25 10:42:03 PM : INFO : root : DEBUG /artifacts: About to read body
-11/26/25 10:42:03 PM : INFO : root : [36mDEBUG /artifacts: About to read body[0m
+11/26/25 11:52:39 PM : INFO : root : DEBUG /artifacts: About to read body
+11/26/25 11:52:39 PM : INFO : root : [36mDEBUG /artifacts: About to read body[0m
 DEBUG /artifacts: Raw body = [{"name": "*", "types": []}]
-11/26/25 10:42:03 PM : INFO : root : DEBUG /artifacts: Raw body = [{"name": "*", "types": []}]
-11/26/25 10:42:03 PM : INFO : root : [DATA] Request body: [{'name': '*', 'types': []}]
-11/26/25 10:42:03 PM : INFO : root : [36mDEBUG /artifacts: Raw body = [{"name": "*", "types": []}][0m
-11/26/25 10:42:03 PM : INFO : root : [36m[DATA] Request body: [{'name': '*', 'types': []}][0m
+11/26/25 11:52:39 PM : INFO : root : DEBUG /artifacts: Raw body = [{"name": "*", "types": []}]
+11/26/25 11:52:39 PM : INFO : root : [DATA] Request body: [{'name': '*', 'types': []}]
+11/26/25 11:52:39 PM : INFO : root : [36mDEBUG /artifacts: Raw body = [{"name": "*", "types": []}][0m
+11/26/25 11:52:39 PM : INFO : root : [36m[DATA] Request body: [{'name': '*', 'types': []}][0m
 DEBUG /artifacts: Parsed queries = [{'name': '*', 'types': []}]
-11/26/25 10:42:03 PM : INFO : root : DEBUG /artifacts: Parsed queries = [{'name': '*', 'types': []}]
-11/26/25 10:42:03 PM : INFO : root : [36mDEBUG /artifacts: Parsed queries = [{'name': '*', 'types': []}][0m
+11/26/25 11:52:39 PM : INFO : root : DEBUG /artifacts: Parsed queries = [{'name': '*', 'types': []}]
+11/26/25 11:52:39 PM : INFO : root : [36mDEBUG /artifacts: Parsed queries = [{'name': '*', 'types': []}][0m
 DEBUG: About to call list_artifacts()
 DEBUG: Got 0 artifacts
 DEBUG: About to build results
@@ -87,153 +91,129 @@ Results built (0):
 Offset header: {'offset': '2'}
 ========================================
 
-11/26/25 10:42:03 PM : INFO : root : ===== ARTIFACTS QUERY RESULTS =====
-11/26/25 10:42:03 PM : INFO : root : Query: [{'name': '*', 'types': []}]
-11/26/25 10:42:03 PM : INFO : root : Returning 0 results from 0 total artifacts
-11/26/25 10:42:03 PM : INFO : root : =====================================
-11/26/25 10:42:03 PM : INFO : root : [DATA] Response: 0 results
-11/26/25 10:42:03 PM : INFO : root : [RESPONSE] POST /artifacts -> 200
-11/26/25 10:42:03 PM : INFO : root : [REQUEST] POST /artifact/model
-11/26/25 10:42:03 PM : WARNING : root : DEBUG /artifact/{{type}}: No auth header - allowing for baseline
-11/26/25 10:42:03 PM : INFO : root : [DATA] Creating artifact type=model, body keys: ['name', 'url']
-11/26/25 10:42:03 PM : INFO : root : Creating artifact: name=bert-base-uncased, type=model, ID=9430210313
-11/26/25 10:42:03 PM : INFO : root : [SIZE CALC] Starting size calculation for model: https://huggingface.co/google-bert/bert-base-uncased
-11/26/25 10:42:03 PM : INFO : root : [SIZE CALC] Detected HuggingFace URL: https://huggingface.co/google-bert/bert-base-uncased
-11/26/25 10:42:03 PM : INFO : root : [SIZE CALC] Extracted repo_id: google-bert/bert-base-uncased, is_dataset: False
-11/26/25 10:42:03 PM : INFO : root : [SIZE CALC] Fetching from: https://huggingface.co/google-bert/bert-base-uncased/tree/main
-11/26/25 10:42:03 PM : INFO : root : [SIZE CALC WEB SUCCESS] google-bert/bert-base-uncased: 3532.8 MB (scraped from website)
-11/26/25 10:42:03 PM : INFO : root : [SIZE] Artifact bert-base-uncased (model) size: 3532.8 MB
-11/26/25 10:42:03 PM : INFO : root : [S3] Processing bert-base-uncased for S3 storage
-11/26/25 10:42:04 PM : INFO : artifact_downloader : [S3 CHECK] Artifact bert-base-uncased not found in S3
-11/26/25 10:42:04 PM : INFO : artifact_downloader : [DOWNLOAD] Starting REAL download for bert-base-uncased from https://huggingface.co/google-bert/bert-base-uncased
-11/26/25 10:42:04 PM : INFO : artifact_downloader : [DOWNLOAD] Using temp directory: /home/ec2-user/temp/artifact_model_1u2pa8bb
-11/26/25 10:42:04 PM : INFO : artifact_downloader : [HF DOWNLOAD] Downloading model google-bert/bert-base-uncased via huggingface_hub
+11/26/25 11:52:39 PM : INFO : root : ===== ARTIFACTS QUERY RESULTS =====
+11/26/25 11:52:39 PM : INFO : root : Query: [{'name': '*', 'types': []}]
+11/26/25 11:52:39 PM : INFO : root : Returning 0 results from 0 total artifacts
+11/26/25 11:52:39 PM : INFO : root : =====================================
+11/26/25 11:52:39 PM : INFO : root : [DATA] Response: 0 results
+11/26/25 11:52:39 PM : INFO : root : [RESPONSE] POST /artifacts -> 200
+11/26/25 11:52:39 PM : INFO : root : [REQUEST] POST /artifact/model
+11/26/25 11:52:39 PM : WARNING : root : DEBUG /artifact/{{type}}: No auth header - allowing for baseline
+11/26/25 11:52:39 PM : INFO : root : [DATA] Creating artifact type=model, body keys: ['name', 'url']
+11/26/25 11:52:39 PM : INFO : root : Creating artifact: name=bert-base-uncased, type=model, ID=9430210313
+11/26/25 11:52:39 PM : INFO : root : [SIZE CALC] Starting size calculation for model: https://huggingface.co/google-bert/bert-base-uncased
+11/26/25 11:52:39 PM : INFO : root : [SIZE CALC] Detected HuggingFace URL: https://huggingface.co/google-bert/bert-base-uncased
+11/26/25 11:52:39 PM : INFO : root : [SIZE CALC] Extracted repo_id: google-bert/bert-base-uncased, is_dataset: False
+11/26/25 11:52:39 PM : INFO : root : [SIZE CALC] Fetching from: https://huggingface.co/google-bert/bert-base-uncased/tree/main
+11/26/25 11:52:39 PM : INFO : root : [SIZE CALC WEB SUCCESS] google-bert/bert-base-uncased: 3532.8 MB (scraped from website)
+11/26/25 11:52:39 PM : INFO : root : [SIZE] Artifact bert-base-uncased (model) size: 3532.8 MB
+11/26/25 11:52:39 PM : INFO : root : [S3] Processing bert-base-uncased for S3 storage
+11/26/25 11:52:39 PM : INFO : artifact_downloader : [S3 CHECK] Artifact bert-base-uncased not found in S3
+11/26/25 11:52:39 PM : INFO : artifact_downloader : [DOWNLOAD] Starting REAL download for bert-base-uncased from https://huggingface.co/google-bert/bert-base-uncased
+11/26/25 11:52:39 PM : INFO : artifact_downloader : [DOWNLOAD] Using temp directory: /home/ec2-user/temp/artifact_model_4901poh5
+11/26/25 11:52:39 PM : INFO : artifact_downloader : [HF DOWNLOAD] Downloading model google-bert/bert-base-uncased via huggingface_hub
 /home/ec2-user/117-Phase-2-CLI/venv/lib64/python3.9/site-packages/huggingface_hub/utils/_validators.py:202: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `snapshot_download`. Downloading to a local directory does not use symlinks anymore.
   warnings.warn(
-11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/revision/main "HTTP/1.1 200 OK"
-11/26/25 10:42:03 PM : INFO : root : [36m===== ARTIFACTS QUERY RESULTS =====[0m
-11/26/25 10:42:03 PM : INFO : root : [36mQuery: [{'name': '*', 'types': []}][0m
-11/26/25 10:42:03 PM : INFO : root : [36mReturning 0 results from 0 total artifacts[0m
-11/26/25 10:42:03 PM : INFO : root : [36m=====================================[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[DATA] Response: 0 results[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[RESPONSE] POST /artifacts -> 200[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[REQUEST] POST /artifact/model[0m
-11/26/25 10:42:03 PM : WARNING : root : [33mDEBUG /artifact/{{type}}: No auth header - allowing for baseline[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[DATA] Creating artifact type=model, body keys: ['name', 'url'][0m
-11/26/25 10:42:03 PM : INFO : root : [36mCreating artifact: name=bert-base-uncased, type=model, ID=9430210313[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[SIZE CALC] Starting size calculation for model: https://huggingface.co/google-bert/bert-base-uncased[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[SIZE CALC] Detected HuggingFace URL: https://huggingface.co/google-bert/bert-base-uncased[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[SIZE CALC] Extracted repo_id: google-bert/bert-base-uncased, is_dataset: False[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[SIZE CALC] Fetching from: https://huggingface.co/google-bert/bert-base-uncased/tree/main[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[SIZE CALC WEB SUCCESS] google-bert/bert-base-uncased: 3532.8 MB (scraped from website)[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[SIZE] Artifact bert-base-uncased (model) size: 3532.8 MB[0m
-11/26/25 10:42:03 PM : INFO : root : [36m[S3] Processing bert-base-uncased for S3 storage[0m
-11/26/25 10:42:04 PM : INFO : artifact_downloader : [36m[S3 CHECK] Artifact bert-base-uncased not found in S3[0m
-11/26/25 10:42:04 PM : INFO : artifact_downloader : [36m[DOWNLOAD] Starting REAL download for bert-base-uncased from https://huggingface.co/google-bert/bert-base-uncased[0m
-11/26/25 10:42:04 PM : INFO : artifact_downloader : [36m[DOWNLOAD] Using temp directory: /home/ec2-user/temp/artifact_model_1u2pa8bb[0m
-11/26/25 10:42:04 PM : INFO : artifact_downloader : [36m[HF DOWNLOAD] Downloading model google-bert/bert-base-uncased via huggingface_hub[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/revision/main "HTTP/1.1 200 OK"[0m
-Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/.gitattributes "HTTP/1.1 307 Temporary Redirect"
-                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/.gitattributes "HTTP/1.1 200 OK"
-                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/README.md "HTTP/1.1 307 Temporary Redirect"
-                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/.gitattributes "HTTP/1.1 200 OK"
-11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/LICENSE "HTTP/1.1 307 Temporary Redirect"
-11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/README.md "HTTP/1.1 200 OK"
-11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/coreml/fill-mask/float32_model.mlpackage/Data/com.apple.CoreML/model.mlmodel "HTTP/1.1 307 Temporary Redirect"
-                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]                                                         11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/coreml/fill-mask/float32_model.mlpackage/Data/com.apple.CoreML/weights/weight.bin "HTTP/1.1 302 Found"
-Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]                                                         11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/config.json "HTTP/1.1 307 Temporary Redirect"
-Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/LICENSE "HTTP/1.1 200 OK"
-                                                         11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/coreml%2Ffill-mask%2Ffloat32_model.mlpackage%2FData%2Fcom.apple.CoreML%2Fmodel.mlmodel "HTTP/1.1 200 OK"
-Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/config.json "HTTP/1.1 200 OK"
-11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/coreml/fill-mask/float32_model.mlpackage/Manifest.json "HTTP/1.1 307 Temporary Redirect"
-11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/README.md "HTTP/1.1 200 OK"
-                                                         11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/flax_model.msgpack "HTTP/1.1 302 Found"
-Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/LICENSE "HTTP/1.1 200 OK"
-                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/coreml%2Ffill-mask%2Ffloat32_model.mlpackage%2FData%2Fcom.apple.CoreML%2Fmodel.mlmodel "HTTP/1.1 200 OK"
-                                                         11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/coreml%2Ffill-mask%2Ffloat32_model.mlpackage%2FManifest.json "HTTP/1.1 200 OK"
-11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/config.json "HTTP/1.1 200 OK"
-Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]                                                                 11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/model.safetensors "HTTP/1.1 302 Found"
-11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/model.onnx "HTTP/1.1 302 Found"
-Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/coreml%2Ffill-mask%2Ffloat32_model.mlpackage%2FManifest.json "HTTP/1.1 200 OK"
-                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/pytorch_model.bin "HTTP/1.1 302 Found"
-                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"
-                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"
-                                                                 11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"
-Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"
-                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/tf_model.h5 "HTTP/1.1 302 Found"
-                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/rust_model.ot "HTTP/1.1 302 Found"
-                                                                 11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer.json "HTTP/1.1 307 Temporary Redirect"
-Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"
-                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer.json "HTTP/1.1 200 OK"
-                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer.json "HTTP/1.1 200 OK"
-                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"
-                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"
-                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
-                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer_config.json "HTTP/1.1 200 OK"
-                                                                 11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/.gitattributes "HTTP/1.1 307 Temporary Redirect"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/.gitattributes "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/README.md "HTTP/1.1 307 Temporary Redirect"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/.gitattributes "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/LICENSE "HTTP/1.1 307 Temporary Redirect"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/README.md "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/coreml/fill-mask/float32_model.mlpackage/Data/com.apple.CoreML/model.mlmodel "HTTP/1.1 307 Temporary Redirect"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/coreml/fill-mask/float32_model.mlpackage/Data/com.apple.CoreML/weights/weight.bin "HTTP/1.1 302 Found"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/config.json "HTTP/1.1 307 Temporary Redirect"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/LICENSE "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/coreml%2Ffill-mask%2Ffloat32_model.mlpackage%2FData%2Fcom.apple.CoreML%2Fmodel.mlmodel "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/config.json "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/coreml/fill-mask/float32_model.mlpackage/Manifest.json "HTTP/1.1 307 Temporary Redirect"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/README.md "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/flax_model.msgpack "HTTP/1.1 302 Found"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/LICENSE "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/coreml%2Ffill-mask%2Ffloat32_model.mlpackage%2FData%2Fcom.apple.CoreML%2Fmodel.mlmodel "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/coreml%2Ffill-mask%2Ffloat32_model.mlpackage%2FManifest.json "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/config.json "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/model.safetensors "HTTP/1.1 302 Found"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/model.onnx "HTTP/1.1 302 Found"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/coreml%2Ffill-mask%2Ffloat32_model.mlpackage%2FManifest.json "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/pytorch_model.bin "HTTP/1.1 302 Found"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/tf_model.h5 "HTTP/1.1 302 Found"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/rust_model.ot "HTTP/1.1 302 Found"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer.json "HTTP/1.1 307 Temporary Redirect"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer.json "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer.json "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"[0m
-11/26/25 10:42:04 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"[0m
-Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer_config.json "HTTP/1.1 200 OK"
-                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/vocab.txt "HTTP/1.1 307 Temporary Redirect"
-                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/vocab.txt "HTTP/1.1 200 OK"
-                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]11/26/25 10:42:04 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/vocab.txt "HTTP/1.1 200 OK"
-                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.50it/s]Fetching 16 files:  12%|█▎        | 2/16 [00:10<00:00, 18.50it/s]Fetching 16 files:  38%|███▊      | 6/16 [01:19<02:27, 14.78s/it]Fetching 16 files:  50%|█████     | 8/16 [01:22<01:20, 10.12s/it]Fetching 16 files:  62%|██████▎   | 10/16 [01:33<00:51,  8.53s/it]Fetching 16 files:  69%|██████▉   | 11/16 [04:20<03:14, 38.86s/it]Fetching 16 files: 100%|██████████| 16/16 [04:20<00:00, 16.27s/it]
-11/26/25 10:46:24 PM : INFO : artifact_downloader : [HF DOWNLOAD] Successfully downloaded google-bert/bert-base-uncased
-11/26/25 10:46:24 PM : INFO : artifact_downloader : [DOWNLOAD] Creating zip archive for bert-base-uncased
-11/26/25 10:58:18 PM : INFO : API.storage : Config loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json
-11/26/25 10:58:18 PM : INFO : botocore.credentials : Found credentials from IAM Role: TrustworthyRegistryEC2Role
-11/26/25 10:58:19 PM : INFO : API.storage : S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
-11/26/25 10:58:19 PM : INFO : root : S3 Storage initialized successfully
-11/26/25 10:58:19 PM : INFO : API.storage : Config loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json
-11/26/25 10:58:19 PM : INFO : API.storage : S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
-11/26/25 10:58:19 PM : INFO : root : Loaded templates from: /home/ec2-user/117-Phase-2-CLI/templates
-11/26/25 10:58:19 PM : INFO : API.dynamo : Config loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json
-11/26/25 10:58:19 PM : INFO : API.dynamo : DynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2
-11/26/25 10:58:19 PM : INFO : handlers.registry_handler : ✓ DynamoDB initialized successfully
-11/26/25 10:58:18 PM : INFO : API.storage : [36mConfig loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json[0m
-11/26/25 10:58:18 PM : INFO : botocore.credentials : [36mFound credentials from IAM Role: TrustworthyRegistryEC2Role[0m
-11/26/25 10:58:19 PM : INFO : API.storage : [36mS3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2[0m
-11/26/25 10:58:19 PM : INFO : root : [36mS3 Storage initialized successfully[0m
-11/26/25 10:58:19 PM : INFO : API.storage : [36mConfig loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json[0m
-11/26/25 10:58:19 PM : INFO : API.storage : [36mS3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2[0m
-11/26/25 10:58:19 PM : INFO : root : [36mLoaded templates from: /home/ec2-user/117-Phase-2-CLI/templates[0m
-11/26/25 10:58:19 PM : INFO : API.dynamo : [36mConfig loaded from: /home/ec2-user/117-Phase-2-CLI/.aws/config.json[0m
-11/26/25 10:58:19 PM : INFO : API.dynamo : [36mDynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2[0m
-11/26/25 10:58:19 PM : INFO : handlers.registry_handler : [36m✓ DynamoDB initialized successfully[0m
-✓ Using DynamoDB for persistent storage
-11/26/25 10:58:19 PM : INFO : API.dynamo : Table TrustworthyModelRegDB already exists
-11/26/25 10:58:19 PM : INFO : handlers.registry_handler : Registry initialized successfully
-11/26/25 10:58:19 PM : INFO : root : Registry initialized successfully
+11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/revision/main "HTTP/1.1 200 OK"
+11/26/25 11:52:39 PM : INFO : root : [36m===== ARTIFACTS QUERY RESULTS =====[0m
+11/26/25 11:52:39 PM : INFO : root : [36mQuery: [{'name': '*', 'types': []}][0m
+11/26/25 11:52:39 PM : INFO : root : [36mReturning 0 results from 0 total artifacts[0m
+11/26/25 11:52:39 PM : INFO : root : [36m=====================================[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[DATA] Response: 0 results[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[RESPONSE] POST /artifacts -> 200[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[REQUEST] POST /artifact/model[0m
+11/26/25 11:52:39 PM : WARNING : root : [33mDEBUG /artifact/{{type}}: No auth header - allowing for baseline[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[DATA] Creating artifact type=model, body keys: ['name', 'url'][0m
+11/26/25 11:52:39 PM : INFO : root : [36mCreating artifact: name=bert-base-uncased, type=model, ID=9430210313[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[SIZE CALC] Starting size calculation for model: https://huggingface.co/google-bert/bert-base-uncased[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[SIZE CALC] Detected HuggingFace URL: https://huggingface.co/google-bert/bert-base-uncased[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[SIZE CALC] Extracted repo_id: google-bert/bert-base-uncased, is_dataset: False[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[SIZE CALC] Fetching from: https://huggingface.co/google-bert/bert-base-uncased/tree/main[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[SIZE CALC WEB SUCCESS] google-bert/bert-base-uncased: 3532.8 MB (scraped from website)[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[SIZE] Artifact bert-base-uncased (model) size: 3532.8 MB[0m
+11/26/25 11:52:39 PM : INFO : root : [36m[S3] Processing bert-base-uncased for S3 storage[0m
+11/26/25 11:52:39 PM : INFO : artifact_downloader : [36m[S3 CHECK] Artifact bert-base-uncased not found in S3[0m
+11/26/25 11:52:39 PM : INFO : artifact_downloader : [36m[DOWNLOAD] Starting REAL download for bert-base-uncased from https://huggingface.co/google-bert/bert-base-uncased[0m
+11/26/25 11:52:39 PM : INFO : artifact_downloader : [36m[DOWNLOAD] Using temp directory: /home/ec2-user/temp/artifact_model_4901poh5[0m
+11/26/25 11:52:39 PM : INFO : artifact_downloader : [36m[HF DOWNLOAD] Downloading model google-bert/bert-base-uncased via huggingface_hub[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/revision/main "HTTP/1.1 200 OK"[0m
+Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/.gitattributes "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/.gitattributes "HTTP/1.1 200 OK"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/LICENSE "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/README.md "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/LICENSE "HTTP/1.1 200 OK"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/config.json "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/README.md "HTTP/1.1 200 OK"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/coreml/fill-mask/float32_model.mlpackage/Data/com.apple.CoreML/model.mlmodel "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/coreml/fill-mask/float32_model.mlpackage/Data/com.apple.CoreML/weights/weight.bin "HTTP/1.1 302 Found"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/config.json "HTTP/1.1 200 OK"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/coreml%2Ffill-mask%2Ffloat32_model.mlpackage%2FData%2Fcom.apple.CoreML%2Fmodel.mlmodel "HTTP/1.1 200 OK"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/coreml/fill-mask/float32_model.mlpackage/Manifest.json "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/.gitattributes "HTTP/1.1 200 OK"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/LICENSE "HTTP/1.1 200 OK"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/config.json "HTTP/1.1 200 OK"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/coreml%2Ffill-mask%2Ffloat32_model.mlpackage%2FManifest.json "HTTP/1.1 200 OK"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/README.md "HTTP/1.1 200 OK"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/flax_model.msgpack "HTTP/1.1 302 Found"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/coreml%2Ffill-mask%2Ffloat32_model.mlpackage%2FData%2Fcom.apple.CoreML%2Fmodel.mlmodel "HTTP/1.1 200 OK"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/model.onnx "HTTP/1.1 302 Found"
+                                                         Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/coreml%2Ffill-mask%2Ffloat32_model.mlpackage%2FManifest.json "HTTP/1.1 200 OK"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/model.safetensors "HTTP/1.1 302 Found"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/pytorch_model.bin "HTTP/1.1 302 Found"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer.json "HTTP/1.1 307 Temporary Redirect"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/rust_model.ot "HTTP/1.1 302 Found"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/tf_model.h5 "HTTP/1.1 302 Found"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer.json "HTTP/1.1 200 OK"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer.json "HTTP/1.1 200 OK"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer_config.json "HTTP/1.1 200 OK"
+                                                                 11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/.gitattributes "HTTP/1.1 307 Temporary Redirect"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/.gitattributes "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/LICENSE "HTTP/1.1 307 Temporary Redirect"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/README.md "HTTP/1.1 307 Temporary Redirect"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/LICENSE "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/config.json "HTTP/1.1 307 Temporary Redirect"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/README.md "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/coreml/fill-mask/float32_model.mlpackage/Data/com.apple.CoreML/model.mlmodel "HTTP/1.1 307 Temporary Redirect"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/coreml/fill-mask/float32_model.mlpackage/Data/com.apple.CoreML/weights/weight.bin "HTTP/1.1 302 Found"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/config.json "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/coreml%2Ffill-mask%2Ffloat32_model.mlpackage%2FData%2Fcom.apple.CoreML%2Fmodel.mlmodel "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/coreml/fill-mask/float32_model.mlpackage/Manifest.json "HTTP/1.1 307 Temporary Redirect"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/.gitattributes "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/LICENSE "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/config.json "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/coreml%2Ffill-mask%2Ffloat32_model.mlpackage%2FManifest.json "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/README.md "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/flax_model.msgpack "HTTP/1.1 302 Found"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/coreml%2Ffill-mask%2Ffloat32_model.mlpackage%2FData%2Fcom.apple.CoreML%2Fmodel.mlmodel "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/model.onnx "HTTP/1.1 302 Found"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/coreml%2Ffill-mask%2Ffloat32_model.mlpackage%2FManifest.json "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/model.safetensors "HTTP/1.1 302 Found"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/pytorch_model.bin "HTTP/1.1 302 Found"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer.json "HTTP/1.1 307 Temporary Redirect"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/rust_model.ot "HTTP/1.1 302 Found"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/tf_model.h5 "HTTP/1.1 302 Found"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer.json "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer.json "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/google-bert/bert-base-uncased/xet-read-token/86b5e0934494bd15c9632b12f734a8a67f723594 "HTTP/1.1 200 OK"[0m
+11/26/25 11:52:40 PM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"[0m
+Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer_config.json "HTTP/1.1 200 OK"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/vocab.txt "HTTP/1.1 307 Temporary Redirect"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/vocab.txt "HTTP/1.1 200 OK"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]11/26/25 11:52:40 PM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google-bert/bert-base-uncased/86b5e0934494bd15c9632b12f734a8a67f723594/vocab.txt "HTTP/1.1 200 OK"
+                                                                 Fetching 16 files:  12%|█▎        | 2/16 [00:00<00:00, 18.95it/s]Fetching 16 files:  12%|█▎        | 2/16 [00:11<00:00, 18.95it/s]Fetching 16 files:  38%|███▊      | 6/16 [01:23<02:33, 15.36s/it]Fetching 16 files:  50%|█████     | 8/16 [01:26<01:25, 10.70s/it]Fetching 16 files: 100%|██████████| 16/16 [01:26<00:00,  5.42s/it]
+11/26/25 11:54:06 PM : INFO : artifact_downloader : [HF DOWNLOAD] Successfully downloaded google-bert/bert-base-uncased
+11/26/25 11:54:07 PM : INFO : artifact_downloader : [DOWNLOAD] Creating zip archive for bert-base-uncased
