@@ -1991,8 +1991,8 @@ def delete_artifact(artifact_type: str, artifact_id: str, request: Request):
             actual_type = _get_artifact_type(a)
             if actual_type != artifact_type:
                 raise HTTPException(status_code=404, detail="Artifact does not exist.")
-            # Delete the artifact
-            registry_handler.delete_artifact(a["name"])
+            artifact_id_to_delete = a.get("artifact_id") or a["name"]
+            registry_handler.delete_artifact(artifact_id_to_delete)
             logger.info(f"Deleted artifact: {a['name']} (ID: {aid})")
             return Response(status_code=200)
     raise HTTPException(status_code=404, detail="Artifact does not exist.")
