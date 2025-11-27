@@ -2009,34 +2009,45 @@ async def update_artifact(artifact_type: str, artifact_id: str, request: Request
 
 @app.delete("/artifacts/{artifact_type}/{artifact_id}")
 def delete_artifact(artifact_type: str, artifact_id: str, request: Request):
-    """NON-BASELINE: Delete an artifact."""
+    """
+    Delete an artifact by ID (spec-correct, matches registry + GET logic).
+    """
+
+    # Baseline: allow missing auth
     auth_header = request.headers.get("X-Authorization")
-    if not auth_header:
-        logger.warning("No auth header - allowing for baseline")
-    else:
+    if auth_header:
         require_auth(auth_header)
+
+    # Validate type
     if artifact_type not in ["model", "dataset", "code"]:
         raise HTTPException(
             status_code=400,
             detail="There is missing field(s) in the artifact_type or artifact_id or invalid",
         )
-    try:
-        aid = int(artifact_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail="There is missing field(s) in the artifact_type or artifact_id or invalid",
-        )
+
+    # Spec: IDs are strings
+    requested_id = artifact_id
+
+    # Pull artifacts from registry
     artifacts = registry_handler.list_artifacts()
+
     for a in artifacts:
-        if gen_id(a["name"]) == aid:
-            actual_type = a.get("type", "model")
-            if actual_type != artifact_type:
+        # Correct ID generator from your registry
+        stored_id = registry_handler.generate_artifact_id(a["name"])
+
+        if stored_id == requested_id:
+
+            # Must match type
+            if a["artifact_type"] != artifact_type:
                 raise HTTPException(status_code=404, detail="Artifact does not exist.")
-            # Delete the artifact
+
+            # Delete by NAME (the real key)
             registry_handler.delete_artifact(a["name"])
-            logger.info(f"Deleted artifact: {a['name']} (ID: {aid})")
+            logger.info(f"Deleted artifact: {a['name']} (ID: {requested_id})")
+
             return Response(status_code=200)
+
+    # If no match found:
     raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
 
