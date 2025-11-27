@@ -41,11 +41,6 @@ SIZE_CACHE = {}
 # Cost calculation cache - speeds up repeated cost requests
 COST_CACHE = {}
 
-
-# Track recently deleted artifacts to handle DynamoDB eventual consistency
-# DynamoDB Scan operations use eventually consistent reads by default,
-# so deleted items may still appear briefly in list_artifacts()
-DELETED_ARTIFACTS = set()
 # Garbage collection tuning
 gc.set_threshold(700, 10, 10)
 
@@ -407,6 +402,59 @@ def _extract_name_from_url(url: str) -> str:
 
     # Fallback: return last segment
     return parts[-1] if parts else "unknown"
+
+
+def _fetch_huggingface_config(url: str) -> dict:
+    """
+    Fetch config.json from HuggingFace model URL.
+    Returns dict with config data, or empty dict if not found.
+    """
+    import requests
+
+    try:
+        if "huggingface.co" not in url:
+            return {}
+
+        # Extract repo ID from URL
+        # https://huggingface.co/org/model -> org/model
+        parts = url.replace("https://", "").replace("http://", "").split("/")
+
+        # Find huggingface.co index
+        try:
+            hf_index = parts.index("huggingface.co")
+        except ValueError:
+            return {}
+
+        # Get org/model parts after huggingface.co
+        if len(parts) > hf_index + 2:
+            org = parts[hf_index + 1]
+            model = parts[hf_index + 2]
+            repo_id = f"{org}/{model}"
+        elif len(parts) > hf_index + 1:
+            # Single name model
+            repo_id = parts[hf_index + 1]
+        else:
+            return {}
+
+        # Build config.json URL
+        config_url = f"https://huggingface.co/{repo_id}/raw/main/config.json"
+
+        logger.info(f"[LINEAGE] Fetching config from {config_url}")
+        response = requests.get(config_url, timeout=10)
+
+        if response.status_code == 200:
+            config_data = response.json()
+            logger.info(f"[LINEAGE] Successfully fetched config for {repo_id}")
+            return config_data
+        else:
+            logger.warning(
+                f"[LINEAGE] Config not found at {config_url}: {response.status_code}"
+            )
+            return {}
+
+    except Exception as e:
+        logger.warning(f"[LINEAGE] Error fetching config from {url}: {e}")
+        return {}
 
 
 def _verify_artifact_exists(artifact_id, artifacts):
@@ -1160,9 +1208,9 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
 @app.get("/artifact/model/{artifact_id}/lineage")
 def get_lineage(artifact_id: str, request: Request):
     """
-    Retrieve lineage graph for a model
+    Retrieve lineage graph for a model by parsing HuggingFace config.json
 
-    Returns artifacts and edges
+    Returns artifacts and edges showing dependencies
     """
     auth_header = request.headers.get("X-Authorization")
 
@@ -1202,112 +1250,132 @@ def get_lineage(artifact_id: str, request: Request):
     model_node = {
         "artifact_id": aid,
         "name": model_artifact["name"],
-        "source": "root_model",
+        "source": "config_json",  # Changed from "root_model" to match spec
     }
     nodes.append(model_node)
     seen_ids.add(aid)
 
-    # Extract metadata for lineage information
-    try:
-        metadata = json.loads(model_artifact.get("metadata_json", "{}"))
-    except json.JSONDecodeError:
-        metadata = {}
+    # Get model URL and fetch HuggingFace config.json
+    model_url = model_artifact.get("url", "")
+    config_data = _fetch_huggingface_config(model_url)
 
-    # Add dataset dependencies
-    dataset_url = model_artifact.get("dataset_url", "unknown")
-    if dataset_url and dataset_url != "unknown":
-        dataset_name = _extract_name_from_url(dataset_url)
-        dataset_id = gen_id(dataset_name)
+    if config_data:
+        logger.info(f"[LINEAGE] Found config data for {model_artifact['name']}")
+        logger.info(f"[LINEAGE] Config keys: {list(config_data.keys())}")
 
-        if dataset_id not in seen_ids:
-            nodes.append(
-                {
-                    "artifact_id": dataset_id,
-                    "name": dataset_name,
-                    "source": "training_dataset",
-                }
-            )
-            edges.append(
-                {
-                    "from_node_artifact_id": dataset_id,
-                    "to_node_artifact_id": aid,
-                    "relationship": "trained_on",
-                }
-            )
-            seen_ids.add(dataset_id)
+        # Extract base model information from config
+        # HuggingFace config.json can have various fields for base models:
+        # - _name_or_path
+        # - base_model_name_or_path
+        # - model_type (for architecture)
 
-    # Add code repository dependencies
-    code_url = model_artifact.get("code_url", "unknown")
-    if code_url and code_url != "unknown":
-        code_name = _extract_name_from_url(code_url)
-        code_id = gen_id(code_name)
+        base_model_name = None
 
-        if code_id not in seen_ids:
-            nodes.append(
-                {
-                    "artifact_id": code_id,
-                    "name": code_name,
-                    "source": "implementation_code",
-                }
-            )
-            edges.append(
-                {
-                    "from_node_artifact_id": code_id,
-                    "to_node_artifact_id": aid,
-                    "relationship": "implemented_by",
-                }
-            )
-            seen_ids.add(code_id)
+        # Try common base model fields
+        for field in ["_name_or_path", "base_model_name_or_path", "base_model"]:
+            if field in config_data:
+                base_model_name = config_data[field]
+                logger.info(f"[LINEAGE] Found base model in {field}: {base_model_name}")
+                break
 
-    # Add parent model dependencies
-    parent_model = metadata.get("parent_model")
-    if parent_model:
-        parent_id = gen_id(parent_model)
+        # Add base model node if found
+        if base_model_name and base_model_name != model_artifact["name"]:
+            # Clean up the base model name (remove paths, just get model name)
+            if "/" in base_model_name:
+                # Could be org/model format or a file path
+                if base_model_name.startswith("/") or base_model_name.startswith("./"):
+                    # File path - extract just the model name
+                    base_model_name = base_model_name.split("/")[-1]
+                # else it's likely org/model format, keep as is
 
-        if parent_id not in seen_ids:
-            nodes.append(
-                {
-                    "artifact_id": parent_id,
-                    "name": parent_model,
-                    "source": "parent_model",
-                }
-            )
-            edges.append(
-                {
-                    "from_node_artifact_id": parent_id,
-                    "to_node_artifact_id": aid,
-                    "relationship": "fine_tuned_from",
-                }
-            )
-            seen_ids.add(parent_id)
+            base_model_id = gen_id(base_model_name)
 
-    # Add evaluation datasets from metadata
-    eval_datasets = metadata.get("evaluation_datasets", [])
-    if isinstance(eval_datasets, list):
-        for eval_dataset_name in eval_datasets:
-            eval_id = gen_id(eval_dataset_name)
-
-            if eval_id not in seen_ids:
+            if base_model_id not in seen_ids:
                 nodes.append(
                     {
-                        "artifact_id": eval_id,
-                        "name": eval_dataset_name,
-                        "source": "evaluation_dataset",
+                        "artifact_id": base_model_id,
+                        "name": base_model_name,
+                        "source": "config_json",
                     }
                 )
                 edges.append(
                     {
-                        "from_node_artifact_id": eval_id,
+                        "from_node_artifact_id": base_model_id,
                         "to_node_artifact_id": aid,
-                        "relationship": "evaluated_on",
+                        "relationship": "base_model",
                     }
                 )
-                seen_ids.add(eval_id)
+                seen_ids.add(base_model_id)
+                logger.info(f"[LINEAGE] Added base model: {base_model_name}")
 
-    # Validate graph structure
-    if len(nodes) == 1 and len(edges) == 0:
-        # No dependencies found
-        logger.warning(f"Model {aid} has no dependencies in lineage graph")
+        # Look for dataset information in config
+        # Some configs have "dataset_name" or "datasets" field
+        dataset_name = None
+        if "dataset_name" in config_data:
+            dataset_name = config_data["dataset_name"]
+        elif "datasets" in config_data and isinstance(config_data["datasets"], list):
+            if len(config_data["datasets"]) > 0:
+                dataset_name = config_data["datasets"][0]
+
+        if dataset_name:
+            dataset_id = gen_id(dataset_name)
+            if dataset_id not in seen_ids:
+                nodes.append(
+                    {
+                        "artifact_id": dataset_id,
+                        "name": dataset_name,
+                        "source": "config_json",
+                    }
+                )
+                edges.append(
+                    {
+                        "from_node_artifact_id": dataset_id,
+                        "to_node_artifact_id": aid,
+                        "relationship": "trained_on",
+                    }
+                )
+                seen_ids.add(dataset_id)
+                logger.info(f"[LINEAGE] Added dataset: {dataset_name}")
+    else:
+        logger.warning(f"[LINEAGE] No config.json found for {model_artifact['name']}")
+
+        # Fallback to metadata parsing if config.json not available
+        try:
+            metadata = json.loads(model_artifact.get("metadata_json", "{}"))
+
+            # Check for parent model in metadata
+            parent_model = metadata.get("parent_model")
+            if parent_model:
+                parent_id = gen_id(parent_model)
+                if parent_id not in seen_ids:
+                    nodes.append(
+                        {
+                            "artifact_id": parent_id,
+                            "name": parent_model,
+                            "source": "metadata",
+                        }
+                    )
+                    edges.append(
+                        {
+                            "from_node_artifact_id": parent_id,
+                            "to_node_artifact_id": aid,
+                            "relationship": "base_model",
+                        }
+                    )
+                    seen_ids.add(parent_id)
+        except json.JSONDecodeError:
+            pass
+
+    # Log final graph
+    logger.info(f"[LINEAGE] Final graph: {len(nodes)} nodes, {len(edges)} edges")
+    for node in nodes:
+        logger.info(
+            f"[LINEAGE]   Node: {node['name']} (ID: {node['artifact_id']}, source: {node['source']})"
+        )
+    for edge in edges:
+        logger.info(
+            f"[LINEAGE]   Edge: {edge['from_node_artifact_id']} -> {edge['to_node_artifact_id']} ({edge['relationship']})"
+        )
 
     return {"nodes": nodes, "edges": edges}
 
@@ -1691,14 +1759,8 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
             s3_key, download_url = process_artifact_for_s3(
                 s3_storage, url, original_name, artifact_type
             )
-            logger.info(
-                f"[S3 DEBUG] Returned s3_key={s3_key}, download_url={download_url}"
-            )
             if s3_key and download_url:
                 logger.info(f"[S3] Successfully stored {original_name} in S3")
-                logger.info(
-                    f"[S3] Download URL: {download_url[:100]}..."
-                )  # Log first 100 chars
             else:
                 logger.warning(
                     f"[S3] Failed to store {original_name} in S3, continuing without download_url"
@@ -1744,18 +1806,8 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
     }
 
     # Add download_url if available
-    logger.info(f"[RESPONSE DEBUG] download_url variable: {download_url}")
     if download_url:
-        logger.info(
-            f"[RESPONSE DEBUG] Adding download_url to response: {download_url[:100]}..."
-        )
         resp["data"]["download_url"] = download_url
-    else:
-        logger.warning("[RESPONSE DEBUG] No download_url available to add to response")
-
-    logger.info(
-        f"[RESPONSE DEBUG] Final response data keys: {list(resp['data'].keys())}"
-    )
 
     return JSONResponse(status_code=201, content=resp)
 
@@ -1922,11 +1974,6 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):  # noq
     artifact = None
 
     for a in artifacts:
-        # Skip if artifact was recently deleted (handle DynamoDB eventual consistency)
-        if a["name"] in DELETED_ARTIFACTS:
-            logger.info(f"Skipping recently deleted artifact: {a['name']}")
-            continue
-
         calculated_id = gen_id(a["name"])
 
         if calculated_id == aid:
@@ -1952,18 +1999,8 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):  # noq
         else:  # model
             url = artifact.get("url", artifact.get("code_url", "unknown"))
 
-        # Get download_url from metadata if available
-        download_url = None
-        try:
-            import json
-
-            metadata = json.loads(artifact.get("metadata_json", "{}"))
-            download_url = metadata.get("download_url")
-        except Exception as e:
-            logger.warning(f"Failed to parse metadata for download_url: {e}")
-
         logger.info(f"SUCCESS: Returning {artifact['name']}")
-        response_data = {
+        return {
             "metadata": {
                 "name": artifact["name"],
                 "id": str(aid),
@@ -1971,13 +2008,6 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):  # noq
             },
             "data": {"url": url},
         }
-
-        # Add download_url if available
-        if download_url:
-            response_data["data"]["download_url"] = download_url
-            logger.info(f"Added download_url to GET response: {download_url[:100]}...")
-
-        return response_data
 
     logger.error(f"NOT FOUND: ID {aid}, type {artifact_type}")
     raise HTTPException(status_code=404, detail="Artifact does not exist.")
@@ -2063,23 +2093,21 @@ def delete_artifact(artifact_type: str, artifact_id: str, request: Request):
             status_code=400,
             detail="There is missing field(s) in the artifact_type or artifact_id or invalid",
         )
-
-    # Invalid ID format MUST return 404 per autograder expectations
     try:
         aid = int(artifact_id)
     except ValueError:
-        logger.error(f"Invalid artifact ID format: {artifact_id}")
-        raise HTTPException(status_code=404, detail="Artifact does not exist.")
+        raise HTTPException(
+            status_code=400,
+            detail="There is missing field(s) in the artifact_type or artifact_id or invalid",
+        )
     artifacts = registry_handler.list_artifacts()
     for a in artifacts:
         if gen_id(a["name"]) == aid:
-            actual_type = _get_artifact_type(a)
+            actual_type = a.get("type", "model")
             if actual_type != artifact_type:
                 raise HTTPException(status_code=404, detail="Artifact does not exist.")
             # Delete the artifact
             registry_handler.delete_artifact(a["name"])
-            # Track deletion to handle DynamoDB eventual consistency
-            DELETED_ARTIFACTS.add(a["name"])
             logger.info(f"Deleted artifact: {a['name']} (ID: {aid})")
             return Response(status_code=200)
     raise HTTPException(status_code=404, detail="Artifact does not exist.")
@@ -2104,8 +2132,6 @@ def reset_registry(request: Request):
     # so subsequent ingests can reuse existing files (much faster)
     # Per instructor guidance: "keep models in S3 after a reset"
     registry_handler.reset_registry()
-    # Clear deleted artifacts tracking set on reset
-    DELETED_ARTIFACTS.clear()
     gc.collect()
     logger.info("[RESET] Database cleared (S3 artifacts preserved for caching)")
     return {"status": "system reset successful"}
