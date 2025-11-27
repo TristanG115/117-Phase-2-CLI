@@ -1582,50 +1582,95 @@ def get_artifact_lineage(id: str, request: Request):
                 f"[LINEAGE] Extracted from README: {json.dumps(lineage_data, indent=2)}"
             )
         else:
-            # Try extracting from metadata structure itself
-            logger.info(
-                "[LINEAGE] No README, attempting to extract from metadata structure"
-            )
-            logger.info(
-                f"[LINEAGE] Checking metadata fields: base_model={metadata.get('base_model')}, base_model_name={metadata.get('base_model_name')}"
-            )
-
-            lineage_data = {
-                "datasets": [],
-                "code_repos": [],
-                "parent_models": [],
-                "evaluation_datasets": [],
-            }
-
-            # Check common metadata fields
-            if "base_model" in metadata:
-                logger.info(f"[LINEAGE] Found base_model: {metadata['base_model']}")
-                lineage_data["parent_models"].append(metadata["base_model"])
-            if "base_model_name" in metadata:
-                logger.info(
-                    f"[LINEAGE] Found base_model_name: {metadata['base_model_name']}"
-                )
-                lineage_data["parent_models"].append(metadata["base_model_name"])
-
-            # Extract from artifact's code_url and dataset_url fields (stored during ingestion)
+            # No README in storage - try to fetch from HuggingFace if code_url is a HF URL
             code_url = target_artifact.get("code_url", "")
-            dataset_url = target_artifact.get("dataset_url", "")
 
-            logger.info(
-                f"[LINEAGE] Artifact code_url: {code_url}, dataset_url: {dataset_url}"
-            )
+            if "huggingface.co" in code_url:
+                logger.info(
+                    f"[LINEAGE] Attempting to fetch HuggingFace model card from {code_url}"
+                )
+                try:
+                    # Fetch the README from HuggingFace
+                    import requests
 
-            if code_url and code_url != "unknown":
-                lineage_data["code_repos"].append(code_url)
-                logger.info(f"[LINEAGE] Added code repo from artifact: {code_url}")
+                    # Convert model URL to raw README URL
+                    # From: https://huggingface.co/microsoft/resnet-50
+                    # To: https://huggingface.co/microsoft/resnet-50/raw/main/README.md
+                    readme_url = f"{code_url.rstrip('/')}/raw/main/README.md"
+                    logger.info(f"[LINEAGE] Fetching README from: {readme_url}")
 
-            if dataset_url and dataset_url != "unknown":
-                lineage_data["datasets"].append(dataset_url)
-                logger.info(f"[LINEAGE] Added dataset from artifact: {dataset_url}")
+                    response = requests.get(readme_url, timeout=10)
+                    if response.status_code == 200:
+                        readme_content = response.text
+                        logger.info(
+                            f"[LINEAGE] Successfully fetched README ({len(readme_content)} chars)"
+                        )
+                        lineage_data = extractor.extract_lineage(
+                            readme_content, target_artifact["name"]
+                        )
+                        lineage_data = extractor.normalize_urls(lineage_data)
+                        logger.info(
+                            f"[LINEAGE] Extracted from fetched README: {json.dumps(lineage_data, indent=2)}"
+                        )
+                    else:
+                        logger.warning(
+                            f"[LINEAGE] Failed to fetch README: {response.status_code}"
+                        )
+                        raise Exception("README fetch failed")
+                except Exception as e:
+                    logger.warning(f"[LINEAGE] Could not fetch HuggingFace README: {e}")
+                    # Fall back to metadata extraction
+                    readme_content = ""
+                    lineage_data = None
+            else:
+                lineage_data = None
 
-            logger.info(
-                f"[LINEAGE] Extracted from metadata: {json.dumps(lineage_data, indent=2)}"
-            )
+            # If we still don't have lineage data, extract from metadata structure
+            # If we still don't have lineage data, extract from metadata structure
+            if not lineage_data:
+                # Try extracting from metadata structure itself
+                logger.info(
+                    "[LINEAGE] No README, attempting to extract from metadata structure"
+                )
+                logger.info(
+                    f"[LINEAGE] Checking metadata fields: base_model={metadata.get('base_model')}, base_model_name={metadata.get('base_model_name')}"
+                )
+
+                lineage_data = {
+                    "datasets": [],
+                    "code_repos": [],
+                    "parent_models": [],
+                    "evaluation_datasets": [],
+                }
+
+                # Check common metadata fields
+                if "base_model" in metadata:
+                    logger.info(f"[LINEAGE] Found base_model: {metadata['base_model']}")
+                    lineage_data["parent_models"].append(metadata["base_model"])
+                if "base_model_name" in metadata:
+                    logger.info(
+                        f"[LINEAGE] Found base_model_name: {metadata['base_model_name']}"
+                    )
+                    lineage_data["parent_models"].append(metadata["base_model_name"])
+
+                # Extract from artifact's code_url and dataset_url fields (stored during ingestion)
+                dataset_url = target_artifact.get("dataset_url", "")
+
+                logger.info(
+                    f"[LINEAGE] Artifact code_url: {code_url}, dataset_url: {dataset_url}"
+                )
+
+                if code_url and code_url != "unknown":
+                    lineage_data["code_repos"].append(code_url)
+                    logger.info(f"[LINEAGE] Added code repo from artifact: {code_url}")
+
+                if dataset_url and dataset_url != "unknown":
+                    lineage_data["datasets"].append(dataset_url)
+                    logger.info(f"[LINEAGE] Added dataset from artifact: {dataset_url}")
+
+                logger.info(
+                    f"[LINEAGE] Extracted from metadata: {json.dumps(lineage_data, indent=2)}"
+                )
 
         # Also check metadata for additional information
         if "datasets" in metadata:
