@@ -1969,8 +1969,20 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):  # noq
 
             metadata = json.loads(artifact.get("metadata_json", "{}"))
             download_url = metadata.get("download_url")
+
+            # If no download_url in metadata, try to generate one from S3
+            if not download_url and S3_AVAILABLE and s3_storage:
+                from artifact_downloader import get_artifact_download_url
+
+                download_url = get_artifact_download_url(
+                    s3_storage, artifact["name"], artifact_type
+                )
+                if download_url:
+                    logger.info(
+                        f"Generated download_url from S3 for {artifact['name']}"
+                    )
         except Exception as e:
-            logger.warning(f"Failed to parse metadata for download_url: {e}")
+            logger.warning(f"Failed to get download_url: {e}")
 
         logger.info(f"SUCCESS: Returning {artifact['name']}")
         response_data = {
