@@ -13,6 +13,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from handlers import registry_handler
+from lineage import get_lineage_extractor
 from model_evaluator import ModelEvaluator
 
 # Import S3 storage and artifact downloader
@@ -1209,15 +1210,24 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
 @app.get("/artifact/model/{artifact_id}/lineage")
 def get_lineage(artifact_id: str, request: Request):
     """
-    Retrieve lineage graph for a model by parsing HuggingFace config.json
+    Retrieve the lineage graph for this artifact using lineage.py extractor.
+    BASELINE behavior:
+    - 200: Return lineage graph
+    - 400: Metadata missing/malformed
+    - 403: Invalid/missing auth
+    - 404: Artifact does not exist
     """
+
+    # ===== AUTH =====
     auth_header = request.headers.get("X-Authorization")
-
     if not auth_header:
-        logger.warning("No auth header - allowing for baseline")
-    else:
-        require_auth(auth_header)
+        raise HTTPException(
+            status_code=403,
+            detail="Authentication failed due to invalid or missing AuthenticationToken.",
+        )
+    require_auth(auth_header)
 
+    # ===== VALIDATE ID =====
     try:
         aid = int(artifact_id)
     except ValueError:
@@ -1226,7 +1236,7 @@ def get_lineage(artifact_id: str, request: Request):
             detail="The lineage graph cannot be computed because the artifact metadata is missing or malformed.",
         )
 
-    # Find the model artifact
+    # ===== FIND MODEL ARTIFACT =====
     artifacts = registry_handler.list_artifacts()
     model_artifact = None
 
@@ -1240,62 +1250,91 @@ def get_lineage(artifact_id: str, request: Request):
     if not model_artifact:
         raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
-    # Build lineage graph
+    # ===== LOAD METADATA / README =====
+    try:
+        metadata = json.loads(model_artifact.get("metadata_json", "{}"))
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="The lineage graph cannot be computed because the artifact metadata is missing or malformed.",
+        )
+
+    readme_text = metadata.get("readme")
+    if not readme_text or len(readme_text.strip()) < 10:
+        raise HTTPException(
+            status_code=400,
+            detail="The lineage graph cannot be computed because the artifact metadata is missing or malformed.",
+        )
+
+    # ===== RUN LINEAGE EXTRACTOR =====
+    extractor = get_lineage_extractor()
+    model_name = model_artifact["name"]
+
+    try:
+        lineage_data = extractor.extract_lineage(readme_text, model_name)
+        lineage_data = extractor.normalize_urls(lineage_data)
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="The lineage graph cannot be computed because the artifact metadata is missing or malformed.",
+        )
+
+    # ===== BUILD GRAPH =====
     nodes = []
     edges = []
     seen_ids = set()
 
-    # Add the model itself as the root node
-    model_node = {
-        "artifact_id": aid,
-        "name": model_artifact["name"],
-        "source": "config_json",
-    }
-    nodes.append(model_node)
+    # Add root model node
+    nodes.append(
+        {
+            "artifact_id": aid,
+            "name": model_name,
+            "source": "readme",
+        }
+    )
     seen_ids.add(aid)
 
-    # Get model URL and fetch HuggingFace config.json
-    model_url = model_artifact.get("url", "")
-    config_data = _fetch_huggingface_config(model_url)
+    # ---- Helper for adding nodes + edges ----
+    def add_node_and_edge(child_name: str, relationship: str):
+        if not child_name:
+            return
 
-    if config_data:
-        logger.info(f"[LINEAGE] Found config for {model_artifact['name']}")
+        child_id = gen_id(child_name)
+        if child_id not in seen_ids:
+            nodes.append(
+                {
+                    "artifact_id": child_id,
+                    "name": child_name,
+                    "source": "readme",
+                }
+            )
+            seen_ids.add(child_id)
 
-        # Extract base model information
-        base_model_name = None
-        for field in ["_name_or_path", "base_model_name_or_path", "base_model"]:
-            if field in config_data:
-                base_model_name = config_data[field]
-                logger.info(f"[LINEAGE] Found base model in {field}: {base_model_name}")
-                break
+        edges.append(
+            {
+                "from_node_artifact_id": child_id,
+                "to_node_artifact_id": aid,
+                "relationship": relationship,
+            }
+        )
 
-        # Add base model node if found
-        if base_model_name and base_model_name != model_artifact["name"]:
-            if "/" in base_model_name:
-                if base_model_name.startswith("/") or base_model_name.startswith("./"):
-                    base_model_name = base_model_name.split("/")[-1]
+    # Parent models
+    for parent in lineage_data.get("parent_models", []):
+        add_node_and_edge(parent, "base_model")
 
-            base_model_id = gen_id(base_model_name)
+    # Training datasets
+    for ds in lineage_data.get("datasets", []):
+        add_node_and_edge(ds, "training_dataset")
 
-            if base_model_id not in seen_ids:
-                nodes.append(
-                    {
-                        "artifact_id": base_model_id,
-                        "name": base_model_name,
-                        "source": "config_json",
-                    }
-                )
-                edges.append(
-                    {
-                        "from_node_artifact_id": base_model_id,
-                        "to_node_artifact_id": aid,
-                        "relationship": "base_model",
-                    }
-                )
-                seen_ids.add(base_model_id)
+    # Code repos
+    for repo in lineage_data.get("code_repos", []):
+        add_node_and_edge(repo, "code_repository")
 
-    logger.info(f"[LINEAGE] Final graph: {len(nodes)} nodes, {len(edges)} edges")
+    # Evaluation datasets
+    for ed in lineage_data.get("evaluation_datasets", []):
+        add_node_and_edge(ed, "evaluation_dataset")
 
+    # ===== RETURN GRAPH =====
     return {"nodes": nodes, "edges": edges}
 
 
