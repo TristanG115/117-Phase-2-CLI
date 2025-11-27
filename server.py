@@ -2106,6 +2106,225 @@ def delete_artifact(artifact_type: str, artifact_id: str, request: Request):
     raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
 
+@app.get("/artifact/model/{id}/lineage")
+def get_artifact_lineage(id: str, request: Request):
+    """
+    BASELINE: Retrieve the lineage graph for a model artifact.
+
+    Returns a graph with nodes (artifacts) and edges (relationships).
+    """
+    auth_header = request.headers.get("X-Authorization")
+    if not auth_header:
+        logger.warning(
+            f"Lineage request for ID {id} - No auth header (allowing for baseline)"
+        )
+    else:
+        if not require_auth(auth_header):
+            logger.error(f"Lineage request for ID {id} - Authentication failed")
+            raise HTTPException(
+                status_code=403,
+                detail="Authentication failed due to invalid or missing AuthenticationToken.",
+            )
+
+    # Validate artifact ID format
+    try:
+        artifact_id = int(id)
+    except ValueError:
+        logger.error(f"Lineage request - Invalid ID format: {id}")
+        raise HTTPException(status_code=404, detail="Artifact does not exist.")
+
+    logger.info(f"[LINEAGE] Retrieving lineage for artifact ID: {artifact_id}")
+
+    # Find the artifact
+    artifacts = registry_handler.list_artifacts()
+    target_artifact = None
+
+    for artifact in artifacts:
+        if gen_id(artifact["name"]) == artifact_id:
+            # Must be a model for this endpoint
+            actual_type = _get_artifact_type(artifact)
+            if actual_type != "model":
+                logger.error(
+                    f"Lineage request - Artifact {artifact_id} is {actual_type}, not model"
+                )
+                raise HTTPException(status_code=404, detail="Artifact does not exist.")
+            target_artifact = artifact
+            break
+
+    if not target_artifact:
+        logger.error(f"Lineage request - Artifact not found: {artifact_id}")
+        raise HTTPException(status_code=404, detail="Artifact does not exist.")
+
+    logger.info(f"[LINEAGE] Found artifact: {target_artifact['name']}")
+
+    # Parse metadata to extract lineage information
+    try:
+        metadata_json = target_artifact.get("metadata_json", "{}")
+        metadata = (
+            json.loads(metadata_json)
+            if isinstance(metadata_json, str)
+            else metadata_json
+        )
+        readme_content = target_artifact.get("readme", "")
+
+        logger.info(
+            f"[LINEAGE] Metadata available: {bool(metadata)}, README length: {len(readme_content)}"
+        )
+
+        # Check if we have sufficient metadata
+        if not metadata and not readme_content:
+            logger.warning(
+                f"[LINEAGE] No metadata or README for artifact {artifact_id}"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="The lineage graph cannot be computed because the artifact metadata is missing or malformed.",
+            )
+
+        # Extract lineage using the lineage extractor
+        extractor = get_lineage_extractor()
+
+        # Get lineage data
+        if readme_content:
+            lineage_data = extractor.extract_lineage(
+                readme_content, target_artifact["name"]
+            )
+            lineage_data = extractor.normalize_urls(lineage_data)
+            logger.info(
+                f"[LINEAGE] Extracted from README: {json.dumps(lineage_data, indent=2)}"
+            )
+        else:
+            lineage_data = {
+                "datasets": [],
+                "code_repos": [],
+                "parent_models": [],
+                "evaluation_datasets": [],
+            }
+            logger.info("[LINEAGE] No README content, using empty lineage")
+
+        # Also check metadata for additional information
+        if "datasets" in metadata:
+            datasets_field = metadata["datasets"]
+            if isinstance(datasets_field, list):
+                for ds in datasets_field:
+                    ds_url = f"https://huggingface.co/datasets/{ds}"
+                    if ds_url not in lineage_data["datasets"]:
+                        lineage_data["datasets"].append(ds_url)
+            elif isinstance(datasets_field, str):
+                ds_url = f"https://huggingface.co/datasets/{datasets_field}"
+                if ds_url not in lineage_data["datasets"]:
+                    lineage_data["datasets"].append(ds_url)
+
+        # Build the lineage graph
+        nodes = []
+        edges = []
+
+        # Add the current artifact as the main node
+        nodes.append(
+            {
+                "artifact_id": artifact_id,
+                "name": target_artifact["name"],
+                "source": "metadata",  # Source indicates where this info came from
+            }
+        )
+
+        logger.info(f"[LINEAGE] Added main node: {target_artifact['name']}")
+
+        # Add parent models as nodes and create edges
+        for parent_name in lineage_data.get("parent_models", []):
+            parent_id = gen_id(parent_name)
+            nodes.append(
+                {
+                    "artifact_id": parent_id,
+                    "name": parent_name,
+                    "source": "readme" if readme_content else "metadata",
+                }
+            )
+            edges.append(
+                {
+                    "from_node_artifact_id": parent_id,
+                    "to_node_artifact_id": artifact_id,
+                    "relationship": "base_model",
+                }
+            )
+            logger.info(
+                f"[LINEAGE] Added parent model: {parent_name} -> {target_artifact['name']}"
+            )
+
+        # Add datasets as nodes and create edges
+        for dataset_url in lineage_data.get("datasets", []):
+            # Extract dataset name from URL
+            dataset_name = (
+                dataset_url.split("/")[-1] if "/" in dataset_url else dataset_url
+            )
+            dataset_id = gen_id(dataset_name)
+            nodes.append(
+                {
+                    "artifact_id": dataset_id,
+                    "name": dataset_name,
+                    "source": "readme" if readme_content else "metadata",
+                }
+            )
+            edges.append(
+                {
+                    "from_node_artifact_id": dataset_id,
+                    "to_node_artifact_id": artifact_id,
+                    "relationship": "training_data",
+                }
+            )
+            logger.info(
+                f"[LINEAGE] Added training dataset: {dataset_name} -> {target_artifact['name']}"
+            )
+
+        # Add evaluation datasets as nodes and create edges
+        for eval_dataset in lineage_data.get("evaluation_datasets", []):
+            eval_id = gen_id(eval_dataset)
+            nodes.append(
+                {
+                    "artifact_id": eval_id,
+                    "name": eval_dataset,
+                    "source": "readme" if readme_content else "metadata",
+                }
+            )
+            edges.append(
+                {
+                    "from_node_artifact_id": eval_id,
+                    "to_node_artifact_id": artifact_id,
+                    "relationship": "evaluation_data",
+                }
+            )
+            logger.info(
+                f"[LINEAGE] Added evaluation dataset: {eval_dataset} -> {target_artifact['name']}"
+            )
+
+        # Build response
+        response_data = {"nodes": nodes, "edges": edges}
+
+        logger.info(
+            f"[LINEAGE] Returning graph with {len(nodes)} nodes and {len(edges)} edges"
+        )
+        logger.info(f"[LINEAGE] Full response: {json.dumps(response_data, indent=2)}")
+
+        return JSONResponse(
+            status_code=200, content=response_data, media_type="application/json"
+        )
+
+    except json.JSONDecodeError as e:
+        logger.error(f"[LINEAGE] JSON decode error for artifact {artifact_id}: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail="The lineage graph cannot be computed because the artifact metadata is missing or malformed.",
+        )
+    except Exception as e:
+        logger.error(
+            f"[LINEAGE] Unexpected error for artifact {artifact_id}: {e}", exc_info=True
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="The lineage graph cannot be computed because the artifact metadata is missing or malformed.",
+        )
+
+
 # 6. OTHER ROUTES (least specific)
 @app.delete("/reset")
 def reset_registry(request: Request):
