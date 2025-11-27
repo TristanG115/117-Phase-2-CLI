@@ -1691,8 +1691,14 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
             s3_key, download_url = process_artifact_for_s3(
                 s3_storage, url, original_name, artifact_type
             )
+            logger.info(
+                f"[S3 DEBUG] Returned s3_key={s3_key}, download_url={download_url}"
+            )
             if s3_key and download_url:
                 logger.info(f"[S3] Successfully stored {original_name} in S3")
+                logger.info(
+                    f"[S3] Download URL: {download_url[:100]}..."
+                )  # Log first 100 chars
             else:
                 logger.warning(
                     f"[S3] Failed to store {original_name} in S3, continuing without download_url"
@@ -1738,8 +1744,18 @@ async def register_artifact(artifact_type: str, request: Request):  # noqa: C901
     }
 
     # Add download_url if available
+    logger.info(f"[RESPONSE DEBUG] download_url variable: {download_url}")
     if download_url:
+        logger.info(
+            f"[RESPONSE DEBUG] Adding download_url to response: {download_url[:100]}..."
+        )
         resp["data"]["download_url"] = download_url
+    else:
+        logger.warning("[RESPONSE DEBUG] No download_url available to add to response")
+
+    logger.info(
+        f"[RESPONSE DEBUG] Final response data keys: {list(resp['data'].keys())}"
+    )
 
     return JSONResponse(status_code=201, content=resp)
 
@@ -1936,8 +1952,18 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):  # noq
         else:  # model
             url = artifact.get("url", artifact.get("code_url", "unknown"))
 
+        # Get download_url from metadata if available
+        download_url = None
+        try:
+            import json
+
+            metadata = json.loads(artifact.get("metadata_json", "{}"))
+            download_url = metadata.get("download_url")
+        except Exception as e:
+            logger.warning(f"Failed to parse metadata for download_url: {e}")
+
         logger.info(f"SUCCESS: Returning {artifact['name']}")
-        return {
+        response_data = {
             "metadata": {
                 "name": artifact["name"],
                 "id": str(aid),
@@ -1945,6 +1971,13 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):  # noq
             },
             "data": {"url": url},
         }
+
+        # Add download_url if available
+        if download_url:
+            response_data["data"]["download_url"] = download_url
+            logger.info(f"Added download_url to GET response: {download_url[:100]}...")
+
+        return response_data
 
     logger.error(f"NOT FOUND: ID {aid}, type {artifact_type}")
     raise HTTPException(status_code=404, detail="Artifact does not exist.")
