@@ -1210,12 +1210,22 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
 @app.get("/artifact/model/{artifact_id}/lineage")
 def get_lineage(artifact_id: str, request: Request):
     """
-    Retrieve lineage graph for this artifact using lineage.py extractor.
-    BASELINE (NO AUTH):
+    Retrieve the lineage graph for this artifact using lineage.py extractor.
+    BASELINE behavior:
     - 200: Return lineage graph
     - 400: Metadata missing/malformed
+    - 403: Invalid/missing auth
     - 404: Artifact does not exist
     """
+
+    # ===== AUTH =====
+    auth_header = request.headers.get("X-Authorization")
+    if not auth_header:
+        raise HTTPException(
+            status_code=403,
+            detail="Authentication failed due to invalid or missing AuthenticationToken.",
+        )
+    require_auth(auth_header)
 
     # ===== VALIDATE ID =====
     try:
@@ -1232,7 +1242,6 @@ def get_lineage(artifact_id: str, request: Request):
 
     for a in artifacts:
         if gen_id(a["name"]) == aid:
-            # must be a model
             if _get_artifact_type(a) != "model":
                 raise HTTPException(status_code=404, detail="Artifact does not exist.")
             model_artifact = a
@@ -1257,7 +1266,7 @@ def get_lineage(artifact_id: str, request: Request):
             detail="The lineage graph cannot be computed because the artifact metadata is missing or malformed.",
         )
 
-    # ===== EXTRACT LINEAGE =====
+    # ===== RUN LINEAGE EXTRACTOR =====
     extractor = get_lineage_extractor()
     model_name = model_artifact["name"]
 
@@ -1270,22 +1279,34 @@ def get_lineage(artifact_id: str, request: Request):
             detail="The lineage graph cannot be computed because the artifact metadata is missing or malformed.",
         )
 
-    # ===== BUILD GRAPH STRUCTURE =====
+    # ===== BUILD GRAPH =====
     nodes = []
     edges = []
     seen_ids = set()
 
-    # Add root node
-    nodes.append({"artifact_id": aid, "name": model_name, "source": "readme"})
+    # Add root model node
+    nodes.append(
+        {
+            "artifact_id": aid,
+            "name": model_name,
+            "source": "readme",
+        }
+    )
     seen_ids.add(aid)
 
+    # ---- Helper for adding nodes + edges ----
     def add_node_and_edge(child_name: str, relationship: str):
         if not child_name:
             return
+
         child_id = gen_id(child_name)
         if child_id not in seen_ids:
             nodes.append(
-                {"artifact_id": child_id, "name": child_name, "source": "readme"}
+                {
+                    "artifact_id": child_id,
+                    "name": child_name,
+                    "source": "readme",
+                }
             )
             seen_ids.add(child_id)
 
@@ -1305,7 +1326,7 @@ def get_lineage(artifact_id: str, request: Request):
     for ds in lineage_data.get("datasets", []):
         add_node_and_edge(ds, "training_dataset")
 
-    # Code repositories
+    # Code repos
     for repo in lineage_data.get("code_repos", []):
         add_node_and_edge(repo, "code_repository")
 
@@ -1313,7 +1334,7 @@ def get_lineage(artifact_id: str, request: Request):
     for ed in lineage_data.get("evaluation_datasets", []):
         add_node_and_edge(ed, "evaluation_dataset")
 
-    # ===== RETURN SPEC-COMPLIANT RESPONSE =====
+    # ===== RETURN GRAPH =====
     return {"nodes": nodes, "edges": edges}
 
 
