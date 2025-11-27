@@ -239,7 +239,6 @@ def download_and_zip_artifact(
         logger.info(f"[DOWNLOAD] Starting REAL download for {artifact_name} from {url}")
 
         # Use a temp directory on the root filesystem (not /tmp which is too small)
-        # /tmp only has ~333MB, but root has 16GB available
         base_temp_dir = "/home/ec2-user/temp"
         os.makedirs(base_temp_dir, exist_ok=True)
 
@@ -272,25 +271,39 @@ def download_and_zip_artifact(
 
         artifact_dir = os.path.join(temp_dir, artifact_name)
 
+        logger.info(f"[ZIP] Starting zip build for {artifact_name}...")
+
+        # Count total files first
+        total_files = 0
+        for _, _, files in os.walk(artifact_dir):
+            total_files += len(files)
+
+        logger.info(f"[ZIP] {total_files} files detected inside artifact directory.")
+
+        processed = 0
+
         with zipfile.ZipFile(zip_file_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-            # Walk through the downloaded directory and add all files
             for root, dirs, files in os.walk(artifact_dir):
                 for file in files:
                     file_path = os.path.join(root, file)
                     arcname = os.path.relpath(file_path, temp_dir)
-                    zipf.write(file_path, arcname)
 
-            # If no files were added, add a metadata file
-            if not zipf.namelist():
-                logger.warning(f"[DOWNLOAD] No files downloaded, adding metadata file")
-                metadata_content = f"""
-Artifact Name: {artifact_name}
-Type: {artifact_type}
-Source URL: {url}
+                    try:
+                        zipf.write(file_path, arcname)
+                    except Exception as e:
+                        logger.warning(f"[ZIP] Failed to add file {file_path}: {e}")
+                        continue
 
-Download completed but no files were found.
-"""
-                zipf.writestr(f"{artifact_name}/metadata.txt", metadata_content)
+                    processed += 1
+
+                    # Log progress every 10 files or at 100%
+                    if processed % 10 == 0 or processed == total_files:
+                        logger.info(
+                            f"[ZIP] {processed}/{total_files} files added "
+                            f"({(processed/total_files)*100:.1f}%)"
+                        )
+
+        logger.info(f"[ZIP] Completed building zip archive for {artifact_name}.")
 
         zip_size_mb = os.path.getsize(zip_file_path) / (1024 * 1024)
         logger.info(
