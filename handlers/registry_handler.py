@@ -110,7 +110,7 @@ def _get_db() -> Any:
                 # Any other error (missing boto3, AWS credentials, etc)
                 error_msg = f"Failed to start, falling back to in-memory database: {type(e).__name__}: {e}"
                 logger.error(error_msg)
-                print(f" WARNING: {error_msg}", flush=True)
+                print(f"⚠️  WARNING: {error_msg}", flush=True)
                 _db = _InMemoryDB()
     return _db
 
@@ -383,18 +383,19 @@ def health_check() -> Dict[str, str]:
             "backend": "Unknown",
             "error": str(e),
         }
-    
-    
+
+
 def get_lineage_graph(model_url_or_name):
     """
     Build lineage graph for a given model
-    
+
     model_url_or_name: URL or model name to find in registry
-        
+
     """
     import json
+
     from handlers import registry_handler
-    
+
     # Helper to extract name from URL
     def extract_name_from_url(url):
         url = url.rstrip("/")
@@ -404,12 +405,13 @@ def get_lineage_graph(model_url_or_name):
         elif "github.com" in url and len(parts) >= 1:
             return parts[-1]
         return parts[-1] if parts else "unknown"
-    
+
     # Helper to generate consistent IDs
     def gen_id(name):
         import hashlib
+
         return abs(int(hashlib.sha256(name.encode()).hexdigest(), 16)) % (10**10)
-    
+
     # Helper to get artifact type
     def get_artifact_type(artifact):
         artifact_type = artifact.get("artifact_type")
@@ -423,121 +425,142 @@ def get_lineage_graph(model_url_or_name):
         except Exception:
             pass
         return "model"
-    
+
     # Find the model in registry
     artifacts = registry_handler.list_artifacts()
     model_artifact = None
-    
+
     # Try to find by URL first, then by name
-    search_name = extract_name_from_url(model_url_or_name) if "://" in model_url_or_name else model_url_or_name
-    
+    search_name = (
+        extract_name_from_url(model_url_or_name)
+        if "://" in model_url_or_name
+        else model_url_or_name
+    )
+
     for a in artifacts:
-        if (a.get("url") == model_url_or_name or 
-            a.get("name") == search_name or
-            a.get("name") == model_url_or_name):
+        if (
+            a.get("url") == model_url_or_name
+            or a.get("name") == search_name
+            or a.get("name") == model_url_or_name
+        ):
             if get_artifact_type(a) == "model":
                 model_artifact = a
                 break
-    
+
     if not model_artifact:
         raise ValueError(f"Model not found in registry: {model_url_or_name}")
-    
+
     # Build lineage graph
     nodes = []
     edges = []
     seen_ids = set()
-    
+
     # Add root model node
     model_id = gen_id(model_artifact["name"])
-    nodes.append({
-        "artifact_id": model_id,
-        "name": model_artifact["name"],
-        "source": "root_model"
-    })
+    nodes.append(
+        {
+            "artifact_id": model_id,
+            "name": model_artifact["name"],
+            "source": "root_model",
+        }
+    )
     seen_ids.add(model_id)
-    
+
     # Extract metadata
     try:
         metadata = json.loads(model_artifact.get("metadata_json", "{}"))
     except json.JSONDecodeError:
         metadata = {}
-    
+
     # Add dataset dependencies
     dataset_url = model_artifact.get("dataset_url", "unknown")
     if dataset_url and dataset_url != "unknown":
         dataset_name = extract_name_from_url(dataset_url)
         dataset_id = gen_id(dataset_name)
-        
+
         if dataset_id not in seen_ids:
-            nodes.append({
-                "artifact_id": dataset_id,
-                "name": dataset_name,
-                "source": "training_dataset"
-            })
-            edges.append({
-                "from_node_artifact_id": dataset_id,
-                "to_node_artifact_id": model_id,
-                "relationship": "trained_on"
-            })
+            nodes.append(
+                {
+                    "artifact_id": dataset_id,
+                    "name": dataset_name,
+                    "source": "training_dataset",
+                }
+            )
+            edges.append(
+                {
+                    "from_node_artifact_id": dataset_id,
+                    "to_node_artifact_id": model_id,
+                    "relationship": "trained_on",
+                }
+            )
             seen_ids.add(dataset_id)
-    
+
     # Add code repository dependencies
     code_url = model_artifact.get("code_url", "unknown")
     if code_url and code_url != "unknown":
         code_name = extract_name_from_url(code_url)
         code_id = gen_id(code_name)
-        
+
         if code_id not in seen_ids:
-            nodes.append({
-                "artifact_id": code_id,
-                "name": code_name,
-                "source": "implementation_code"
-            })
-            edges.append({
-                "from_node_artifact_id": code_id,
-                "to_node_artifact_id": model_id,
-                "relationship": "implemented_by"
-            })
+            nodes.append(
+                {
+                    "artifact_id": code_id,
+                    "name": code_name,
+                    "source": "implementation_code",
+                }
+            )
+            edges.append(
+                {
+                    "from_node_artifact_id": code_id,
+                    "to_node_artifact_id": model_id,
+                    "relationship": "implemented_by",
+                }
+            )
             seen_ids.add(code_id)
-    
+
     # Add parent model dependencies
     parent_model = metadata.get("parent_model")
     if parent_model:
         parent_id = gen_id(parent_model)
-        
+
         if parent_id not in seen_ids:
-            nodes.append({
-                "artifact_id": parent_id,
-                "name": parent_model,
-                "source": "parent_model"
-            })
-            edges.append({
-                "from_node_artifact_id": parent_id,
-                "to_node_artifact_id": model_id,
-                "relationship": "fine_tuned_from"
-            })
+            nodes.append(
+                {
+                    "artifact_id": parent_id,
+                    "name": parent_model,
+                    "source": "parent_model",
+                }
+            )
+            edges.append(
+                {
+                    "from_node_artifact_id": parent_id,
+                    "to_node_artifact_id": model_id,
+                    "relationship": "fine_tuned_from",
+                }
+            )
             seen_ids.add(parent_id)
-    
+
     # Add evaluation datasets
     eval_datasets = metadata.get("evaluation_datasets", [])
     if isinstance(eval_datasets, list):
         for eval_dataset_name in eval_datasets:
             eval_id = gen_id(eval_dataset_name)
-            
+
             if eval_id not in seen_ids:
-                nodes.append({
-                    "artifact_id": eval_id,
-                    "name": eval_dataset_name,
-                    "source": "evaluation_dataset"
-                })
-                edges.append({
-                    "from_node_artifact_id": eval_id,
-                    "to_node_artifact_id": model_id,
-                    "relationship": "evaluated_on"
-                })
+                nodes.append(
+                    {
+                        "artifact_id": eval_id,
+                        "name": eval_dataset_name,
+                        "source": "evaluation_dataset",
+                    }
+                )
+                edges.append(
+                    {
+                        "from_node_artifact_id": eval_id,
+                        "to_node_artifact_id": model_id,
+                        "relationship": "evaluated_on",
+                    }
+                )
                 seen_ids.add(eval_id)
-    
-    return {
-        "nodes": nodes,
-        "edges": edges
-    }
+
+    return {"nodes": nodes, "edges": edges}
