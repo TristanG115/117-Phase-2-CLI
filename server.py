@@ -41,6 +41,11 @@ SIZE_CACHE = {}
 # Cost calculation cache - speeds up repeated cost requests
 COST_CACHE = {}
 
+
+# Track recently deleted artifacts to handle DynamoDB eventual consistency
+# DynamoDB Scan operations use eventually consistent reads by default,
+# so deleted items may still appear briefly in list_artifacts()
+DELETED_ARTIFACTS = set()
 # Garbage collection tuning
 gc.set_threshold(700, 10, 10)
 
@@ -1901,6 +1906,11 @@ def get_artifact(artifact_type: str, artifact_id: str, request: Request):  # noq
     artifact = None
 
     for a in artifacts:
+        # Skip if artifact was recently deleted (handle DynamoDB eventual consistency)
+        if a["name"] in DELETED_ARTIFACTS:
+            logger.info(f"Skipping recently deleted artifact: {a['name']}")
+            continue
+
         calculated_id = gen_id(a["name"])
 
         if calculated_id == aid:
@@ -2035,6 +2045,8 @@ def delete_artifact(artifact_type: str, artifact_id: str, request: Request):
                 raise HTTPException(status_code=404, detail="Artifact does not exist.")
             # Delete the artifact
             registry_handler.delete_artifact(a["name"])
+            # Track deletion to handle DynamoDB eventual consistency
+            DELETED_ARTIFACTS.add(a["name"])
             logger.info(f"Deleted artifact: {a['name']} (ID: {aid})")
             return Response(status_code=200)
     raise HTTPException(status_code=404, detail="Artifact does not exist.")
@@ -2059,6 +2071,8 @@ def reset_registry(request: Request):
     # so subsequent ingests can reuse existing files (much faster)
     # Per instructor guidance: "keep models in S3 after a reset"
     registry_handler.reset_registry()
+    # Clear deleted artifacts tracking set on reset
+    DELETED_ARTIFACTS.clear()
     gc.collect()
     logger.info("[RESET] Database cleared (S3 artifacts preserved for caching)")
     return {"status": "system reset successful"}
