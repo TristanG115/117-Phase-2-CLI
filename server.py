@@ -1530,6 +1530,14 @@ def get_artifact_lineage(id: str, request: Request):
 
     logger.info(f"[LINEAGE] Found artifact: {target_artifact['name']}")
 
+    # Log ALL artifact fields for debugging
+    logger.info(f"[LINEAGE] Artifact keys: {list(target_artifact.keys())}")
+    logger.info(f"[LINEAGE] dataset_url: {target_artifact.get('dataset_url', 'N/A')}")
+    logger.info(f"[LINEAGE] code_url: {target_artifact.get('code_url', 'N/A')}")
+    logger.info(
+        f"[LINEAGE] parent_models: {target_artifact.get('parent_models', 'N/A')}"
+    )
+
     # Parse metadata to extract lineage information
     try:
         metadata_json = target_artifact.get("metadata_json", "{}")
@@ -1598,11 +1606,22 @@ def get_artifact_lineage(id: str, request: Request):
                     f"[LINEAGE] Found base_model_name: {metadata['base_model_name']}"
                 )
                 lineage_data["parent_models"].append(metadata["base_model_name"])
-            if "pipeline_tag" in metadata and "base_model" in str(
-                metadata.get("pipeline_tag", "")
-            ):
-                # Some metadata has base model in pipeline_tag
-                logger.info(f"[LINEAGE] Found pipeline_tag: {metadata['pipeline_tag']}")
+
+            # Extract from artifact's code_url and dataset_url fields (stored during ingestion)
+            code_url = target_artifact.get("code_url", "")
+            dataset_url = target_artifact.get("dataset_url", "")
+
+            logger.info(
+                f"[LINEAGE] Artifact code_url: {code_url}, dataset_url: {dataset_url}"
+            )
+
+            if code_url and code_url != "unknown":
+                lineage_data["code_repos"].append(code_url)
+                logger.info(f"[LINEAGE] Added code repo from artifact: {code_url}")
+
+            if dataset_url and dataset_url != "unknown":
+                lineage_data["datasets"].append(dataset_url)
+                logger.info(f"[LINEAGE] Added dataset from artifact: {dataset_url}")
 
             logger.info(
                 f"[LINEAGE] Extracted from metadata: {json.dumps(lineage_data, indent=2)}"
@@ -1704,6 +1723,31 @@ def get_artifact_lineage(id: str, request: Request):
             )
             logger.info(
                 f"[LINEAGE] Added evaluation dataset: {eval_dataset} -> {target_artifact['name']}"
+            )
+
+        # Add code repositories as nodes and create edges
+        for code_repo in lineage_data.get("code_repos", []):
+            # Extract repo name from URL
+            repo_name = code_repo.split("/")[-1] if "/" in code_repo else code_repo
+            if not repo_name:
+                repo_name = code_repo.split("/")[-2] if "/" in code_repo else code_repo
+            repo_id = gen_id(code_repo)  # Use full URL for ID generation
+            nodes.append(
+                {
+                    "artifact_id": repo_id,
+                    "name": code_repo,  # Use full URL as name
+                    "source": "readme" if readme_content else "metadata",
+                }
+            )
+            edges.append(
+                {
+                    "from_node_artifact_id": repo_id,
+                    "to_node_artifact_id": artifact_id,
+                    "relationship": "code_repository",
+                }
+            )
+            logger.info(
+                f"[LINEAGE] Added code repository: {code_repo} -> {target_artifact['name']}"
             )
 
         # Build response
