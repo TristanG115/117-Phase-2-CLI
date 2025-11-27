@@ -972,3 +972,821 @@ Offset header: {'offset': '2'}
 11/26/25 11:59:18 PM : INFO : API.dynamo : Table TrustworthyModelRegDB already exists
 11/26/25 11:59:18 PM : INFO : handlers.registry_handler : Registry initialized successfully
 11/26/25 11:59:18 PM : INFO : root : Registry initialized successfully
+11/27/25 12:01:19 AM : INFO : root : [REQUEST] GET /health
+11/27/25 12:01:19 AM : INFO : root : Health check called
+11/27/25 12:01:19 AM : INFO : root : [RESPONSE] GET /health -> 200
+11/27/25 12:01:19 AM : INFO : root : [REQUEST] GET /tracks
+11/27/25 12:01:19 AM : INFO : root : [RESPONSE] GET /tracks -> 200
+11/27/25 12:01:20 AM : INFO : root : [REQUEST] GET /tracks
+11/27/25 12:01:20 AM : INFO : root : [RESPONSE] GET /tracks -> 200
+11/27/25 12:01:20 AM : INFO : root : [REQUEST] DELETE /reset
+11/27/25 12:01:20 AM : WARNING : root : DEBUG /reset: No auth header - allowing for baseline
+11/27/25 12:01:20 AM : INFO : API.dynamo : Registry reset - all artifacts deleted
+11/27/25 12:01:20 AM : INFO : handlers.registry_handler : Registry has been reset successfully.
+11/27/25 12:01:20 AM : INFO : root : [RESET] Database cleared (S3 artifacts preserved for caching)
+11/27/25 12:01:20 AM : INFO : root : [RESPONSE] DELETE /reset -> 200
+11/27/25 12:01:20 AM : INFO : root : [REQUEST] POST /artifacts
+11/27/25 12:01:20 AM : INFO : root : DEBUG /artifacts: All headers = {'host': '18.191.29.29:8000', 'user-agent': 'python-requests/2.32.3', 'accept-encoding': 'gzip, deflate', 'accept': '*/*', 'connection': 'keep-alive', 'content-length': '28', 'content-type': 'application/json'}
+11/27/25 12:01:20 AM : INFO : root : DEBUG /artifacts: X-Authorization value = None
+11/27/25 12:01:20 AM : WARNING : root : DEBUG: No X-Authorization header - allowing for baseline
+11/26/25 11:59:18 PM : INFO : API.dynamo : [36mTable TrustworthyModelRegDB already exists[0m
+11/26/25 11:59:18 PM : INFO : handlers.registry_handler : [36mRegistry initialized successfully[0m
+11/26/25 11:59:18 PM : INFO : root : [36mRegistry initialized successfully[0m
+11/27/25 12:01:19 AM : INFO : root : [36m[REQUEST] GET /health[0m
+11/27/25 12:01:19 AM : INFO : root : [36mHealth check called[0m
+11/27/25 12:01:19 AM : INFO : root : [36m[RESPONSE] GET /health -> 200[0m
+11/27/25 12:01:19 AM : INFO : root : [36m[REQUEST] GET /tracks[0m
+11/27/25 12:01:19 AM : INFO : root : [36m[RESPONSE] GET /tracks -> 200[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[REQUEST] GET /tracks[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[RESPONSE] GET /tracks -> 200[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[REQUEST] DELETE /reset[0m
+11/27/25 12:01:20 AM : WARNING : root : [33mDEBUG /reset: No auth header - allowing for baseline[0m
+11/27/25 12:01:20 AM : INFO : API.dynamo : [36mRegistry reset - all artifacts deleted[0m
+11/27/25 12:01:20 AM : INFO : handlers.registry_handler : [36mRegistry has been reset successfully.[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[RESET] Database cleared (S3 artifacts preserved for caching)[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[RESPONSE] DELETE /reset -> 200[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[REQUEST] POST /artifacts[0m
+11/27/25 12:01:20 AM : INFO : root : [36mDEBUG /artifacts: All headers = {'host': '18.191.29.29:8000', 'user-agent': 'python-requests/2.32.3', 'accept-encoding': 'gzip, deflate', 'accept': '*/*', 'connection': 'keep-alive', 'content-length': '28', 'content-type': 'application/json'}[0m
+11/27/25 12:01:20 AM : INFO : root : [36mDEBUG /artifacts: X-Authorization value = None[0m
+11/27/25 12:01:20 AM : WARNING : root : [33mDEBUG: No X-Authorization header - allowing for baseline[0m
+DEBUG /artifacts: About to read body
+11/27/25 12:01:20 AM : INFO : root : DEBUG /artifacts: About to read body
+11/27/25 12:01:20 AM : INFO : root : [36mDEBUG /artifacts: About to read body[0m
+DEBUG /artifacts: Raw body = [{"name": "*", "types": []}]
+11/27/25 12:01:20 AM : INFO : root : DEBUG /artifacts: Raw body = [{"name": "*", "types": []}]
+11/27/25 12:01:20 AM : INFO : root : [DATA] Request body: [{'name': '*', 'types': []}]
+11/27/25 12:01:20 AM : INFO : root : [36mDEBUG /artifacts: Raw body = [{"name": "*", "types": []}][0m
+11/27/25 12:01:20 AM : INFO : root : [36m[DATA] Request body: [{'name': '*', 'types': []}][0m
+DEBUG /artifacts: Parsed queries = [{'name': '*', 'types': []}]
+11/27/25 12:01:20 AM : INFO : root : DEBUG /artifacts: Parsed queries = [{'name': '*', 'types': []}]
+11/27/25 12:01:20 AM : INFO : root : [36mDEBUG /artifacts: Parsed queries = [{'name': '*', 'types': []}][0m
+DEBUG: About to call list_artifacts()
+DEBUG: Got 0 artifacts
+DEBUG: About to build results
+DEBUG _build: Processing 1 queries against 0 artifacts
+DEBUG _build: Query 0: {'name': '*', 'types': []}
+DEBUG _build: Validated - name=*, types=['model', 'dataset', 'code']
+DEBUG _build: Returning 0 total results
+DEBUG: Built 0 results
+DEBUG: Returning 0 results with offset header {'offset': '2'}
+
+===== DEBUG /artifacts FINAL STATE =====
+Queries received (1): [{'name': '*', 'types': []}]
+Total artifacts loaded: 0
+Results built (0):
+Offset header: {'offset': '2'}
+========================================
+
+11/27/25 12:01:20 AM : INFO : root : ===== ARTIFACTS QUERY RESULTS =====
+11/27/25 12:01:20 AM : INFO : root : Query: [{'name': '*', 'types': []}]
+11/27/25 12:01:20 AM : INFO : root : Returning 0 results from 0 total artifacts
+11/27/25 12:01:20 AM : INFO : root : =====================================
+11/27/25 12:01:20 AM : INFO : root : [DATA] Response: 0 results
+11/27/25 12:01:20 AM : INFO : root : [RESPONSE] POST /artifacts -> 200
+11/27/25 12:01:20 AM : INFO : root : [REQUEST] POST /artifact/model
+11/27/25 12:01:20 AM : WARNING : root : DEBUG /artifact/{{type}}: No auth header - allowing for baseline
+11/27/25 12:01:20 AM : INFO : root : [DATA] Creating artifact type=model, body keys: ['name', 'url']
+11/27/25 12:01:20 AM : INFO : root : Creating artifact: name=bert-base-uncased, type=model, ID=9430210313
+11/27/25 12:01:20 AM : INFO : root : [SIZE CALC] Starting size calculation for model: https://huggingface.co/google-bert/bert-base-uncased
+11/27/25 12:01:20 AM : INFO : root : [SIZE CALC] Detected HuggingFace URL: https://huggingface.co/google-bert/bert-base-uncased
+11/27/25 12:01:20 AM : INFO : root : [SIZE CALC] Extracted repo_id: google-bert/bert-base-uncased, is_dataset: False
+11/27/25 12:01:20 AM : INFO : root : [SIZE CALC] Fetching from: https://huggingface.co/google-bert/bert-base-uncased/tree/main
+11/27/25 12:01:20 AM : INFO : root : [SIZE CALC WEB SUCCESS] google-bert/bert-base-uncased: 3532.8 MB (scraped from website)
+11/27/25 12:01:20 AM : INFO : root : [SIZE] Artifact bert-base-uncased (model) size: 3532.8 MB
+11/27/25 12:01:20 AM : INFO : root : [S3] Processing bert-base-uncased for S3 storage
+11/27/25 12:01:20 AM : INFO : artifact_downloader : [S3 CHECK] Artifact bert-base-uncased already exists in S3
+11/27/25 12:01:20 AM : INFO : artifact_downloader : [S3 CACHE HIT] Using existing S3 object for bert-base-uncased
+11/27/25 12:01:20 AM : INFO : API.storage : Generated download URL for artifacts/model/bert-base-uncased.zip (expires in 3600s)
+11/27/25 12:01:20 AM : INFO : artifact_downloader : [S3 DOWNLOAD URL] Generated download URL for bert-base-uncased
+11/27/25 12:01:20 AM : INFO : root : [S3] Successfully stored bert-base-uncased in S3
+11/27/25 12:01:20 AM : INFO : API.dynamo : Added model artifact: bert-base-uncased (ID: 9430210313)
+11/27/25 12:01:20 AM : INFO : root : Registered artifact ID: 9430210313
+11/27/25 12:01:20 AM : INFO : API.dynamo : Updated artifact 9430210313
+11/27/25 12:01:20 AM : INFO : root : Logged audit event: CREATE for artifact bert-base-uncased (ID: 9430210313)
+11/27/25 12:01:20 AM : INFO : root : Started background rating task for model bert-base-uncased
+11/27/25 12:01:20 AM : INFO : root : Starting background rating for bert-base-uncased (ID: 9430210313)
+11/27/25 12:01:20 AM : INFO : ModelHandler : Fetched HuggingFace API data for google-bert/bert-base-uncased: downloads=61035381, likes=2488
+11/27/25 12:01:20 AM : INFO : ModelHandler : License found in cardData for google-bert/bert-base-uncased: apache-2.0 (score=1.0)
+11/27/25 12:01:20 AM : INFO : DatasetQualityMetric : Starting dataset quality metric calculation
+11/27/25 12:01:20 AM : WARNING : DatasetQualityMetric : No dataset resources available
+11/27/25 12:01:20 AM : WARNING : ReproducibilityMetric : No code provided
+11/27/25 12:01:20 AM : INFO : ModelHandler : Fetched HuggingFace API data for google-bert/bert-base-uncased: downloads=61035381, likes=2488
+11/27/25 12:01:20 AM : INFO : ModelHandler : Model size from safetensors: 105.01 MB
+11/27/25 12:01:20 AM : INFO : ModelHandler : Fetched HuggingFace API data for google-bert/bert-base-uncased: downloads=61035381, likes=2488
+11/27/25 12:01:20 AM : INFO : ModelHandler : Fetched HuggingFace API data for google-bert/bert-base-uncased: downloads=61035381, likes=2488
+11/27/25 12:01:20 AM : INFO : ModelHandler : Documentation score for google-bert/bert-base-uncased: 0.10
+11/27/25 12:01:20 AM : WARNING : root : Model bert-base-uncased failed validation. Net_score=0.33, Failed metrics: ramp_up_time=0.1, performance_claims=0.0, dataset_and_code_score=0.0, dataset_quality=0.0, code_quality=0.0, reproducibility=0.0, tree_score=0.0
+11/27/25 12:01:20 AM : INFO : API.dynamo : Updated artifact 9430210313
+11/27/25 12:01:20 AM : WARNING : root : Rating completed for bert-base-uncased: net_score=0.33 - INVALID
+11/27/25 12:01:20 AM : INFO : root : [RESPONSE] POST /artifact/model -> 201
+11/27/25 12:01:20 AM : INFO : root : [REQUEST] POST /artifacts
+11/27/25 12:01:20 AM : INFO : root : DEBUG /artifacts: All headers = {'host': '18.191.29.29:8000', 'user-agent': 'python-requests/2.32.3', 'accept-encoding': 'gzip, deflate', 'accept': '*/*', 'connection': 'keep-alive', 'content-length': '35', 'content-type': 'application/json'}
+11/27/25 12:01:20 AM : INFO : root : DEBUG /artifacts: X-Authorization value = None
+11/27/25 12:01:20 AM : WARNING : root : DEBUG: No X-Authorization header - allowing for baseline
+11/27/25 12:01:20 AM : INFO : root : [36m===== ARTIFACTS QUERY RESULTS =====[0m
+11/27/25 12:01:20 AM : INFO : root : [36mQuery: [{'name': '*', 'types': []}][0m
+11/27/25 12:01:20 AM : INFO : root : [36mReturning 0 results from 0 total artifacts[0m
+11/27/25 12:01:20 AM : INFO : root : [36m=====================================[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[DATA] Response: 0 results[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[RESPONSE] POST /artifacts -> 200[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[REQUEST] POST /artifact/model[0m
+11/27/25 12:01:20 AM : WARNING : root : [33mDEBUG /artifact/{{type}}: No auth header - allowing for baseline[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[DATA] Creating artifact type=model, body keys: ['name', 'url'][0m
+11/27/25 12:01:20 AM : INFO : root : [36mCreating artifact: name=bert-base-uncased, type=model, ID=9430210313[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[SIZE CALC] Starting size calculation for model: https://huggingface.co/google-bert/bert-base-uncased[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[SIZE CALC] Detected HuggingFace URL: https://huggingface.co/google-bert/bert-base-uncased[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[SIZE CALC] Extracted repo_id: google-bert/bert-base-uncased, is_dataset: False[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[SIZE CALC] Fetching from: https://huggingface.co/google-bert/bert-base-uncased/tree/main[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[SIZE CALC WEB SUCCESS] google-bert/bert-base-uncased: 3532.8 MB (scraped from website)[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[SIZE] Artifact bert-base-uncased (model) size: 3532.8 MB[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[S3] Processing bert-base-uncased for S3 storage[0m
+11/27/25 12:01:20 AM : INFO : artifact_downloader : [36m[S3 CHECK] Artifact bert-base-uncased already exists in S3[0m
+11/27/25 12:01:20 AM : INFO : artifact_downloader : [36m[S3 CACHE HIT] Using existing S3 object for bert-base-uncased[0m
+11/27/25 12:01:20 AM : INFO : API.storage : [36mGenerated download URL for artifacts/model/bert-base-uncased.zip (expires in 3600s)[0m
+11/27/25 12:01:20 AM : INFO : artifact_downloader : [36m[S3 DOWNLOAD URL] Generated download URL for bert-base-uncased[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[S3] Successfully stored bert-base-uncased in S3[0m
+11/27/25 12:01:20 AM : INFO : API.dynamo : [36mAdded model artifact: bert-base-uncased (ID: 9430210313)[0m
+11/27/25 12:01:20 AM : INFO : root : [36mRegistered artifact ID: 9430210313[0m
+11/27/25 12:01:20 AM : INFO : API.dynamo : [36mUpdated artifact 9430210313[0m
+11/27/25 12:01:20 AM : INFO : root : [36mLogged audit event: CREATE for artifact bert-base-uncased (ID: 9430210313)[0m
+11/27/25 12:01:20 AM : INFO : root : [36mStarted background rating task for model bert-base-uncased[0m
+11/27/25 12:01:20 AM : INFO : root : [36mStarting background rating for bert-base-uncased (ID: 9430210313)[0m
+11/27/25 12:01:20 AM : INFO : ModelHandler : [36mFetched HuggingFace API data for google-bert/bert-base-uncased: downloads=61035381, likes=2488[0m
+11/27/25 12:01:20 AM : INFO : ModelHandler : [36mLicense found in cardData for google-bert/bert-base-uncased: apache-2.0 (score=1.0)[0m
+11/27/25 12:01:20 AM : INFO : DatasetQualityMetric : [36mStarting dataset quality metric calculation[0m
+11/27/25 12:01:20 AM : WARNING : DatasetQualityMetric : [33mNo dataset resources available[0m
+11/27/25 12:01:20 AM : WARNING : ReproducibilityMetric : [33mNo code provided[0m
+11/27/25 12:01:20 AM : INFO : ModelHandler : [36mFetched HuggingFace API data for google-bert/bert-base-uncased: downloads=61035381, likes=2488[0m
+11/27/25 12:01:20 AM : INFO : ModelHandler : [36mModel size from safetensors: 105.01 MB[0m
+11/27/25 12:01:20 AM : INFO : ModelHandler : [36mFetched HuggingFace API data for google-bert/bert-base-uncased: downloads=61035381, likes=2488[0m
+11/27/25 12:01:20 AM : INFO : ModelHandler : [36mFetched HuggingFace API data for google-bert/bert-base-uncased: downloads=61035381, likes=2488[0m
+11/27/25 12:01:20 AM : INFO : ModelHandler : [36mDocumentation score for google-bert/bert-base-uncased: 0.10[0m
+11/27/25 12:01:20 AM : WARNING : root : [33mModel bert-base-uncased failed validation. Net_score=0.33, Failed metrics: ramp_up_time=0.1, performance_claims=0.0, dataset_and_code_score=0.0, dataset_quality=0.0, code_quality=0.0, reproducibility=0.0, tree_score=0.0[0m
+11/27/25 12:01:20 AM : INFO : API.dynamo : [36mUpdated artifact 9430210313[0m
+11/27/25 12:01:20 AM : WARNING : root : [33mRating completed for bert-base-uncased: net_score=0.33 - INVALID[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[RESPONSE] POST /artifact/model -> 201[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[REQUEST] POST /artifacts[0m
+11/27/25 12:01:20 AM : INFO : root : [36mDEBUG /artifacts: All headers = {'host': '18.191.29.29:8000', 'user-agent': 'python-requests/2.32.3', 'accept-encoding': 'gzip, deflate', 'accept': '*/*', 'connection': 'keep-alive', 'content-length': '35', 'content-type': 'application/json'}[0m
+11/27/25 12:01:20 AM : INFO : root : [36mDEBUG /artifacts: X-Authorization value = None[0m
+11/27/25 12:01:20 AM : WARNING : root : [33mDEBUG: No X-Authorization header - allowing for baseline[0m
+DEBUG /artifacts: About to read body
+11/27/25 12:01:20 AM : INFO : root : DEBUG /artifacts: About to read body
+11/27/25 12:01:20 AM : INFO : root : [36mDEBUG /artifacts: About to read body[0m
+DEBUG /artifacts: Raw body = [{"name": "*", "types": ["model"]}]
+11/27/25 12:01:20 AM : INFO : root : DEBUG /artifacts: Raw body = [{"name": "*", "types": ["model"]}]
+11/27/25 12:01:20 AM : INFO : root : [DATA] Request body: [{'name': '*', 'types': ['model']}]
+11/27/25 12:01:20 AM : INFO : root : [36mDEBUG /artifacts: Raw body = [{"name": "*", "types": ["model"]}][0m
+11/27/25 12:01:20 AM : INFO : root : [36m[DATA] Request body: [{'name': '*', 'types': ['model']}][0m
+DEBUG /artifacts: Parsed queries = [{'name': '*', 'types': ['model']}]
+11/27/25 12:01:20 AM : INFO : root : DEBUG /artifacts: Parsed queries = [{'name': '*', 'types': ['model']}]
+11/27/25 12:01:20 AM : INFO : root : [36mDEBUG /artifacts: Parsed queries = [{'name': '*', 'types': ['model']}][0m
+DEBUG: About to call list_artifacts()
+DEBUG: Got 1 artifacts
+DEBUG: About to build results
+DEBUG _build: Processing 1 queries against 1 artifacts
+DEBUG _build: Query 0: {'name': '*', 'types': ['model']}
+DEBUG _build: Validated - name=*, types=['model']
+DEBUG _build: Artifact bert-base-uncased has normalized type model
+DEBUG _build: Adding bert-base-uncased as model
+DEBUG _build: Returning 1 total results
+DEBUG: Built 1 results
+DEBUG: Returning 1 results with offset header {'offset': '2'}
+
+===== DEBUG /artifacts FINAL STATE =====
+Queries received (1): [{'name': '*', 'types': ['model']}]
+Total artifacts loaded: 1
+Results built (1):
+  → {'name': 'bert-base-uncased', 'id': 9430210313, 'type': 'model'}
+Offset header: {'offset': '2'}
+========================================
+
+11/27/25 12:01:20 AM : INFO : root : ===== ARTIFACTS QUERY RESULTS =====
+11/27/25 12:01:20 AM : INFO : root : Query: [{'name': '*', 'types': ['model']}]
+11/27/25 12:01:20 AM : INFO : root : Returning 1 results from 1 total artifacts
+11/27/25 12:01:20 AM : INFO : root :   Result 0: name=bert-base-uncased, id=9430210313, type=model
+11/27/25 12:01:20 AM : INFO : root : =====================================
+11/27/25 12:01:20 AM : INFO : root : [DATA] Response: 1 results
+11/27/25 12:01:20 AM : INFO : root : [RESPONSE] POST /artifacts -> 200
+11/27/25 12:01:20 AM : INFO : root : [REQUEST] POST /artifact/dataset
+11/27/25 12:01:20 AM : WARNING : root : DEBUG /artifact/{{type}}: No auth header - allowing for baseline
+11/27/25 12:01:20 AM : INFO : root : [DATA] Creating artifact type=dataset, body keys: ['name', 'url']
+11/27/25 12:01:20 AM : INFO : root : Creating artifact: name=bookcorpus, type=dataset, ID=6987630192
+11/27/25 12:01:20 AM : INFO : root : [SIZE CALC] Starting size calculation for dataset: https://huggingface.co/datasets/bookcorpus/bookcorpus
+11/27/25 12:01:20 AM : INFO : root : [SIZE CALC] Detected HuggingFace URL: https://huggingface.co/datasets/bookcorpus/bookcorpus
+11/27/25 12:01:20 AM : INFO : root : [SIZE CALC] Extracted repo_id: bookcorpus/bookcorpus, is_dataset: True
+11/27/25 12:01:20 AM : INFO : root : [SIZE CALC] Fetching from: https://huggingface.co/datasets/bookcorpus/bookcorpus/tree/main
+11/27/25 12:01:21 AM : INFO : root : [SIZE CALC WEB SUCCESS] bookcorpus/bookcorpus: 6.0 MB (scraped from website)
+11/27/25 12:01:21 AM : INFO : root : [SIZE] Artifact bookcorpus (dataset) size: 6.0 MB
+11/27/25 12:01:21 AM : INFO : root : [S3] Processing bookcorpus for S3 storage
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [S3 CHECK] Artifact bookcorpus already exists in S3
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [S3 CACHE HIT] Using existing S3 object for bookcorpus
+11/27/25 12:01:21 AM : INFO : API.storage : Generated download URL for artifacts/dataset/bookcorpus.zip (expires in 3600s)
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [S3 DOWNLOAD URL] Generated download URL for bookcorpus
+11/27/25 12:01:21 AM : INFO : root : [S3] Successfully stored bookcorpus in S3
+11/27/25 12:01:21 AM : INFO : API.dynamo : Added dataset artifact: bookcorpus (ID: 6987630192)
+11/27/25 12:01:21 AM : INFO : root : Registered artifact ID: 6987630192
+11/27/25 12:01:21 AM : INFO : API.dynamo : Updated artifact 6987630192
+11/27/25 12:01:21 AM : INFO : root : Logged audit event: CREATE for artifact bookcorpus (ID: 6987630192)
+11/27/25 12:01:21 AM : INFO : root : [RESPONSE] POST /artifact/dataset -> 201
+11/27/25 12:01:21 AM : INFO : root : [REQUEST] POST /artifacts
+11/27/25 12:01:21 AM : INFO : root : DEBUG /artifacts: All headers = {'host': '18.191.29.29:8000', 'user-agent': 'python-requests/2.32.3', 'accept-encoding': 'gzip, deflate', 'accept': '*/*', 'connection': 'keep-alive', 'content-length': '37', 'content-type': 'application/json'}
+11/27/25 12:01:21 AM : INFO : root : DEBUG /artifacts: X-Authorization value = None
+11/27/25 12:01:21 AM : WARNING : root : DEBUG: No X-Authorization header - allowing for baseline
+11/27/25 12:01:20 AM : INFO : root : [36m===== ARTIFACTS QUERY RESULTS =====[0m
+11/27/25 12:01:20 AM : INFO : root : [36mQuery: [{'name': '*', 'types': ['model']}][0m
+11/27/25 12:01:20 AM : INFO : root : [36mReturning 1 results from 1 total artifacts[0m
+11/27/25 12:01:20 AM : INFO : root : [36m  Result 0: name=bert-base-uncased, id=9430210313, type=model[0m
+11/27/25 12:01:20 AM : INFO : root : [36m=====================================[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[DATA] Response: 1 results[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[RESPONSE] POST /artifacts -> 200[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[REQUEST] POST /artifact/dataset[0m
+11/27/25 12:01:20 AM : WARNING : root : [33mDEBUG /artifact/{{type}}: No auth header - allowing for baseline[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[DATA] Creating artifact type=dataset, body keys: ['name', 'url'][0m
+11/27/25 12:01:20 AM : INFO : root : [36mCreating artifact: name=bookcorpus, type=dataset, ID=6987630192[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[SIZE CALC] Starting size calculation for dataset: https://huggingface.co/datasets/bookcorpus/bookcorpus[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[SIZE CALC] Detected HuggingFace URL: https://huggingface.co/datasets/bookcorpus/bookcorpus[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[SIZE CALC] Extracted repo_id: bookcorpus/bookcorpus, is_dataset: True[0m
+11/27/25 12:01:20 AM : INFO : root : [36m[SIZE CALC] Fetching from: https://huggingface.co/datasets/bookcorpus/bookcorpus/tree/main[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[SIZE CALC WEB SUCCESS] bookcorpus/bookcorpus: 6.0 MB (scraped from website)[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[SIZE] Artifact bookcorpus (dataset) size: 6.0 MB[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[S3] Processing bookcorpus for S3 storage[0m
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [36m[S3 CHECK] Artifact bookcorpus already exists in S3[0m
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [36m[S3 CACHE HIT] Using existing S3 object for bookcorpus[0m
+11/27/25 12:01:21 AM : INFO : API.storage : [36mGenerated download URL for artifacts/dataset/bookcorpus.zip (expires in 3600s)[0m
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [36m[S3 DOWNLOAD URL] Generated download URL for bookcorpus[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[S3] Successfully stored bookcorpus in S3[0m
+11/27/25 12:01:21 AM : INFO : API.dynamo : [36mAdded dataset artifact: bookcorpus (ID: 6987630192)[0m
+11/27/25 12:01:21 AM : INFO : root : [36mRegistered artifact ID: 6987630192[0m
+11/27/25 12:01:21 AM : INFO : API.dynamo : [36mUpdated artifact 6987630192[0m
+11/27/25 12:01:21 AM : INFO : root : [36mLogged audit event: CREATE for artifact bookcorpus (ID: 6987630192)[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[RESPONSE] POST /artifact/dataset -> 201[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[REQUEST] POST /artifacts[0m
+11/27/25 12:01:21 AM : INFO : root : [36mDEBUG /artifacts: All headers = {'host': '18.191.29.29:8000', 'user-agent': 'python-requests/2.32.3', 'accept-encoding': 'gzip, deflate', 'accept': '*/*', 'connection': 'keep-alive', 'content-length': '37', 'content-type': 'application/json'}[0m
+11/27/25 12:01:21 AM : INFO : root : [36mDEBUG /artifacts: X-Authorization value = None[0m
+11/27/25 12:01:21 AM : WARNING : root : [33mDEBUG: No X-Authorization header - allowing for baseline[0m
+DEBUG /artifacts: About to read body
+11/27/25 12:01:21 AM : INFO : root : DEBUG /artifacts: About to read body
+11/27/25 12:01:21 AM : INFO : root : [36mDEBUG /artifacts: About to read body[0m
+DEBUG /artifacts: Raw body = [{"name": "*", "types": ["dataset"]}]
+11/27/25 12:01:21 AM : INFO : root : DEBUG /artifacts: Raw body = [{"name": "*", "types": ["dataset"]}]
+11/27/25 12:01:21 AM : INFO : root : [DATA] Request body: [{'name': '*', 'types': ['dataset']}]
+11/27/25 12:01:21 AM : INFO : root : [36mDEBUG /artifacts: Raw body = [{"name": "*", "types": ["dataset"]}][0m
+11/27/25 12:01:21 AM : INFO : root : [36m[DATA] Request body: [{'name': '*', 'types': ['dataset']}][0m
+DEBUG /artifacts: Parsed queries = [{'name': '*', 'types': ['dataset']}]
+11/27/25 12:01:21 AM : INFO : root : DEBUG /artifacts: Parsed queries = [{'name': '*', 'types': ['dataset']}]
+11/27/25 12:01:21 AM : INFO : root : [36mDEBUG /artifacts: Parsed queries = [{'name': '*', 'types': ['dataset']}][0m
+DEBUG: About to call list_artifacts()
+DEBUG: Got 2 artifacts
+DEBUG: About to build results
+DEBUG _build: Processing 1 queries against 2 artifacts
+DEBUG _build: Query 0: {'name': '*', 'types': ['dataset']}
+DEBUG _build: Validated - name=*, types=['dataset']
+DEBUG _build: Artifact bookcorpus has normalized type dataset
+DEBUG _build: Adding bookcorpus as dataset
+DEBUG _build: Artifact bert-base-uncased has normalized type model
+DEBUG _build: Skipping bert-base-uncased - type model not in ['dataset']
+DEBUG _build: Returning 1 total results
+DEBUG: Built 1 results
+DEBUG: Returning 1 results with offset header {'offset': '2'}
+
+===== DEBUG /artifacts FINAL STATE =====
+Queries received (1): [{'name': '*', 'types': ['dataset']}]
+Total artifacts loaded: 2
+Results built (1):
+  → {'name': 'bookcorpus', 'id': 6987630192, 'type': 'dataset'}
+Offset header: {'offset': '2'}
+========================================
+
+11/27/25 12:01:21 AM : INFO : root : ===== ARTIFACTS QUERY RESULTS =====
+11/27/25 12:01:21 AM : INFO : root : Query: [{'name': '*', 'types': ['dataset']}]
+11/27/25 12:01:21 AM : INFO : root : Returning 1 results from 2 total artifacts
+11/27/25 12:01:21 AM : INFO : root :   Result 0: name=bookcorpus, id=6987630192, type=dataset
+11/27/25 12:01:21 AM : INFO : root : =====================================
+11/27/25 12:01:21 AM : INFO : root : [DATA] Response: 1 results
+11/27/25 12:01:21 AM : INFO : root : [RESPONSE] POST /artifacts -> 200
+11/27/25 12:01:21 AM : INFO : root : [REQUEST] POST /artifact/code
+11/27/25 12:01:21 AM : WARNING : root : DEBUG /artifact/{{type}}: No auth header - allowing for baseline
+11/27/25 12:01:21 AM : INFO : root : [DATA] Creating artifact type=code, body keys: ['name', 'url']
+11/27/25 12:01:21 AM : INFO : root : Creating artifact: name=google-research-bert, type=code, ID=5199587685
+11/27/25 12:01:21 AM : INFO : root : [SIZE CALC] Starting size calculation for code: https://github.com/google-research/bert
+11/27/25 12:01:21 AM : INFO : root : [SIZE CALC] Detected GitHub URL: https://github.com/google-research/bert
+11/27/25 12:01:21 AM : INFO : root : [SIZE CALC] Calling GitHub API: https://api.github.com/repos/google-research/bert
+11/27/25 12:01:21 AM : INFO : root : [SIZE CALC SUCCESS] GitHub google-research/bert: 0.31 MB
+11/27/25 12:01:21 AM : INFO : root : [SIZE] Artifact google-research-bert (code) size: 0.31 MB
+11/27/25 12:01:21 AM : INFO : root : [S3] Processing google-research-bert for S3 storage
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [S3 CHECK] Artifact google-research-bert already exists in S3
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [S3 CACHE HIT] Using existing S3 object for google-research-bert
+11/27/25 12:01:21 AM : INFO : API.storage : Generated download URL for artifacts/code/google-research-bert.zip (expires in 3600s)
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [S3 DOWNLOAD URL] Generated download URL for google-research-bert
+11/27/25 12:01:21 AM : INFO : root : [S3] Successfully stored google-research-bert in S3
+11/27/25 12:01:21 AM : INFO : API.dynamo : Added code artifact: google-research-bert (ID: 5199587685)
+11/27/25 12:01:21 AM : INFO : root : Registered artifact ID: 5199587685
+11/27/25 12:01:21 AM : INFO : API.dynamo : Updated artifact 5199587685
+11/27/25 12:01:21 AM : INFO : root : Logged audit event: CREATE for artifact google-research-bert (ID: 5199587685)
+11/27/25 12:01:21 AM : INFO : root : [RESPONSE] POST /artifact/code -> 201
+11/27/25 12:01:21 AM : INFO : root : [REQUEST] POST /artifacts
+11/27/25 12:01:21 AM : INFO : root : DEBUG /artifacts: All headers = {'host': '18.191.29.29:8000', 'user-agent': 'python-requests/2.32.3', 'accept-encoding': 'gzip, deflate', 'accept': '*/*', 'connection': 'keep-alive', 'content-length': '34', 'content-type': 'application/json'}
+11/27/25 12:01:21 AM : INFO : root : DEBUG /artifacts: X-Authorization value = None
+11/27/25 12:01:21 AM : WARNING : root : DEBUG: No X-Authorization header - allowing for baseline
+11/27/25 12:01:21 AM : INFO : root : [36m===== ARTIFACTS QUERY RESULTS =====[0m
+11/27/25 12:01:21 AM : INFO : root : [36mQuery: [{'name': '*', 'types': ['dataset']}][0m
+11/27/25 12:01:21 AM : INFO : root : [36mReturning 1 results from 2 total artifacts[0m
+11/27/25 12:01:21 AM : INFO : root : [36m  Result 0: name=bookcorpus, id=6987630192, type=dataset[0m
+11/27/25 12:01:21 AM : INFO : root : [36m=====================================[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[DATA] Response: 1 results[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[RESPONSE] POST /artifacts -> 200[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[REQUEST] POST /artifact/code[0m
+11/27/25 12:01:21 AM : WARNING : root : [33mDEBUG /artifact/{{type}}: No auth header - allowing for baseline[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[DATA] Creating artifact type=code, body keys: ['name', 'url'][0m
+11/27/25 12:01:21 AM : INFO : root : [36mCreating artifact: name=google-research-bert, type=code, ID=5199587685[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[SIZE CALC] Starting size calculation for code: https://github.com/google-research/bert[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[SIZE CALC] Detected GitHub URL: https://github.com/google-research/bert[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[SIZE CALC] Calling GitHub API: https://api.github.com/repos/google-research/bert[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[SIZE CALC SUCCESS] GitHub google-research/bert: 0.31 MB[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[SIZE] Artifact google-research-bert (code) size: 0.31 MB[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[S3] Processing google-research-bert for S3 storage[0m
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [36m[S3 CHECK] Artifact google-research-bert already exists in S3[0m
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [36m[S3 CACHE HIT] Using existing S3 object for google-research-bert[0m
+11/27/25 12:01:21 AM : INFO : API.storage : [36mGenerated download URL for artifacts/code/google-research-bert.zip (expires in 3600s)[0m
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [36m[S3 DOWNLOAD URL] Generated download URL for google-research-bert[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[S3] Successfully stored google-research-bert in S3[0m
+11/27/25 12:01:21 AM : INFO : API.dynamo : [36mAdded code artifact: google-research-bert (ID: 5199587685)[0m
+11/27/25 12:01:21 AM : INFO : root : [36mRegistered artifact ID: 5199587685[0m
+11/27/25 12:01:21 AM : INFO : API.dynamo : [36mUpdated artifact 5199587685[0m
+11/27/25 12:01:21 AM : INFO : root : [36mLogged audit event: CREATE for artifact google-research-bert (ID: 5199587685)[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[RESPONSE] POST /artifact/code -> 201[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[REQUEST] POST /artifacts[0m
+11/27/25 12:01:21 AM : INFO : root : [36mDEBUG /artifacts: All headers = {'host': '18.191.29.29:8000', 'user-agent': 'python-requests/2.32.3', 'accept-encoding': 'gzip, deflate', 'accept': '*/*', 'connection': 'keep-alive', 'content-length': '34', 'content-type': 'application/json'}[0m
+11/27/25 12:01:21 AM : INFO : root : [36mDEBUG /artifacts: X-Authorization value = None[0m
+11/27/25 12:01:21 AM : WARNING : root : [33mDEBUG: No X-Authorization header - allowing for baseline[0m
+DEBUG /artifacts: About to read body
+11/27/25 12:01:21 AM : INFO : root : DEBUG /artifacts: About to read body
+11/27/25 12:01:21 AM : INFO : root : [36mDEBUG /artifacts: About to read body[0m
+DEBUG /artifacts: Raw body = [{"name": "*", "types": ["code"]}]
+11/27/25 12:01:21 AM : INFO : root : DEBUG /artifacts: Raw body = [{"name": "*", "types": ["code"]}]
+11/27/25 12:01:21 AM : INFO : root : [DATA] Request body: [{'name': '*', 'types': ['code']}]
+11/27/25 12:01:21 AM : INFO : root : [36mDEBUG /artifacts: Raw body = [{"name": "*", "types": ["code"]}][0m
+11/27/25 12:01:21 AM : INFO : root : [36m[DATA] Request body: [{'name': '*', 'types': ['code']}][0m
+DEBUG /artifacts: Parsed queries = [{'name': '*', 'types': ['code']}]
+11/27/25 12:01:21 AM : INFO : root : DEBUG /artifacts: Parsed queries = [{'name': '*', 'types': ['code']}]
+11/27/25 12:01:21 AM : INFO : root : [36mDEBUG /artifacts: Parsed queries = [{'name': '*', 'types': ['code']}][0m
+DEBUG: About to call list_artifacts()
+DEBUG: Got 3 artifacts
+DEBUG: About to build results
+DEBUG _build: Processing 1 queries against 3 artifacts
+DEBUG _build: Query 0: {'name': '*', 'types': ['code']}
+DEBUG _build: Validated - name=*, types=['code']
+DEBUG _build: Artifact google-research-bert has normalized type code
+DEBUG _build: Adding google-research-bert as code
+DEBUG _build: Artifact bookcorpus has normalized type dataset
+DEBUG _build: Skipping bookcorpus - type dataset not in ['code']
+DEBUG _build: Artifact bert-base-uncased has normalized type model
+DEBUG _build: Skipping bert-base-uncased - type model not in ['code']
+DEBUG _build: Returning 1 total results
+DEBUG: Built 1 results
+DEBUG: Returning 1 results with offset header {'offset': '2'}
+
+===== DEBUG /artifacts FINAL STATE =====
+Queries received (1): [{'name': '*', 'types': ['code']}]
+Total artifacts loaded: 3
+Results built (1):
+  → {'name': 'google-research-bert', 'id': 5199587685, 'type': 'code'}
+Offset header: {'offset': '2'}
+========================================
+
+11/27/25 12:01:21 AM : INFO : root : ===== ARTIFACTS QUERY RESULTS =====
+11/27/25 12:01:21 AM : INFO : root : Query: [{'name': '*', 'types': ['code']}]
+11/27/25 12:01:21 AM : INFO : root : Returning 1 results from 3 total artifacts
+11/27/25 12:01:21 AM : INFO : root :   Result 0: name=google-research-bert, id=5199587685, type=code
+11/27/25 12:01:21 AM : INFO : root : =====================================
+11/27/25 12:01:21 AM : INFO : root : [DATA] Response: 1 results
+11/27/25 12:01:21 AM : INFO : root : [RESPONSE] POST /artifacts -> 200
+11/27/25 12:01:21 AM : INFO : root : [REQUEST] POST /artifact/model
+11/27/25 12:01:21 AM : WARNING : root : DEBUG /artifact/{{type}}: No auth header - allowing for baseline
+11/27/25 12:01:21 AM : INFO : root : [DATA] Creating artifact type=model, body keys: ['name', 'url']
+11/27/25 12:01:21 AM : INFO : root : Creating artifact: name=audience_classifier_model, type=model, ID=2878306226
+11/27/25 12:01:21 AM : INFO : root : [SIZE CALC] Starting size calculation for model: https://huggingface.co/parvk11/audience_classifier_model
+11/27/25 12:01:21 AM : INFO : root : [SIZE CALC] Detected HuggingFace URL: https://huggingface.co/parvk11/audience_classifier_model
+11/27/25 12:01:21 AM : INFO : root : [SIZE CALC] Extracted repo_id: parvk11/audience_classifier_model, is_dataset: False
+11/27/25 12:01:21 AM : INFO : root : [SIZE CALC] Fetching from: https://huggingface.co/parvk11/audience_classifier_model/tree/main
+11/27/25 12:01:21 AM : INFO : root : [SIZE CALC WEB SUCCESS] parvk11/audience_classifier_model: 268.0 MB (scraped from website)
+11/27/25 12:01:21 AM : INFO : root : [SIZE] Artifact audience_classifier_model (model) size: 268.0 MB
+11/27/25 12:01:21 AM : INFO : root : [S3] Processing audience_classifier_model for S3 storage
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [S3 CHECK] Artifact audience_classifier_model already exists in S3
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [S3 CACHE HIT] Using existing S3 object for audience_classifier_model
+11/27/25 12:01:21 AM : INFO : API.storage : Generated download URL for artifacts/model/audience_classifier_model.zip (expires in 3600s)
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [S3 DOWNLOAD URL] Generated download URL for audience_classifier_model
+11/27/25 12:01:21 AM : INFO : root : [S3] Successfully stored audience_classifier_model in S3
+11/27/25 12:01:21 AM : INFO : API.dynamo : Added model artifact: audience_classifier_model (ID: 2878306226)
+11/27/25 12:01:21 AM : INFO : root : Registered artifact ID: 2878306226
+11/27/25 12:01:21 AM : INFO : API.dynamo : Updated artifact 2878306226
+11/27/25 12:01:21 AM : INFO : root : Logged audit event: CREATE for artifact audience_classifier_model (ID: 2878306226)
+11/27/25 12:01:21 AM : INFO : root : Started background rating task for model audience_classifier_model
+11/27/25 12:01:21 AM : INFO : root : Starting background rating for audience_classifier_model (ID: 2878306226)
+11/27/25 12:01:21 AM : INFO : ModelHandler : Fetched HuggingFace API data for parvk11/audience_classifier_model: downloads=809, likes=0
+11/27/25 12:01:21 AM : INFO : ModelHandler : Fetched HuggingFace API data for parvk11/audience_classifier_model: downloads=809, likes=0
+11/27/25 12:01:21 AM : WARNING : ModelHandler : No license found for parvk11/audience_classifier_model
+11/27/25 12:01:21 AM : INFO : DatasetQualityMetric : Starting dataset quality metric calculation
+11/27/25 12:01:21 AM : WARNING : DatasetQualityMetric : No dataset resources available
+11/27/25 12:01:21 AM : WARNING : ReproducibilityMetric : No code provided
+11/27/25 12:01:21 AM : INFO : ModelHandler : Fetched HuggingFace API data for parvk11/audience_classifier_model: downloads=809, likes=0
+11/27/25 12:01:21 AM : INFO : ModelHandler : Model size calculated: 255.71 MB (aggregated from API/tree/HEAD)
+11/27/25 12:01:22 AM : INFO : ModelHandler : Fetched HuggingFace API data for parvk11/audience_classifier_model: downloads=809, likes=0
+11/27/25 12:01:22 AM : INFO : ModelHandler : Documentation score for parvk11/audience_classifier_model: 0.10
+11/27/25 12:01:22 AM : WARNING : root : Model audience_classifier_model failed validation. Net_score=0.13, Failed metrics: license=0.0, ramp_up_time=0.1, performance_claims=0.0, dataset_and_code_score=0.0, dataset_quality=0.0, code_quality=0.0, reproducibility=0.0, tree_score=0.0
+11/27/25 12:01:22 AM : INFO : API.dynamo : Updated artifact 2878306226
+11/27/25 12:01:22 AM : WARNING : root : Rating completed for audience_classifier_model: net_score=0.13 - INVALID
+11/27/25 12:01:22 AM : INFO : root : [RESPONSE] POST /artifact/model -> 201
+11/27/25 12:01:22 AM : INFO : root : [REQUEST] POST /artifact/model
+11/27/25 12:01:22 AM : WARNING : root : DEBUG /artifact/{{type}}: No auth header - allowing for baseline
+11/27/25 12:01:22 AM : INFO : root : [DATA] Creating artifact type=model, body keys: ['name', 'url']
+11/27/25 12:01:22 AM : INFO : root : Creating artifact: name=distilbert-base-uncased-distilled-squad, type=model, ID=7666871917
+11/27/25 12:01:22 AM : INFO : root : [SIZE CALC] Starting size calculation for model: https://huggingface.co/distilbert-base-uncased-distilled-squad
+11/27/25 12:01:22 AM : INFO : root : [SIZE CALC] Detected HuggingFace URL: https://huggingface.co/distilbert-base-uncased-distilled-squad
+11/27/25 12:01:22 AM : INFO : root : [SIZE CALC] Extracted repo_id: distilbert/distilbert-base-uncased-distilled-squad, is_dataset: False
+11/27/25 12:01:22 AM : INFO : root : [SIZE CALC] Fetching from: https://huggingface.co/distilbert/distilbert-base-uncased-distilled-squad/tree/main
+11/27/25 12:01:22 AM : INFO : root : [SIZE CALC WEB SUCCESS] distilbert/distilbert-base-uncased-distilled-squad: 1996.8 MB (scraped from website)
+11/27/25 12:01:22 AM : INFO : root : [SIZE] Artifact distilbert-base-uncased-distilled-squad (model) size: 1996.8 MB
+11/27/25 12:01:22 AM : INFO : root : [S3] Processing distilbert-base-uncased-distilled-squad for S3 storage
+11/27/25 12:01:22 AM : INFO : artifact_downloader : [S3 CHECK] Artifact distilbert-base-uncased-distilled-squad already exists in S3
+11/27/25 12:01:22 AM : INFO : artifact_downloader : [S3 CACHE HIT] Using existing S3 object for distilbert-base-uncased-distilled-squad
+11/27/25 12:01:22 AM : INFO : API.storage : Generated download URL for artifacts/model/distilbert-base-uncased-distilled-squad.zip (expires in 3600s)
+11/27/25 12:01:22 AM : INFO : artifact_downloader : [S3 DOWNLOAD URL] Generated download URL for distilbert-base-uncased-distilled-squad
+11/27/25 12:01:22 AM : INFO : root : [S3] Successfully stored distilbert-base-uncased-distilled-squad in S3
+11/27/25 12:01:22 AM : INFO : API.dynamo : Added model artifact: distilbert-base-uncased-distilled-squad (ID: 7666871917)
+11/27/25 12:01:22 AM : INFO : root : Registered artifact ID: 7666871917
+11/27/25 12:01:22 AM : INFO : API.dynamo : Updated artifact 7666871917
+11/27/25 12:01:22 AM : INFO : root : Logged audit event: CREATE for artifact distilbert-base-uncased-distilled-squad (ID: 7666871917)
+11/27/25 12:01:22 AM : INFO : root : Started background rating task for model distilbert-base-uncased-distilled-squad
+11/27/25 12:01:22 AM : INFO : root : Starting background rating for distilbert-base-uncased-distilled-squad (ID: 7666871917)
+11/27/25 12:01:22 AM : ERROR : ModelHandler : Error fetching HF API data: 'list' object has no attribute 'get'
+11/27/25 12:01:22 AM : INFO : ModelHandler : Documentation score for : 0.00
+11/27/25 12:01:22 AM : ERROR : model_evaluator : Error in metric calculation: 'list' object has no attribute 'get'
+11/27/25 12:01:21 AM : INFO : root : [36m===== ARTIFACTS QUERY RESULTS =====[0m
+11/27/25 12:01:21 AM : INFO : root : [36mQuery: [{'name': '*', 'types': ['code']}][0m
+11/27/25 12:01:21 AM : INFO : root : [36mReturning 1 results from 3 total artifacts[0m
+11/27/25 12:01:21 AM : INFO : root : [36m  Result 0: name=google-research-bert, id=5199587685, type=code[0m
+11/27/25 12:01:21 AM : INFO : root : [36m=====================================[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[DATA] Response: 1 results[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[RESPONSE] POST /artifacts -> 200[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[REQUEST] POST /artifact/model[0m
+11/27/25 12:01:21 AM : WARNING : root : [33mDEBUG /artifact/{{type}}: No auth header - allowing for baseline[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[DATA] Creating artifact type=model, body keys: ['name', 'url'][0m
+11/27/25 12:01:21 AM : INFO : root : [36mCreating artifact: name=audience_classifier_model, type=model, ID=2878306226[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[SIZE CALC] Starting size calculation for model: https://huggingface.co/parvk11/audience_classifier_model[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[SIZE CALC] Detected HuggingFace URL: https://huggingface.co/parvk11/audience_classifier_model[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[SIZE CALC] Extracted repo_id: parvk11/audience_classifier_model, is_dataset: False[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[SIZE CALC] Fetching from: https://huggingface.co/parvk11/audience_classifier_model/tree/main[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[SIZE CALC WEB SUCCESS] parvk11/audience_classifier_model: 268.0 MB (scraped from website)[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[SIZE] Artifact audience_classifier_model (model) size: 268.0 MB[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[S3] Processing audience_classifier_model for S3 storage[0m
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [36m[S3 CHECK] Artifact audience_classifier_model already exists in S3[0m
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [36m[S3 CACHE HIT] Using existing S3 object for audience_classifier_model[0m
+11/27/25 12:01:21 AM : INFO : API.storage : [36mGenerated download URL for artifacts/model/audience_classifier_model.zip (expires in 3600s)[0m
+11/27/25 12:01:21 AM : INFO : artifact_downloader : [36m[S3 DOWNLOAD URL] Generated download URL for audience_classifier_model[0m
+11/27/25 12:01:21 AM : INFO : root : [36m[S3] Successfully stored audience_classifier_model in S3[0m
+11/27/25 12:01:21 AM : INFO : API.dynamo : [36mAdded model artifact: audience_classifier_model (ID: 2878306226)[0m
+11/27/25 12:01:21 AM : INFO : root : [36mRegistered artifact ID: 2878306226[0m
+11/27/25 12:01:21 AM : INFO : API.dynamo : [36mUpdated artifact 2878306226[0m
+11/27/25 12:01:21 AM : INFO : root : [36mLogged audit event: CREATE for artifact audience_classifier_model (ID: 2878306226)[0m
+11/27/25 12:01:21 AM : INFO : root : [36mStarted background rating task for model audience_classifier_model[0m
+11/27/25 12:01:21 AM : INFO : root : [36mStarting background rating for audience_classifier_model (ID: 2878306226)[0m
+11/27/25 12:01:21 AM : INFO : ModelHandler : [36mFetched HuggingFace API data for parvk11/audience_classifier_model: downloads=809, likes=0[0m
+11/27/25 12:01:21 AM : INFO : ModelHandler : [36mFetched HuggingFace API data for parvk11/audience_classifier_model: downloads=809, likes=0[0m
+11/27/25 12:01:21 AM : WARNING : ModelHandler : [33mNo license found for parvk11/audience_classifier_model[0m
+11/27/25 12:01:21 AM : INFO : DatasetQualityMetric : [36mStarting dataset quality metric calculation[0m
+11/27/25 12:01:21 AM : WARNING : DatasetQualityMetric : [33mNo dataset resources available[0m
+11/27/25 12:01:21 AM : WARNING : ReproducibilityMetric : [33mNo code provided[0m
+11/27/25 12:01:21 AM : INFO : ModelHandler : [36mFetched HuggingFace API data for parvk11/audience_classifier_model: downloads=809, likes=0[0m
+11/27/25 12:01:21 AM : INFO : ModelHandler : [36mModel size calculated: 255.71 MB (aggregated from API/tree/HEAD)[0m
+11/27/25 12:01:22 AM : INFO : ModelHandler : [36mFetched HuggingFace API data for parvk11/audience_classifier_model: downloads=809, likes=0[0m
+11/27/25 12:01:22 AM : INFO : ModelHandler : [36mDocumentation score for parvk11/audience_classifier_model: 0.10[0m
+11/27/25 12:01:22 AM : WARNING : root : [33mModel audience_classifier_model failed validation. Net_score=0.13, Failed metrics: license=0.0, ramp_up_time=0.1, performance_claims=0.0, dataset_and_code_score=0.0, dataset_quality=0.0, code_quality=0.0, reproducibility=0.0, tree_score=0.0[0m
+11/27/25 12:01:22 AM : INFO : API.dynamo : [36mUpdated artifact 2878306226[0m
+11/27/25 12:01:22 AM : WARNING : root : [33mRating completed for audience_classifier_model: net_score=0.13 - INVALID[0m
+11/27/25 12:01:22 AM : INFO : root : [36m[RESPONSE] POST /artifact/model -> 201[0m
+11/27/25 12:01:22 AM : INFO : root : [36m[REQUEST] POST /artifact/model[0m
+11/27/25 12:01:22 AM : WARNING : root : [33mDEBUG /artifact/{{type}}: No auth header - allowing for baseline[0m
+11/27/25 12:01:22 AM : INFO : root : [36m[DATA] Creating artifact type=model, body keys: ['name', 'url'][0m
+11/27/25 12:01:22 AM : INFO : root : [36mCreating artifact: name=distilbert-base-uncased-distilled-squad, type=model, ID=7666871917[0m
+11/27/25 12:01:22 AM : INFO : root : [36m[SIZE CALC] Starting size calculation for model: https://huggingface.co/distilbert-base-uncased-distilled-squad[0m
+11/27/25 12:01:22 AM : INFO : root : [36m[SIZE CALC] Detected HuggingFace URL: https://huggingface.co/distilbert-base-uncased-distilled-squad[0m
+11/27/25 12:01:22 AM : INFO : root : [36m[SIZE CALC] Extracted repo_id: distilbert/distilbert-base-uncased-distilled-squad, is_dataset: False[0m
+11/27/25 12:01:22 AM : INFO : root : [36m[SIZE CALC] Fetching from: https://huggingface.co/distilbert/distilbert-base-uncased-distilled-squad/tree/main[0m
+11/27/25 12:01:22 AM : INFO : root : [36m[SIZE CALC WEB SUCCESS] distilbert/distilbert-base-uncased-distilled-squad: 1996.8 MB (scraped from website)[0m
+11/27/25 12:01:22 AM : INFO : root : [36m[SIZE] Artifact distilbert-base-uncased-distilled-squad (model) size: 1996.8 MB[0m
+11/27/25 12:01:22 AM : INFO : root : [36m[S3] Processing distilbert-base-uncased-distilled-squad for S3 storage[0m
+11/27/25 12:01:22 AM : INFO : artifact_downloader : [36m[S3 CHECK] Artifact distilbert-base-uncased-distilled-squad already exists in S3[0m
+11/27/25 12:01:22 AM : INFO : artifact_downloader : [36m[S3 CACHE HIT] Using existing S3 object for distilbert-base-uncased-distilled-squad[0m
+11/27/25 12:01:22 AM : INFO : API.storage : [36mGenerated download URL for artifacts/model/distilbert-base-uncased-distilled-squad.zip (expires in 3600s)[0m
+11/27/25 12:01:22 AM : INFO : artifact_downloader : [36m[S3 DOWNLOAD URL] Generated download URL for distilbert-base-uncased-distilled-squad[0m
+11/27/25 12:01:22 AM : INFO : root : [36m[S3] Successfully stored distilbert-base-uncased-distilled-squad in S3[0m
+11/27/25 12:01:22 AM : INFO : API.dynamo : [36mAdded model artifact: distilbert-base-uncased-distilled-squad (ID: 7666871917)[0m
+11/27/25 12:01:22 AM : INFO : root : [36mRegistered artifact ID: 7666871917[0m
+11/27/25 12:01:22 AM : INFO : API.dynamo : [36mUpdated artifact 7666871917[0m
+11/27/25 12:01:22 AM : INFO : root : [36mLogged audit event: CREATE for artifact distilbert-base-uncased-distilled-squad (ID: 7666871917)[0m
+11/27/25 12:01:22 AM : INFO : root : [36mStarted background rating task for model distilbert-base-uncased-distilled-squad[0m
+11/27/25 12:01:22 AM : INFO : root : [36mStarting background rating for distilbert-base-uncased-distilled-squad (ID: 7666871917)[0m
+11/27/25 12:01:22 AM : ERROR : ModelHandler : [91mError fetching HF API data: 'list' object has no attribute 'get'[0m
+11/27/25 12:01:22 AM : INFO : ModelHandler : [36mDocumentation score for : 0.00[0m
+11/27/25 12:01:22 AM : INFO : DatasetQualityMetric : Starting dataset quality metric calculation
+11/27/25 12:01:22 AM : WARNING : DatasetQualityMetric : No dataset resources available
+11/27/25 12:01:22 AM : WARNING : ReproducibilityMetric : No code provided
+11/27/25 12:01:22 AM : ERROR : ModelHandler : Error fetching HF API data: 'list' object has no attribute 'get'
+11/27/25 12:01:22 AM : ERROR : ModelHandler : Error fetching HF API data: 'list' object has no attribute 'get'
+11/27/25 12:01:22 AM : WARNING : ModelHandler : No license found for 
+11/27/25 12:01:22 AM : ERROR : ModelHandler : Error fetching HF API data: 'list' object has no attribute 'get'
+11/27/25 12:01:23 AM : INFO : ModelHandler : Model size calculated: 0.00 MB (aggregated from API/tree/HEAD)
+11/27/25 12:01:23 AM : WARNING : root : Model distilbert-base-uncased-distilled-squad failed validation. Net_score=0.1, Failed metrics: license=0.0, ramp_up_time=0.0, bus_factor=0.2, performance_claims=0.0, dataset_and_code_score=0.0, dataset_quality=0.0, code_quality=0.0, reproducibility=0.0, tree_score=0.0
+11/27/25 12:01:23 AM : INFO : API.dynamo : Updated artifact 7666871917
+11/27/25 12:01:23 AM : WARNING : root : Rating completed for distilbert-base-uncased-distilled-squad: net_score=0.1 - INVALID
+11/27/25 12:01:23 AM : INFO : root : [RESPONSE] POST /artifact/model -> 201
+11/27/25 12:01:23 AM : INFO : root : [REQUEST] POST /artifact/model
+11/27/25 12:01:23 AM : WARNING : root : DEBUG /artifact/{{type}}: No auth header - allowing for baseline
+11/27/25 12:01:23 AM : INFO : root : [DATA] Creating artifact type=model, body keys: ['name', 'url']
+11/27/25 12:01:23 AM : INFO : root : Creating artifact: name=caidas-swin2SR-lightweight-x2-64, type=model, ID=8910977646
+11/27/25 12:01:23 AM : INFO : root : [SIZE CALC] Starting size calculation for model: https://huggingface.co/caidas/swin2SR-lightweight-x2-64
+11/27/25 12:01:23 AM : INFO : root : [SIZE CALC] Detected HuggingFace URL: https://huggingface.co/caidas/swin2SR-lightweight-x2-64
+11/27/25 12:01:23 AM : INFO : root : [SIZE CALC] Extracted repo_id: caidas/swin2SR-lightweight-x2-64, is_dataset: False
+11/27/25 12:01:23 AM : INFO : root : [SIZE CALC] Fetching from: https://huggingface.co/caidas/swin2SR-lightweight-x2-64/tree/main
+11/27/25 12:01:24 AM : INFO : root : [SIZE CALC WEB SUCCESS] caidas/swin2SR-lightweight-x2-64: 8.26 MB (scraped from website)
+11/27/25 12:01:24 AM : INFO : root : [SIZE] Artifact caidas-swin2SR-lightweight-x2-64 (model) size: 8.26 MB
+11/27/25 12:01:24 AM : INFO : root : [S3] Processing caidas-swin2SR-lightweight-x2-64 for S3 storage
+11/27/25 12:01:24 AM : INFO : artifact_downloader : [S3 CHECK] Artifact caidas-swin2SR-lightweight-x2-64 already exists in S3
+11/27/25 12:01:24 AM : INFO : artifact_downloader : [S3 CACHE HIT] Using existing S3 object for caidas-swin2SR-lightweight-x2-64
+11/27/25 12:01:24 AM : INFO : API.storage : Generated download URL for artifacts/model/caidas-swin2SR-lightweight-x2-64.zip (expires in 3600s)
+11/27/25 12:01:24 AM : INFO : artifact_downloader : [S3 DOWNLOAD URL] Generated download URL for caidas-swin2SR-lightweight-x2-64
+11/27/25 12:01:24 AM : INFO : root : [S3] Successfully stored caidas-swin2SR-lightweight-x2-64 in S3
+11/27/25 12:01:24 AM : INFO : API.dynamo : Added model artifact: caidas-swin2SR-lightweight-x2-64 (ID: 8910977646)
+11/27/25 12:01:24 AM : INFO : root : Registered artifact ID: 8910977646
+11/27/25 12:01:24 AM : INFO : API.dynamo : Updated artifact 8910977646
+11/27/25 12:01:24 AM : INFO : root : Logged audit event: CREATE for artifact caidas-swin2SR-lightweight-x2-64 (ID: 8910977646)
+11/27/25 12:01:24 AM : INFO : root : Started background rating task for model caidas-swin2SR-lightweight-x2-64
+11/27/25 12:01:24 AM : INFO : root : Starting background rating for caidas-swin2SR-lightweight-x2-64 (ID: 8910977646)
+11/27/25 12:01:24 AM : INFO : ModelHandler : Fetched HuggingFace API data for caidas/swin2SR-lightweight-x2-64: downloads=1230, likes=13
+11/27/25 12:01:24 AM : INFO : ModelHandler : Model size from safetensors: 0.96 MB
+11/27/25 12:01:24 AM : INFO : DatasetQualityMetric : Starting dataset quality metric calculation
+11/27/25 12:01:24 AM : WARNING : DatasetQualityMetric : No dataset resources available
+11/27/25 12:01:24 AM : WARNING : ReproducibilityMetric : No code provided
+11/27/25 12:01:24 AM : INFO : ModelHandler : Fetched HuggingFace API data for caidas/swin2SR-lightweight-x2-64: downloads=1230, likes=13
+11/27/25 12:01:24 AM : INFO : ModelHandler : License found in cardData for caidas/swin2SR-lightweight-x2-64: apache-2.0 (score=1.0)
+11/27/25 12:01:24 AM : INFO : ModelHandler : Fetched HuggingFace API data for caidas/swin2SR-lightweight-x2-64: downloads=1230, likes=13
+11/27/25 12:01:24 AM : INFO : ModelHandler : Documentation score for caidas/swin2SR-lightweight-x2-64: 0.10
+11/27/25 12:01:24 AM : INFO : ModelHandler : Fetched HuggingFace API data for caidas/swin2SR-lightweight-x2-64: downloads=1230, likes=13
+11/27/25 12:01:24 AM : WARNING : root : Model caidas-swin2SR-lightweight-x2-64 failed validation. Net_score=0.33, Failed metrics: ramp_up_time=0.1, performance_claims=0.0, dataset_and_code_score=0.0, dataset_quality=0.0, code_quality=0.0, reproducibility=0.0, tree_score=0.0
+11/27/25 12:01:24 AM : INFO : API.dynamo : Updated artifact 8910977646
+11/27/25 12:01:24 AM : WARNING : root : Rating completed for caidas-swin2SR-lightweight-x2-64: net_score=0.33 - INVALID
+11/27/25 12:01:24 AM : INFO : root : [RESPONSE] POST /artifact/model -> 201
+11/27/25 12:01:24 AM : INFO : root : [REQUEST] POST /artifact/model
+11/27/25 12:01:24 AM : WARNING : root : DEBUG /artifact/{{type}}: No auth header - allowing for baseline
+11/27/25 12:01:24 AM : INFO : root : [DATA] Creating artifact type=model, body keys: ['name', 'url']
+11/27/25 12:01:24 AM : INFO : root : Creating artifact: name=vikhyatk-moondream2, type=model, ID=2022607104
+11/27/25 12:01:24 AM : INFO : root : [SIZE CALC] Starting size calculation for model: https://huggingface.co/vikhyatk/moondream2
+11/27/25 12:01:24 AM : INFO : root : [SIZE CALC] Detected HuggingFace URL: https://huggingface.co/vikhyatk/moondream2
+11/27/25 12:01:24 AM : INFO : root : [SIZE CALC] Extracted repo_id: vikhyatk/moondream2, is_dataset: False
+11/27/25 12:01:24 AM : INFO : root : [SIZE CALC] Fetching from: https://huggingface.co/vikhyatk/moondream2/tree/main
+11/27/25 12:01:24 AM : INFO : root : [SIZE CALC WEB SUCCESS] vikhyatk/moondream2: 3952.64 MB (scraped from website)
+11/27/25 12:01:24 AM : INFO : root : [SIZE] Artifact vikhyatk-moondream2 (model) size: 3952.64 MB
+11/27/25 12:01:24 AM : INFO : root : [S3] Processing vikhyatk-moondream2 for S3 storage
+11/27/25 12:01:24 AM : INFO : artifact_downloader : [S3 CHECK] Artifact vikhyatk-moondream2 not found in S3
+11/27/25 12:01:24 AM : INFO : artifact_downloader : [DOWNLOAD] Starting REAL download for vikhyatk-moondream2 from https://huggingface.co/vikhyatk/moondream2
+11/27/25 12:01:24 AM : INFO : artifact_downloader : [DOWNLOAD] Using temp directory: /home/ec2-user/temp/artifact_model_h_ynfq88
+11/27/25 12:01:24 AM : INFO : artifact_downloader : [HF DOWNLOAD] Downloading model vikhyatk/moondream2 via huggingface_hub
+/home/ec2-user/117-Phase-2-CLI/venv/lib64/python3.9/site-packages/huggingface_hub/utils/_validators.py:202: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `snapshot_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/vikhyatk/moondream2/revision/main "HTTP/1.1 200 OK"
+11/27/25 12:01:22 AM : ERROR : model_evaluator : [91mError in metric calculation: 'list' object has no attribute 'get'[0m
+11/27/25 12:01:22 AM : INFO : DatasetQualityMetric : [36mStarting dataset quality metric calculation[0m
+11/27/25 12:01:22 AM : WARNING : DatasetQualityMetric : [33mNo dataset resources available[0m
+11/27/25 12:01:22 AM : WARNING : ReproducibilityMetric : [33mNo code provided[0m
+11/27/25 12:01:22 AM : ERROR : ModelHandler : [91mError fetching HF API data: 'list' object has no attribute 'get'[0m
+11/27/25 12:01:22 AM : ERROR : ModelHandler : [91mError fetching HF API data: 'list' object has no attribute 'get'[0m
+11/27/25 12:01:22 AM : WARNING : ModelHandler : [33mNo license found for [0m
+11/27/25 12:01:22 AM : ERROR : ModelHandler : [91mError fetching HF API data: 'list' object has no attribute 'get'[0m
+11/27/25 12:01:23 AM : INFO : ModelHandler : [36mModel size calculated: 0.00 MB (aggregated from API/tree/HEAD)[0m
+11/27/25 12:01:23 AM : WARNING : root : [33mModel distilbert-base-uncased-distilled-squad failed validation. Net_score=0.1, Failed metrics: license=0.0, ramp_up_time=0.0, bus_factor=0.2, performance_claims=0.0, dataset_and_code_score=0.0, dataset_quality=0.0, code_quality=0.0, reproducibility=0.0, tree_score=0.0[0m
+11/27/25 12:01:23 AM : INFO : API.dynamo : [36mUpdated artifact 7666871917[0m
+11/27/25 12:01:23 AM : WARNING : root : [33mRating completed for distilbert-base-uncased-distilled-squad: net_score=0.1 - INVALID[0m
+11/27/25 12:01:23 AM : INFO : root : [36m[RESPONSE] POST /artifact/model -> 201[0m
+11/27/25 12:01:23 AM : INFO : root : [36m[REQUEST] POST /artifact/model[0m
+11/27/25 12:01:23 AM : WARNING : root : [33mDEBUG /artifact/{{type}}: No auth header - allowing for baseline[0m
+11/27/25 12:01:23 AM : INFO : root : [36m[DATA] Creating artifact type=model, body keys: ['name', 'url'][0m
+11/27/25 12:01:23 AM : INFO : root : [36mCreating artifact: name=caidas-swin2SR-lightweight-x2-64, type=model, ID=8910977646[0m
+11/27/25 12:01:23 AM : INFO : root : [36m[SIZE CALC] Starting size calculation for model: https://huggingface.co/caidas/swin2SR-lightweight-x2-64[0m
+11/27/25 12:01:23 AM : INFO : root : [36m[SIZE CALC] Detected HuggingFace URL: https://huggingface.co/caidas/swin2SR-lightweight-x2-64[0m
+11/27/25 12:01:23 AM : INFO : root : [36m[SIZE CALC] Extracted repo_id: caidas/swin2SR-lightweight-x2-64, is_dataset: False[0m
+11/27/25 12:01:23 AM : INFO : root : [36m[SIZE CALC] Fetching from: https://huggingface.co/caidas/swin2SR-lightweight-x2-64/tree/main[0m
+11/27/25 12:01:24 AM : INFO : root : [36m[SIZE CALC WEB SUCCESS] caidas/swin2SR-lightweight-x2-64: 8.26 MB (scraped from website)[0m
+11/27/25 12:01:24 AM : INFO : root : [36m[SIZE] Artifact caidas-swin2SR-lightweight-x2-64 (model) size: 8.26 MB[0m
+11/27/25 12:01:24 AM : INFO : root : [36m[S3] Processing caidas-swin2SR-lightweight-x2-64 for S3 storage[0m
+11/27/25 12:01:24 AM : INFO : artifact_downloader : [36m[S3 CHECK] Artifact caidas-swin2SR-lightweight-x2-64 already exists in S3[0m
+11/27/25 12:01:24 AM : INFO : artifact_downloader : [36m[S3 CACHE HIT] Using existing S3 object for caidas-swin2SR-lightweight-x2-64[0m
+11/27/25 12:01:24 AM : INFO : API.storage : [36mGenerated download URL for artifacts/model/caidas-swin2SR-lightweight-x2-64.zip (expires in 3600s)[0m
+11/27/25 12:01:24 AM : INFO : artifact_downloader : [36m[S3 DOWNLOAD URL] Generated download URL for caidas-swin2SR-lightweight-x2-64[0m
+11/27/25 12:01:24 AM : INFO : root : [36m[S3] Successfully stored caidas-swin2SR-lightweight-x2-64 in S3[0m
+11/27/25 12:01:24 AM : INFO : API.dynamo : [36mAdded model artifact: caidas-swin2SR-lightweight-x2-64 (ID: 8910977646)[0m
+11/27/25 12:01:24 AM : INFO : root : [36mRegistered artifact ID: 8910977646[0m
+11/27/25 12:01:24 AM : INFO : API.dynamo : [36mUpdated artifact 8910977646[0m
+11/27/25 12:01:24 AM : INFO : root : [36mLogged audit event: CREATE for artifact caidas-swin2SR-lightweight-x2-64 (ID: 8910977646)[0m
+11/27/25 12:01:24 AM : INFO : root : [36mStarted background rating task for model caidas-swin2SR-lightweight-x2-64[0m
+11/27/25 12:01:24 AM : INFO : root : [36mStarting background rating for caidas-swin2SR-lightweight-x2-64 (ID: 8910977646)[0m
+11/27/25 12:01:24 AM : INFO : ModelHandler : [36mFetched HuggingFace API data for caidas/swin2SR-lightweight-x2-64: downloads=1230, likes=13[0m
+11/27/25 12:01:24 AM : INFO : ModelHandler : [36mModel size from safetensors: 0.96 MB[0m
+11/27/25 12:01:24 AM : INFO : DatasetQualityMetric : [36mStarting dataset quality metric calculation[0m
+11/27/25 12:01:24 AM : WARNING : DatasetQualityMetric : [33mNo dataset resources available[0m
+11/27/25 12:01:24 AM : WARNING : ReproducibilityMetric : [33mNo code provided[0m
+11/27/25 12:01:24 AM : INFO : ModelHandler : [36mFetched HuggingFace API data for caidas/swin2SR-lightweight-x2-64: downloads=1230, likes=13[0m
+11/27/25 12:01:24 AM : INFO : ModelHandler : [36mLicense found in cardData for caidas/swin2SR-lightweight-x2-64: apache-2.0 (score=1.0)[0m
+11/27/25 12:01:24 AM : INFO : ModelHandler : [36mFetched HuggingFace API data for caidas/swin2SR-lightweight-x2-64: downloads=1230, likes=13[0m
+11/27/25 12:01:24 AM : INFO : ModelHandler : [36mDocumentation score for caidas/swin2SR-lightweight-x2-64: 0.10[0m
+11/27/25 12:01:24 AM : INFO : ModelHandler : [36mFetched HuggingFace API data for caidas/swin2SR-lightweight-x2-64: downloads=1230, likes=13[0m
+11/27/25 12:01:24 AM : WARNING : root : [33mModel caidas-swin2SR-lightweight-x2-64 failed validation. Net_score=0.33, Failed metrics: ramp_up_time=0.1, performance_claims=0.0, dataset_and_code_score=0.0, dataset_quality=0.0, code_quality=0.0, reproducibility=0.0, tree_score=0.0[0m
+11/27/25 12:01:24 AM : INFO : API.dynamo : [36mUpdated artifact 8910977646[0m
+11/27/25 12:01:24 AM : WARNING : root : [33mRating completed for caidas-swin2SR-lightweight-x2-64: net_score=0.33 - INVALID[0m
+11/27/25 12:01:24 AM : INFO : root : [36m[RESPONSE] POST /artifact/model -> 201[0m
+11/27/25 12:01:24 AM : INFO : root : [36m[REQUEST] POST /artifact/model[0m
+11/27/25 12:01:24 AM : WARNING : root : [33mDEBUG /artifact/{{type}}: No auth header - allowing for baseline[0m
+11/27/25 12:01:24 AM : INFO : root : [36m[DATA] Creating artifact type=model, body keys: ['name', 'url'][0m
+11/27/25 12:01:24 AM : INFO : root : [36mCreating artifact: name=vikhyatk-moondream2, type=model, ID=2022607104[0m
+11/27/25 12:01:24 AM : INFO : root : [36m[SIZE CALC] Starting size calculation for model: https://huggingface.co/vikhyatk/moondream2[0m
+11/27/25 12:01:24 AM : INFO : root : [36m[SIZE CALC] Detected HuggingFace URL: https://huggingface.co/vikhyatk/moondream2[0m
+11/27/25 12:01:24 AM : INFO : root : [36m[SIZE CALC] Extracted repo_id: vikhyatk/moondream2, is_dataset: False[0m
+11/27/25 12:01:24 AM : INFO : root : [36m[SIZE CALC] Fetching from: https://huggingface.co/vikhyatk/moondream2/tree/main[0m
+11/27/25 12:01:24 AM : INFO : root : [36m[SIZE CALC WEB SUCCESS] vikhyatk/moondream2: 3952.64 MB (scraped from website)[0m
+11/27/25 12:01:24 AM : INFO : root : [36m[SIZE] Artifact vikhyatk-moondream2 (model) size: 3952.64 MB[0m
+11/27/25 12:01:24 AM : INFO : root : [36m[S3] Processing vikhyatk-moondream2 for S3 storage[0m
+11/27/25 12:01:24 AM : INFO : artifact_downloader : [36m[S3 CHECK] Artifact vikhyatk-moondream2 not found in S3[0m
+11/27/25 12:01:24 AM : INFO : artifact_downloader : [36m[DOWNLOAD] Starting REAL download for vikhyatk-moondream2 from https://huggingface.co/vikhyatk/moondream2[0m
+11/27/25 12:01:24 AM : INFO : artifact_downloader : [36m[DOWNLOAD] Using temp directory: /home/ec2-user/temp/artifact_model_h_ynfq88[0m
+11/27/25 12:01:24 AM : INFO : artifact_downloader : [36m[HF DOWNLOAD] Downloading model vikhyatk/moondream2 via huggingface_hub[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/vikhyatk/moondream2/revision/main "HTTP/1.1 200 OK"[0m
+Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/added_tokens.json "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/config.json "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/added_tokens.json "HTTP/1.1 200 OK"
+11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/README.md "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/.gitattributes "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/configuration_moondream.py "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/config.json "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/README.md "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/fourier_features.py "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/config.py "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/generation_config.json "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/fourier_features.py "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/configuration_moondream.py "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/config.py "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/.gitattributes "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/config.json "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/config.py "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/configuration_moondream.py "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/added_tokens.json "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/README.md "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/generation_config.json "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/.gitattributes "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/fourier_features.py "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/generation_config.json "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/hf_moondream.py "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/hf_moondream.py "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/merges.txt "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/lora.py "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/handler.py "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/layers.py "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/image_crops.py "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/model.safetensors "HTTP/1.1 302 Found"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/merges.txt "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/handler.py "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/moondream.py "HTTP/1.1 307 Temporary Redirect"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/image_crops.py "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/lora.py "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/layers.py "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/image_crops.py "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/layers.py "HTTP/1.1 200 OK"
+                                                         11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/added_tokens.json "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/config.json "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/added_tokens.json "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/README.md "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/.gitattributes "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/configuration_moondream.py "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/config.json "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/README.md "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/fourier_features.py "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/config.py "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/generation_config.json "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/fourier_features.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/configuration_moondream.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/config.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/.gitattributes "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/config.json "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/config.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/configuration_moondream.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/added_tokens.json "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/README.md "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/generation_config.json "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/.gitattributes "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/fourier_features.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/generation_config.json "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/hf_moondream.py "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/hf_moondream.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/merges.txt "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/lora.py "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/handler.py "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/layers.py "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/image_crops.py "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/model.safetensors "HTTP/1.1 302 Found"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/merges.txt "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/handler.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/moondream.py "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/image_crops.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/lora.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/layers.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/image_crops.py "HTTP/1.1 200 OK"[0m
+Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/hf_moondream.py "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/moondream.py "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/lora.py "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/handler.py "HTTP/1.1 200 OK"
+                                                         Fetching 30 files:   0%|          | 0/30 [00:00<?, ?it/s]Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/merges.txt "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/moondream.py "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/requirements.txt "HTTP/1.1 307 Temporary Redirect"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/special_tokens_map.json "HTTP/1.1 307 Temporary Redirect"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/region_model.py "HTTP/1.1 307 Temporary Redirect"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:24 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/rope.py "HTTP/1.1 307 Temporary Redirect"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/requirements.txt "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/region.py "HTTP/1.1 307 Temporary Redirect"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/region.py "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/rope.py "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/region_model.py "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/special_tokens_map.json "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/requirements.txt "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/region.py "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/region_model.py "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/rope.py "HTTP/1.1 200 OK"
+11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/models/vikhyatk/moondream2/xet-read-token/6b714b26eea5cbd9f31e4edb2541c170afa935ba "HTTP/1.1 200 OK"
+11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/special_tokens_map.json "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/text.py "HTTP/1.1 307 Temporary Redirect"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/text.py "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/tokenizer.json "HTTP/1.1 307 Temporary Redirect"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/tokenizer_config.json "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/utils.py "HTTP/1.1 307 Temporary Redirect"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/tokenizer.json "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/vision.py "HTTP/1.1 307 Temporary Redirect"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/text.py "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/tokenizer_config.json "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/vision.py "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/utils.py "HTTP/1.1 200 OK"
+11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/vision_encoder.py "HTTP/1.1 307 Temporary Redirect"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/vision_encoder.py "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/versions.txt "HTTP/1.1 307 Temporary Redirect"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/tokenizer.json "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/vision.py "HTTP/1.1 200 OK"
+                                                                 11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/layers.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/hf_moondream.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/moondream.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/lora.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/handler.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/merges.txt "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/moondream.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/requirements.txt "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/special_tokens_map.json "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/region_model.py "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:24 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/rope.py "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/requirements.txt "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/region.py "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/region.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/rope.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/region_model.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/special_tokens_map.json "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/requirements.txt "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/region.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/region_model.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/rope.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/models/vikhyatk/moondream2/xet-read-token/6b714b26eea5cbd9f31e4edb2541c170afa935ba "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/special_tokens_map.json "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/text.py "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/text.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/tokenizer.json "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/tokenizer_config.json "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/utils.py "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/tokenizer.json "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/vision.py "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/text.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/tokenizer_config.json "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/vision.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/utils.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/vision_encoder.py "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/vision_encoder.py "HTTP/1.1 200 OK"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/versions.txt "HTTP/1.1 307 Temporary Redirect"[0m
+11/27/25 12:01:25 AM : INFO : httpx : [36mHTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/tokenizer.json "HTTP/1.1 200 OK"[0m
+Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/utils.py "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/versions.txt "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/vision_encoder.py "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/versions.txt "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/weights.py "HTTP/1.1 307 Temporary Redirect"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/weights.py "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/weights.py "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/vikhyatk/moondream2/resolve/6b714b26eea5cbd9f31e4edb2541c170afa935ba/vocab.json "HTTP/1.1 307 Temporary Redirect"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/vocab.json "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]11/27/25 12:01:25 AM : INFO : httpx : HTTP Request: GET https://huggingface.co/api/resolve-cache/models/vikhyatk/moondream2/6b714b26eea5cbd9f31e4edb2541c170afa935ba/vocab.json "HTTP/1.1 200 OK"
+                                                                 Fetching 30 files:  30%|███       | 9/30 [00:00<00:00, 57.55it/s]Fetching 30 files:  30%|███       | 9/30 [00:10<00:00, 57.55it/s]Fetching 30 files:  50%|█████     | 15/30 [01:42<02:04,  8.30s/it]Fetching 30 files: 100%|██████████| 30/30 [01:42<00:00,  3.41s/it]
+11/27/25 12:03:07 AM : INFO : artifact_downloader : [HF DOWNLOAD] Successfully downloaded vikhyatk/moondream2
+11/27/25 12:03:07 AM : INFO : artifact_downloader : [DOWNLOAD] Creating zip archive for vikhyatk-moondream2
