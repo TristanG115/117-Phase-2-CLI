@@ -44,6 +44,11 @@ COST_CACHE = {}
 # Garbage collection tuning
 gc.set_threshold(700, 10, 10)
 
+# Track recently deleted artifacts to handle DynamoDB eventual consistency
+# DynamoDB Scan operations use eventually consistent reads by default,
+# so deleted items may still appear briefly in list_artifacts()
+DELETED_ARTIFACTS = set()
+
 # Initialize FastAPI app
 app = FastAPI(
     title="ECE 461 Phase 2",
