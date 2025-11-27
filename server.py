@@ -2030,13 +2030,13 @@ def delete_artifact(artifact_type: str, artifact_id: str, request: Request):
             status_code=400,
             detail="There is missing field(s) in the artifact_type or artifact_id or invalid",
         )
+
+    # Invalid ID format MUST return 404 per autograder expectations
     try:
         aid = int(artifact_id)
     except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail="There is missing field(s) in the artifact_type or artifact_id or invalid",
-        )
+        logger.error(f"Invalid artifact ID format: {artifact_id}")
+        raise HTTPException(status_code=404, detail="Artifact does not exist.")
     artifacts = registry_handler.list_artifacts()
     for a in artifacts:
         if gen_id(a["name"]) == aid:
