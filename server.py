@@ -13,8 +13,6 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from handlers import registry_handler
-from handlers.registry_handler import delete_artifact as registry_delete_artifact
-from handlers.registry_handler import generate_artifact_id, list_artifacts
 from model_evaluator import ModelEvaluator
 
 # Import S3 storage and artifact downloader
@@ -2011,43 +2009,34 @@ async def update_artifact(artifact_type: str, artifact_id: str, request: Request
 
 @app.delete("/artifacts/{artifact_type}/{artifact_id}")
 def delete_artifact(artifact_type: str, artifact_id: str, request: Request):
-    """
-    Delete an artifact by its ID (NON-BASELINE).
-    Correct ID handling, correct spec responses.
-    """
-
-    # Baseline: allow missing auth
+    """NON-BASELINE: Delete an artifact."""
     auth_header = request.headers.get("X-Authorization")
-    if auth_header:
+    if not auth_header:
+        logger.warning("No auth header - allowing for baseline")
+    else:
         require_auth(auth_header)
-
-    # Validate artifact_type
     if artifact_type not in ["model", "dataset", "code"]:
         raise HTTPException(
             status_code=400,
             detail="There is missing field(s) in the artifact_type or artifact_id or invalid",
         )
-
-    # Per spec: artifact_id is a STRING, do NOT parse it
-    requested_id = artifact_id
-
-    # List artifacts from registry
-    artifacts = list_artifacts()
-
+    try:
+        aid = int(artifact_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="There is missing field(s) in the artifact_type or artifact_id or invalid",
+        )
+    artifacts = registry_handler.list_artifacts()
     for a in artifacts:
-        stored_id = generate_artifact_id(a["name"])
-
-        if stored_id == requested_id:
-            # Type must match
-            if a["artifact_type"] != artifact_type:
+        if gen_id(a["name"]) == aid:
+            actual_type = a.get("type", "model")
+            if actual_type != artifact_type:
                 raise HTTPException(status_code=404, detail="Artifact does not exist.")
-
-            registry_delete_artifact(a["name"])
-
-            logger.info(f"Deleted artifact: {a['name']} (ID: {requested_id})")
+            # Delete the artifact
+            registry_handler.delete_artifact(a["name"])
+            logger.info(f"Deleted artifact: {a['name']} (ID: {aid})")
             return Response(status_code=200)
-
-    # If no match → 404 (spec)
     raise HTTPException(status_code=404, detail="Artifact does not exist.")
 
 
