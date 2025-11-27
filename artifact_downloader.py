@@ -2,12 +2,12 @@
 Helper functions for downloading, zipping, and uploading artifacts to S3.
 """
 
-import io
 import logging
 import os
 import shutil
 import subprocess
 import tempfile
+import time
 import zipfile
 from typing import Optional, Tuple
 
@@ -130,6 +130,12 @@ def download_huggingface_artifact(url: str, artifact_name: str, temp_dir: str) -
 
             return True
 
+        # If we didn't get a 200, explicitly fail the HF download path
+        logger.warning(
+            f"[HTTP DOWNLOAD] HTTP request returned status {response.status_code} for {url}"
+        )
+        return False
+
     except Exception as e:
         logger.error(f"[HF DOWNLOAD] Failed to download HuggingFace artifact: {e}")
         return False
@@ -222,35 +228,27 @@ def download_and_zip_artifact(
     url: str, artifact_name: str, artifact_type: str
 ) -> Optional[str]:
     """
-    Download an artifact from a URL and zip it TO A FILE ON DISK (not memory).
-
-    Args:
-        url: Source URL (HuggingFace or GitHub)
-        artifact_name: Name of the artifact
-        artifact_type: Type (model, dataset, code)
-
-    Returns:
-        Path to the zipped file on disk, or None if failed
+    Download an artifact from a URL and zip it TO A FILE ON DISK (not memory),
+    with detailed logging, throughput, ETA estimation, and per-file progress.
     """
+
     temp_dir = None
     zip_file_path = None
 
     try:
         logger.info(f"[DOWNLOAD] Starting REAL download for {artifact_name} from {url}")
 
-        # Use a temp directory on the root filesystem (not /tmp which is too small)
+        # Use large filesystem, not /tmp
         base_temp_dir = "/home/ec2-user/temp"
         os.makedirs(base_temp_dir, exist_ok=True)
 
-        # Create temporary directory
+        # Create temporary working directory
         temp_dir = tempfile.mkdtemp(
             prefix=f"artifact_{artifact_type}_", dir=base_temp_dir
         )
         logger.info(f"[DOWNLOAD] Using temp directory: {temp_dir}")
 
-        # Download based on source
-        download_success = False
-
+        # Download artifact content
         if "huggingface.co" in url:
             download_success = download_huggingface_artifact(
                 url, artifact_name, temp_dir
@@ -258,29 +256,41 @@ def download_and_zip_artifact(
         elif "github.com" in url:
             download_success = download_github_repo(url, artifact_name, temp_dir)
         else:
-            logger.error(f"[DOWNLOAD] Unsupported URL format: {url}")
+            logger.error(f"[DOWNLOAD] Unsupported URL: {url}")
             return None
 
         if not download_success:
             logger.error(f"[DOWNLOAD] Failed to download {artifact_name}")
             return None
 
-        # Create zip file ON DISK (not in memory to avoid OOM on large models)
+        # Begin ZIP phase
         logger.info(f"[DOWNLOAD] Creating zip archive for {artifact_name}")
         zip_file_path = os.path.join(base_temp_dir, f"{artifact_name}.zip")
-
         artifact_dir = os.path.join(temp_dir, artifact_name)
 
-        logger.info(f"[ZIP] Starting zip build for {artifact_name}...")
+        # ================= ZIP PROGRESS LOGGING ====================
+        logger.info(f"[ZIP] Preparing to zip {artifact_name}...")
 
-        # Count total files first
+        # Count files and compute total size
         total_files = 0
-        for _, _, files in os.walk(artifact_dir):
-            total_files += len(files)
+        total_bytes = 0
+        for root, dirs, files in os.walk(artifact_dir):
+            for f in files:
+                total_files += 1
+                fp = os.path.join(root, f)
+                try:
+                    total_bytes += os.path.getsize(fp)
+                except:
+                    pass
 
-        logger.info(f"[ZIP] {total_files} files detected inside artifact directory.")
+        total_mb = total_bytes / (1024 * 1024)
+        logger.info(
+            f"[ZIP] {total_files} files detected. Total size: {total_mb:.2f} MB"
+        )
 
         processed = 0
+        processed_bytes = 0
+        start_time = time.time()
 
         with zipfile.ZipFile(zip_file_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(artifact_dir):
@@ -289,25 +299,62 @@ def download_and_zip_artifact(
                     arcname = os.path.relpath(file_path, temp_dir)
 
                     try:
+                        fsize = os.path.getsize(file_path)
+                    except:
+                        fsize = 0
+
+                    try:
                         zipf.write(file_path, arcname)
                     except Exception as e:
                         logger.warning(f"[ZIP] Failed to add file {file_path}: {e}")
                         continue
 
                     processed += 1
+                    processed_bytes += fsize
 
-                    # Log progress every 10 files or at 100%
-                    if processed % 10 == 0 or processed == total_files:
+                    # Throughput and ETA calculation
+                    elapsed = time.time() - start_time
+                    if elapsed > 0:
+                        mbps = (processed_bytes / (1024 * 1024)) / elapsed
+                    else:
+                        mbps = 0
+
+                    if processed_bytes > 0 and total_bytes > 0:
+                        pct = (processed_bytes / total_bytes) * 100
+                        remaining_bytes = total_bytes - processed_bytes
+                        if mbps > 0:
+                            eta_seconds = remaining_bytes / (mbps * 1024 * 1024)
+                        else:
+                            eta_seconds = 0
+                    else:
+                        pct = 0
+                        eta_seconds = 0
+
+                    # Log progress every file ≤ 50 files, otherwise every 10
+                    if (
+                        total_files <= 50
+                        or processed % 10 == 0
+                        or processed == total_files
+                    ):
                         logger.info(
-                            f"[ZIP] {processed}/{total_files} files added "
-                            f"({(processed/total_files)*100:.1f}%)"
+                            f"[ZIP] {processed}/{total_files} files "
+                            f"({pct:.1f}%) | "
+                            f"Throughput: {mbps:.2f} MB/s | "
+                            f"ETA: {eta_seconds:.1f}s | "
+                            f"Last file: {file} ({fsize/1024/1024:.2f} MB)"
                         )
 
-        logger.info(f"[ZIP] Completed building zip archive for {artifact_name}.")
+        # Final ZIP complete log
+        elapsed_total = time.time() - start_time
+        logger.info(
+            f"[ZIP] Completed zip for {artifact_name} in {elapsed_total:.2f}s "
+            f"({total_mb:.2f} MB total, avg {total_mb/elapsed_total:.2f} MB/s)."
+        )
 
         zip_size_mb = os.path.getsize(zip_file_path) / (1024 * 1024)
         logger.info(
-            f"[DOWNLOAD] Successfully created zip file at {zip_file_path} (size: {zip_size_mb:.2f} MB)"
+            f"[DOWNLOAD] Successfully created zip file at {zip_file_path} "
+            f"(size: {zip_size_mb:.2f} MB)"
         )
 
         return zip_file_path
@@ -317,7 +364,6 @@ def download_and_zip_artifact(
         return None
 
     finally:
-        # Clean up temporary directory
         if temp_dir and os.path.exists(temp_dir):
             try:
                 shutil.rmtree(temp_dir)
