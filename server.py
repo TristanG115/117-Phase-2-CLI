@@ -1697,7 +1697,7 @@ def get_artifact_lineage(id: str, request: Request):
             {
                 "artifact_id": artifact_id,
                 "name": target_artifact["name"],
-                "source": "metadata",  # Source indicates where this info came from
+                "source": "config_json",  # Per spec: "obtained by analysis of the available model structured metadata (config.json)"
             }
         )
 
@@ -1707,11 +1707,7 @@ def get_artifact_lineage(id: str, request: Request):
         for parent_name in lineage_data.get("parent_models", []):
             parent_id = gen_id(parent_name)
             nodes.append(
-                {
-                    "artifact_id": parent_id,
-                    "name": parent_name,
-                    "source": "readme" if readme_content else "metadata",
-                }
+                {"artifact_id": parent_id, "name": parent_name, "source": "config_json"}
             )
             edges.append(
                 {
@@ -1735,7 +1731,7 @@ def get_artifact_lineage(id: str, request: Request):
                 {
                     "artifact_id": dataset_id,
                     "name": dataset_name,
-                    "source": "readme" if readme_content else "metadata",
+                    "source": "config_json",
                 }
             )
             edges.append(
@@ -1753,11 +1749,7 @@ def get_artifact_lineage(id: str, request: Request):
         for eval_dataset in lineage_data.get("evaluation_datasets", []):
             eval_id = gen_id(eval_dataset)
             nodes.append(
-                {
-                    "artifact_id": eval_id,
-                    "name": eval_dataset,
-                    "source": "readme" if readme_content else "metadata",
-                }
+                {"artifact_id": eval_id, "name": eval_dataset, "source": "config_json"}
             )
             edges.append(
                 {
@@ -1781,7 +1773,7 @@ def get_artifact_lineage(id: str, request: Request):
                 {
                     "artifact_id": repo_id,
                     "name": code_repo,  # Use full URL as name
-                    "source": "readme" if readme_content else "metadata",
+                    "source": "config_json",
                 }
             )
             edges.append(
