@@ -1538,26 +1538,33 @@ def get_artifact_lineage(id: str, request: Request):
             if isinstance(metadata_json, str)
             else metadata_json
         )
+
+        # Log the full metadata structure for debugging
+        logger.info(
+            f"[LINEAGE] Full metadata keys: {list(metadata.keys()) if metadata else 'None'}"
+        )
+        logger.info(
+            f"[LINEAGE] Full metadata: {json.dumps(metadata, indent=2)[:500]}..."
+        )  # First 500 chars
+
+        # Try to get README from multiple sources
         readme_content = target_artifact.get("readme", "")
+        if not readme_content:
+            readme_content = metadata.get("readme", "")
+        if not readme_content:
+            readme_content = metadata.get("modelcard", "")
 
         logger.info(
             f"[LINEAGE] Metadata available: {bool(metadata)}, README length: {len(readme_content)}"
         )
 
-        # Check if we have sufficient metadata
-        if not metadata and not readme_content:
-            logger.warning(
-                f"[LINEAGE] No metadata or README for artifact {artifact_id}"
-            )
-            raise HTTPException(
-                status_code=400,
-                detail="The lineage graph cannot be computed because the artifact metadata is missing or malformed.",
-            )
+        # Note: Empty lineage is valid for standalone models
+        # Don't require metadata or README - just return empty graph if nothing found
 
         # Extract lineage using the lineage extractor
         extractor = get_lineage_extractor()
 
-        # Get lineage data
+        # Get lineage data - try README first, then fall back to metadata
         if readme_content:
             lineage_data = extractor.extract_lineage(
                 readme_content, target_artifact["name"]
@@ -1567,26 +1574,55 @@ def get_artifact_lineage(id: str, request: Request):
                 f"[LINEAGE] Extracted from README: {json.dumps(lineage_data, indent=2)}"
             )
         else:
+            # Try extracting from metadata structure itself
+            logger.info(
+                "[LINEAGE] No README, attempting to extract from metadata structure"
+            )
+            logger.info(
+                f"[LINEAGE] Checking metadata fields: base_model={metadata.get('base_model')}, base_model_name={metadata.get('base_model_name')}"
+            )
+
             lineage_data = {
                 "datasets": [],
                 "code_repos": [],
                 "parent_models": [],
                 "evaluation_datasets": [],
             }
-            logger.info("[LINEAGE] No README content, using empty lineage")
+
+            # Check common metadata fields
+            if "base_model" in metadata:
+                logger.info(f"[LINEAGE] Found base_model: {metadata['base_model']}")
+                lineage_data["parent_models"].append(metadata["base_model"])
+            if "base_model_name" in metadata:
+                logger.info(
+                    f"[LINEAGE] Found base_model_name: {metadata['base_model_name']}"
+                )
+                lineage_data["parent_models"].append(metadata["base_model_name"])
+            if "pipeline_tag" in metadata and "base_model" in str(
+                metadata.get("pipeline_tag", "")
+            ):
+                # Some metadata has base model in pipeline_tag
+                logger.info(f"[LINEAGE] Found pipeline_tag: {metadata['pipeline_tag']}")
+
+            logger.info(
+                f"[LINEAGE] Extracted from metadata: {json.dumps(lineage_data, indent=2)}"
+            )
 
         # Also check metadata for additional information
         if "datasets" in metadata:
             datasets_field = metadata["datasets"]
+            logger.info(f"[LINEAGE] Found datasets field in metadata: {datasets_field}")
             if isinstance(datasets_field, list):
                 for ds in datasets_field:
                     ds_url = f"https://huggingface.co/datasets/{ds}"
                     if ds_url not in lineage_data["datasets"]:
                         lineage_data["datasets"].append(ds_url)
+                        logger.info(f"[LINEAGE] Added dataset from metadata: {ds_url}")
             elif isinstance(datasets_field, str):
                 ds_url = f"https://huggingface.co/datasets/{datasets_field}"
                 if ds_url not in lineage_data["datasets"]:
                     lineage_data["datasets"].append(ds_url)
+                    logger.info(f"[LINEAGE] Added dataset from metadata: {ds_url}")
 
         # Build the lineage graph
         nodes = []
