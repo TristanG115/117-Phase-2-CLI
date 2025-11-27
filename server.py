@@ -2030,7 +2030,7 @@ def delete_artifact(artifact_type: str, artifact_id: str, request: Request):
     artifacts = registry_handler.list_artifacts()
     for a in artifacts:
         if gen_id(a["name"]) == aid:
-            actual_type = a.get("type", "model")
+            actual_type = _get_artifact_type(a)
             if actual_type != artifact_type:
                 raise HTTPException(status_code=404, detail="Artifact does not exist.")
             # Delete the artifact
