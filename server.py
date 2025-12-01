@@ -967,7 +967,7 @@ async def artifact_by_regex(request: Request):
                 detail="There is missing field(s) in the artifact_regex or it is formed improperly, or is invalid",
             )
 
-    # --- Search artifacts (NAME ONLY) with per-match timeout ---
+    # --- Search artifacts (NAME AND README) with per-match timeout ---
     artifacts = registry_handler.list_artifacts()
     matches = []
     seen = set()
@@ -981,18 +981,45 @@ async def artifact_by_regex(request: Request):
 
         # Apply timeout to each individual search if on Unix
         try:
+            # Check if name matches
             if hasattr(signal, "SIGALRM"):
                 with time_limit(1):
-                    match_found = pattern.search(name)
+                    name_match = pattern.search(name)
             else:
-                match_found = pattern.search(name)
+                name_match = pattern.search(name)
 
-            if match_found:
+            if name_match:
                 actual_type = _get_artifact_type(a)
                 matches.append({"name": name, "id": artifact_id, "type": actual_type})
                 seen.add(artifact_id)
+
+            # Also check if README matches (if it exists)
+            readme_content = a.get("readme", "")
+            if readme_content:
+                # Try to search in README content
+                if hasattr(signal, "SIGALRM"):
+                    with time_limit(1):
+                        readme_match = pattern.search(readme_content)
+                else:
+                    readme_match = pattern.search(readme_content)
+
+                # If README matches but name didn't, add it as a separate result
+                # Use a different identifier for README entries
+                if readme_match and not name_match:
+                    readme_id = gen_id(f"{name}_README")
+                    if readme_id not in seen:
+                        actual_type = _get_artifact_type(a)
+                        matches.append(
+                            {
+                                "name": f"{name}_README",
+                                "id": readme_id,
+                                "type": actual_type,
+                            }
+                        )
+                        seen.add(readme_id)
+
         except TimeoutException:
-            logger.error(f"Regex search timed out on artifact name: {name}")
+            logger.error(f"Regex search timed out on artifact: {name}")
             raise HTTPException(
                 status_code=400,
                 detail="There is missing field(s) in the artifact_regex or it is formed improperly, or is invalid",
