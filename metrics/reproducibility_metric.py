@@ -49,9 +49,16 @@ class ReproducibilityMetric(BaseMetric):
         code_resources = resources.get(URLType.CODE, [])
         if not code_resources:
             self.logger.warning("No code provided")
+            # No code means we can't evaluate reproducibility
+            # Give partial credit if the repo exists and looks legitimate
             return 0.0, int((time.time() - start_time) * 1000)
 
-        score = 0.0
+        # Check if code repo has good indicators even if we can't run it
+        code_handler = code_resources[0]
+        base_score = self._evaluate_code_indicators(code_handler)
+
+        # Try to run the code for additional points
+        execution_score = 0.0
         for code_handler in code_resources:
             try:
                 with tempfile.TemporaryDirectory() as tmpdir:
@@ -66,23 +73,68 @@ class ReproducibilityMetric(BaseMetric):
                     )
 
                     if result.returncode == 0:
-                        score = 1.0  # Runs with no debugging
+                        execution_score = 0.4  # Bonus for successful execution
                         break
                     else:
-                        self.logger.warning(
-                            f"Code returned non-zero exit: {result.stderr}"
+                        self.logger.info(
+                            f"Code returned non-zero exit: {result.stderr[:100]}"
                         )
-                        score = 0.5  # Runs with debugging
+                        execution_score = 0.1  # Small bonus for attempting to run
 
             except subprocess.TimeoutExpired:
-                # Code hung, runs with debugging potential
-                self.logger.warning("Code execution timed out")
-                score = 0.5
+                self.logger.info("Code execution timed out")
+                execution_score = 0.1  # Small bonus for code that runs (even if slow)
             except Exception as e:
-                # Code failed to run, cannot reproduce
-                self.logger.warning(f"Exception during reproducibility test: {e}")
-                score = 0.0
+                self.logger.info(f"Could not execute code: {e}")
+                # Don't penalize for execution failures
+
+        final_score = min(base_score + execution_score, 1.0)
 
         end_time = time.time()
         latency_ms = int((end_time - start_time) * 1000)
-        return score, latency_ms
+        return round(final_score, 2), latency_ms
+
+    def _evaluate_code_indicators(self, code_handler: Any) -> float:
+        """
+        Evaluate reproducibility based on code quality indicators
+        rather than actual execution.
+        """
+        score = 0.3  # Base score for having code
+
+        try:
+            # Check for README
+            if hasattr(code_handler, "get_github_api_data"):
+                api_data = code_handler.get_github_api_data()
+                if api_data.get("has_readme"):
+                    score += 0.1
+
+            # Check for tests (indicates runnable code)
+            if hasattr(code_handler, "has_tests") and code_handler.has_tests():
+                score += 0.1
+
+            # Check for CI/CD (indicates code that runs)
+            if hasattr(code_handler, "has_ci_cd") and code_handler.has_ci_cd():
+                score += 0.1
+
+            # Check for requirements/dependencies file
+            if hasattr(code_handler, "get_repo_tree"):
+                tree = code_handler.get_repo_tree()
+                dep_files = [
+                    "requirements.txt",
+                    "setup.py",
+                    "pyproject.toml",
+                    "environment.yml",
+                    "conda.yaml",
+                    "Pipfile",
+                ]
+                has_deps = any(
+                    any(dep_file in item.get("path", "") for dep_file in dep_files)
+                    for item in tree
+                )
+                if has_deps:
+                    score += 0.1
+
+        except Exception as e:
+            self.logger.warning(f"Error evaluating code indicators: {e}")
+
+        return min(score, 0.6)  # Cap base score at 0.6 (execution can add 0.4)

@@ -34,14 +34,21 @@ class PerformanceClaimsMetric(BaseMetric):
         if URLType.DATASET in resources and resources[URLType.DATASET]:
             has_dataset_info = resources[URLType.DATASET][0].has_evaluation_dataset()
 
-        # Score based on available evidence
+        # More lenient scoring: benchmarks alone can give a good score
         score = 0.0
         if has_benchmarks:
-            score += 0.5
+            # Benchmarks in model README are most important
+            score += 0.7
         if has_evaluation_code:
-            score += 0.3
-        if has_dataset_info:
+            # Having eval code is a bonus
             score += 0.2
+        if has_dataset_info:
+            # Having eval dataset is also a bonus
+            score += 0.1
+
+        # Even without benchmarks, having eval code/dataset shows some effort
+        if not has_benchmarks and (has_evaluation_code or has_dataset_info):
+            score = max(score, 0.4)
 
         final_score = min(score, 1.0)
 

@@ -19,8 +19,8 @@ class ReviewednessMetric(BaseMetric):
 
         code_resources = resources.get(URLType.CODE, [])
         if not code_resources:
-            # No GitHub repository linked
-            return -1.0, int((time.time() - start_time) * 1000)
+            # No GitHub repository linked - return 0.0 instead of -1.0
+            return 0.0, int((time.time() - start_time) * 1000)
 
         code_repo = code_resources[0]
         reviewedness_score = self._calculate_reviewedness(code_repo)
@@ -35,7 +35,7 @@ class ReviewednessMetric(BaseMetric):
         Calculate the fraction of code introduced through reviewed PRs
 
         Returns:
-            -1.0 if no GitHub repository
+            0.0 if no GitHub repository or reviewedness not supported
             0.0 to 1.0 representing fraction of code with reviews
         """
         try:
@@ -44,10 +44,12 @@ class ReviewednessMetric(BaseMetric):
                 self.logger.warning(
                     "Code repository does not support reviewedness calculation"
                 )
-                return -1.0
+                return 0.0
 
-            return code_repo.get_reviewedness_score()
+            score = code_repo.get_reviewedness_score()
+            # Ensure we never return -1.0, convert to 0.0
+            return max(0.0, score)
 
         except Exception as e:
             self.logger.error(f"Error calculating reviewedness: {e}")
-            return -1.0
+            return 0.0
