@@ -967,7 +967,7 @@ async def artifact_by_regex(request: Request):
                 detail="There is missing field(s) in the artifact_regex or it is formed improperly, or is invalid",
             )
 
-    # --- Search artifacts (NAME AND README) with per-match timeout ---
+    # --- Search artifacts (NAME ONLY) with per-match timeout ---
     artifacts = registry_handler.list_artifacts()
     matches = []
     seen = set()
@@ -981,45 +981,18 @@ async def artifact_by_regex(request: Request):
 
         # Apply timeout to each individual search if on Unix
         try:
-            # Check if name matches
             if hasattr(signal, "SIGALRM"):
                 with time_limit(1):
-                    name_match = pattern.search(name)
+                    match_found = pattern.search(name)
             else:
-                name_match = pattern.search(name)
+                match_found = pattern.search(name)
 
-            if name_match:
+            if match_found:
                 actual_type = _get_artifact_type(a)
                 matches.append({"name": name, "id": artifact_id, "type": actual_type})
                 seen.add(artifact_id)
-
-            # Also check if README matches (if it exists)
-            readme_content = a.get("readme", "")
-            if readme_content:
-                # Try to search in README content
-                if hasattr(signal, "SIGALRM"):
-                    with time_limit(1):
-                        readme_match = pattern.search(readme_content)
-                else:
-                    readme_match = pattern.search(readme_content)
-
-                # If README matches, add it as a separate result
-                # (even if the name also matched - they are separate matches)
-                if readme_match:
-                    readme_id = gen_id(f"{name}_README")
-                    if readme_id not in seen:
-                        actual_type = _get_artifact_type(a)
-                        matches.append(
-                            {
-                                "name": f"{name}_README",
-                                "id": readme_id,
-                                "type": actual_type,
-                            }
-                        )
-                        seen.add(readme_id)
-
         except TimeoutException:
-            logger.error(f"Regex search timed out on artifact: {name}")
+            logger.error(f"Regex search timed out on artifact name: {name}")
             raise HTTPException(
                 status_code=400,
                 detail="There is missing field(s) in the artifact_regex or it is formed improperly, or is invalid",
@@ -1608,6 +1581,30 @@ def get_artifact_lineage(id: str, request: Request):
             logger.info(
                 f"[LINEAGE] Extracted from README: {json.dumps(lineage_data, indent=2)}"
             )
+
+            # FALLBACK: If no parent models found, try manual regex
+            if not lineage_data.get("parent_models"):
+                logger.info("[LINEAGE] No parent models found, trying fallback regex")
+                import re
+
+                pattern = r"fine-tuned version of \[([^\]]+)\]\(https://huggingface\.co/([^\)]+)\)"
+                match = re.search(pattern, readme_content, re.IGNORECASE)
+                if match:
+                    parent_model = match.group(2).strip()
+                    if parent_model:
+                        parent_model_name = (
+                            parent_model.split("/")[-1]
+                            if "/" in parent_model
+                            else parent_model
+                        )
+                        lineage_data["parent_models"].append(parent_model_name)
+                        logger.info(
+                            f"[LINEAGE] Fallback extracted parent: {parent_model_name}"
+                        )
+
+            logger.info(
+                f"[LINEAGE] Final lineage: {json.dumps(lineage_data, indent=2)}"
+            )
         else:
             # No README in storage - try to fetch from HuggingFace if code_url is a HF URL
             code_url = target_artifact.get("code_url", "")
@@ -1638,6 +1635,36 @@ def get_artifact_lineage(id: str, request: Request):
                         lineage_data = extractor.normalize_urls(lineage_data)
                         logger.info(
                             f"[LINEAGE] Extracted from fetched README: {json.dumps(lineage_data, indent=2)}"
+                        )
+
+                        # FALLBACK: If no parent models found, try manual regex patterns
+                        if not lineage_data.get("parent_models"):
+                            logger.info(
+                                "[LINEAGE] No parent models found by extractor, trying fallback regex"
+                            )
+                            import re
+
+                            # Pattern: "fine-tuned version of [model-name](url)"
+                            pattern = r"fine-tuned version of \[([^\]]+)\]\(https://huggingface\.co/([^\)]+)\)"
+                            match = re.search(pattern, readme_content, re.IGNORECASE)
+                            if match:
+                                parent_model = match.group(2).strip()
+                                if parent_model:
+                                    # Extract just the model name (last part)
+                                    parent_model_name = (
+                                        parent_model.split("/")[-1]
+                                        if "/" in parent_model
+                                        else parent_model
+                                    )
+                                    lineage_data["parent_models"].append(
+                                        parent_model_name
+                                    )
+                                    logger.info(
+                                        f"[LINEAGE] Fallback extracted parent: {parent_model_name}"
+                                    )
+
+                        logger.info(
+                            f"[LINEAGE] Final lineage after fallback: {json.dumps(lineage_data, indent=2)}"
                         )
                     else:
                         logger.warning(
@@ -1747,30 +1774,96 @@ def get_artifact_lineage(id: str, request: Request):
                 f"[LINEAGE] Added parent model: {parent_name} -> {target_artifact['name']}"
             )
 
-        # Add datasets as nodes and create edges
-        for dataset_url in lineage_data.get("datasets", []):
-            # Extract dataset name from URL
-            dataset_name = (
-                dataset_url.split("/")[-1] if "/" in dataset_url else dataset_url
-            )
-            dataset_id = gen_id(dataset_name)
-            nodes.append(
-                {
-                    "artifact_id": dataset_id,
-                    "name": dataset_name,
-                    "source": "config_json",
-                }
-            )
-            edges.append(
-                {
-                    "from_node_artifact_id": dataset_id,
-                    "to_node_artifact_id": artifact_id,
-                    "relationship": "training_data",
-                }
-            )
-            logger.info(
-                f"[LINEAGE] Added training dataset: {dataset_name} -> {target_artifact['name']}"
-            )
+        # CRITICAL: Also find child models (models based on this one)
+        # Per instructor: "All three requests must produce the same graph"
+        # This means we need to traverse the complete model family tree
+        logger.info(
+            f"[LINEAGE] Searching for child models based on {target_artifact['name']}"
+        )
+
+        for artifact in artifacts:
+            # Skip the current artifact
+            if artifact["name"] == target_artifact["name"]:
+                continue
+
+            # Only check models
+            if _get_artifact_type(artifact) != "model":
+                continue
+
+            # Check if this artifact is based on our target model
+            try:
+                artifact_metadata_json = artifact.get("metadata_json", "{}")
+                artifact_metadata = (
+                    json.loads(artifact_metadata_json)
+                    if isinstance(artifact_metadata_json, str)
+                    else artifact_metadata_json
+                )
+
+                # Check base_model and base_model_name fields
+                base_model = artifact_metadata.get("base_model", "")
+                base_model_name = artifact_metadata.get("base_model_name", "")
+
+                # Also check README for this artifact
+                artifact_readme = artifact.get("readme", "")
+                if not artifact_readme:
+                    # Try fetching from HuggingFace
+                    artifact_code_url = artifact.get("code_url", "")
+                    if "huggingface.co" in artifact_code_url:
+                        try:
+                            import requests
+
+                            readme_url = (
+                                f"{artifact_code_url.rstrip('/')}/raw/main/README.md"
+                            )
+                            response = requests.get(readme_url, timeout=5)
+                            if response.status_code == 200:
+                                artifact_readme = response.text
+                        except:
+                            pass
+
+                # Check if this artifact references our target model
+                is_child = False
+                if artifact_readme and target_artifact["name"] in artifact_readme:
+                    logger.info(
+                        f"[LINEAGE] Found {artifact['name']} mentions {target_artifact['name']} in README"
+                    )
+                    is_child = True
+                elif target_artifact["name"] in str(base_model) or target_artifact[
+                    "name"
+                ] in str(base_model_name):
+                    logger.info(
+                        f"[LINEAGE] Found {artifact['name']} based on {target_artifact['name']} via metadata"
+                    )
+                    is_child = True
+
+                if is_child:
+                    child_id = gen_id(artifact["name"])
+                    # Check if not already in nodes
+                    if not any(n["artifact_id"] == child_id for n in nodes):
+                        nodes.append(
+                            {
+                                "artifact_id": child_id,
+                                "name": artifact["name"],
+                                "source": "config_json",
+                            }
+                        )
+                        edges.append(
+                            {
+                                "from_node_artifact_id": artifact_id,
+                                "to_node_artifact_id": child_id,
+                                "relationship": "base_model",
+                            }
+                        )
+                        logger.info(
+                            f"[LINEAGE] Added child model: {target_artifact['name']} -> {artifact['name']}"
+                        )
+            except Exception as e:
+                logger.debug(f"[LINEAGE] Error checking {artifact['name']}: {e}")
+                continue
+
+        # NOTE: Datasets are NOT included in model lineage per instructor guidance
+        # "Lineage is only supposed to be between models"
+        # Lines for adding datasets have been removed
 
         # Add evaluation datasets as nodes and create edges
         for eval_dataset in lineage_data.get("evaluation_datasets", []):
