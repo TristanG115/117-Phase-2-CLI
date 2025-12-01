@@ -1003,9 +1003,9 @@ async def artifact_by_regex(request: Request):
                 else:
                     readme_match = pattern.search(readme_content)
 
-                # If README matches but name didn't, add it as a separate result
-                # Use a different identifier for README entries
-                if readme_match and not name_match:
+                # If README matches, add it as a separate result
+                # (even if the name also matched - they are separate matches)
+                if readme_match:
                     readme_id = gen_id(f"{name}_README")
                     if readme_id not in seen:
                         actual_type = _get_artifact_type(a)
