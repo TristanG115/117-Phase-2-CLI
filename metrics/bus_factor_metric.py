@@ -33,15 +33,22 @@ class BusFactorMetric(BaseMetric):
             else 0
         )
 
-        # Convert to 0-1 score (more contributors = higher score)
-        if avg_contributors >= 10:
+        # More realistic scoring based on actual contributor patterns
+        # Models on HuggingFace typically have 1-2 main contributors
+        # Popular ones might have 5-20 based on downloads/likes
+        if avg_contributors >= 15:
             final_score = 1.0
+        elif avg_contributors >= 8:
+            final_score = 0.9
         elif avg_contributors >= 5:
             final_score = 0.8
+        elif avg_contributors >= 3:
+            final_score = 0.7
         elif avg_contributors >= 2:
-            final_score = 0.5
+            final_score = 0.6
         else:
-            final_score = 0.2
+            # Single contributor gets 0.5 (not terrible, just concentrated)
+            final_score = 0.5
 
         end_time = time.time()
         latency_ms = int((end_time - start_time) * 1000)
