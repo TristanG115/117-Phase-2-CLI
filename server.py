@@ -1587,8 +1587,11 @@ def get_artifact_lineage(id: str, request: Request):
                 logger.info("[LINEAGE] No parent models found, trying fallback regex")
                 import re
 
-                pattern = r"fine-tuned version of \[([^\]]+)\]\(https://huggingface\.co/([^\)]+)\)"
-                match = re.search(pattern, readme_content, re.IGNORECASE)
+                # Priority 1: ONNX conversions - "ONNX version of [model]"
+                pattern_onnx = (
+                    r"ONNX version of \[([^\]]+)\]\(https://huggingface\.co/([^\)]+)\)"
+                )
+                match = re.search(pattern_onnx, readme_content, re.IGNORECASE)
                 if match:
                     parent_model = match.group(2).strip()
                     if parent_model:
@@ -1599,8 +1602,25 @@ def get_artifact_lineage(id: str, request: Request):
                         )
                         lineage_data["parent_models"].append(parent_model_name)
                         logger.info(
-                            f"[LINEAGE] Fallback extracted parent: {parent_model_name}"
+                            f"[LINEAGE] Fallback found ONNX parent: {parent_model_name}"
                         )
+
+                # Priority 2: Fine-tuned models - "fine-tuned version of [model]"
+                if not lineage_data.get("parent_models"):
+                    pattern_finetune = r"fine-tuned version of \[([^\]]+)\]\(https://huggingface\.co/([^\)]+)\)"
+                    match = re.search(pattern_finetune, readme_content, re.IGNORECASE)
+                    if match:
+                        parent_model = match.group(2).strip()
+                        if parent_model:
+                            parent_model_name = (
+                                parent_model.split("/")[-1]
+                                if "/" in parent_model
+                                else parent_model
+                            )
+                            lineage_data["parent_models"].append(parent_model_name)
+                            logger.info(
+                                f"[LINEAGE] Fallback found fine-tuned parent: {parent_model_name}"
+                            )
 
             logger.info(
                 f"[LINEAGE] Final lineage: {json.dumps(lineage_data, indent=2)}"
@@ -1644,13 +1664,14 @@ def get_artifact_lineage(id: str, request: Request):
                             )
                             import re
 
-                            # Pattern: "fine-tuned version of [model-name](url)"
-                            pattern = r"fine-tuned version of \[([^\]]+)\]\(https://huggingface\.co/([^\)]+)\)"
-                            match = re.search(pattern, readme_content, re.IGNORECASE)
+                            # Priority 1: ONNX conversions - "ONNX version of [model]"
+                            pattern_onnx = r"ONNX version of \[([^\]]+)\]\(https://huggingface\.co/([^\)]+)\)"
+                            match = re.search(
+                                pattern_onnx, readme_content, re.IGNORECASE
+                            )
                             if match:
                                 parent_model = match.group(2).strip()
                                 if parent_model:
-                                    # Extract just the model name (last part)
                                     parent_model_name = (
                                         parent_model.split("/")[-1]
                                         if "/" in parent_model
@@ -1660,8 +1681,29 @@ def get_artifact_lineage(id: str, request: Request):
                                         parent_model_name
                                     )
                                     logger.info(
-                                        f"[LINEAGE] Fallback extracted parent: {parent_model_name}"
+                                        f"[LINEAGE] Fallback found ONNX parent: {parent_model_name}"
                                     )
+
+                            # Priority 2: Fine-tuned models - "fine-tuned version of [model]"
+                            if not lineage_data.get("parent_models"):
+                                pattern_finetune = r"fine-tuned version of \[([^\]]+)\]\(https://huggingface\.co/([^\)]+)\)"
+                                match = re.search(
+                                    pattern_finetune, readme_content, re.IGNORECASE
+                                )
+                                if match:
+                                    parent_model = match.group(2).strip()
+                                    if parent_model:
+                                        parent_model_name = (
+                                            parent_model.split("/")[-1]
+                                            if "/" in parent_model
+                                            else parent_model
+                                        )
+                                        lineage_data["parent_models"].append(
+                                            parent_model_name
+                                        )
+                                        logger.info(
+                                            f"[LINEAGE] Fallback found fine-tuned parent: {parent_model_name}"
+                                        )
 
                         logger.info(
                             f"[LINEAGE] Final lineage after fallback: {json.dumps(lineage_data, indent=2)}"
@@ -1757,22 +1799,128 @@ def get_artifact_lineage(id: str, request: Request):
 
         logger.info(f"[LINEAGE] Added main node: {target_artifact['name']}")
 
-        # Add parent models as nodes and create edges
-        for parent_name in lineage_data.get("parent_models", []):
+        # CRITICAL: Recursively find ALL ancestors (parents, grandparents, etc.)
+        # to build the complete lineage graph
+        ancestors_to_process = list(lineage_data.get("parent_models", []))
+        processed_ancestors = set()
+
+        while ancestors_to_process:
+            parent_name = ancestors_to_process.pop(0)
+
+            if parent_name in processed_ancestors:
+                continue
+            processed_ancestors.add(parent_name)
+
             parent_id = gen_id(parent_name)
-            nodes.append(
-                {"artifact_id": parent_id, "name": parent_name, "source": "config_json"}
-            )
-            edges.append(
-                {
-                    "from_node_artifact_id": parent_id,
-                    "to_node_artifact_id": artifact_id,
-                    "relationship": "base_model",
-                }
-            )
-            logger.info(
-                f"[LINEAGE] Added parent model: {parent_name} -> {target_artifact['name']}"
-            )
+
+            # Add parent node if not already in nodes
+            if not any(n["artifact_id"] == parent_id for n in nodes):
+                nodes.append(
+                    {
+                        "artifact_id": parent_id,
+                        "name": parent_name,
+                        "source": "config_json",
+                    }
+                )
+                logger.info(f"[LINEAGE] Added ancestor node: {parent_name}")
+
+            # Add edge if this is a direct parent of something already in the graph
+            # Find what this parent is a parent of
+            for existing_node in nodes:
+                if existing_node["name"] == target_artifact["name"]:
+                    # This is a direct parent of the target
+                    if parent_name in lineage_data.get("parent_models", []):
+                        edge = {
+                            "from_node_artifact_id": parent_id,
+                            "to_node_artifact_id": artifact_id,
+                            "relationship": "base_model",
+                        }
+                        if edge not in edges:
+                            edges.append(edge)
+                            logger.info(
+                                f"[LINEAGE] Added edge: {parent_name} -> {target_artifact['name']}"
+                            )
+
+            # Now find this parent's parents (grandparents)
+            parent_artifact = None
+            for a in artifacts:
+                if a["name"] == parent_name:
+                    parent_artifact = a
+                    break
+
+            if parent_artifact:
+                # Extract lineage for the parent
+                parent_readme = parent_artifact.get("readme", "")
+                parent_code_url = parent_artifact.get("code_url", "")
+
+                if not parent_readme and "huggingface.co" in parent_code_url:
+                    try:
+                        import requests
+
+                        readme_url = f"{parent_code_url.rstrip('/')}/raw/main/README.md"
+                        response = requests.get(readme_url, timeout=5)
+                        if response.status_code == 200:
+                            parent_readme = response.text
+                    except:
+                        pass
+
+                if parent_readme:
+                    parent_lineage = extractor.extract_lineage(
+                        parent_readme, parent_name
+                    )
+                    parent_lineage = extractor.normalize_urls(parent_lineage)
+
+                    # Fallback regex for parent
+                    if not parent_lineage.get("parent_models"):
+                        import re
+
+                        pattern_onnx = r"ONNX version of \[([^\]]+)\]\(https://huggingface\.co/([^\)]+)\)"
+                        match = re.search(pattern_onnx, parent_readme, re.IGNORECASE)
+                        if match:
+                            gp_model = match.group(2).strip()
+                            if gp_model:
+                                gp_name = (
+                                    gp_model.split("/")[-1]
+                                    if "/" in gp_model
+                                    else gp_model
+                                )
+                                parent_lineage["parent_models"].append(gp_name)
+
+                        if not parent_lineage.get("parent_models"):
+                            pattern_finetune = r"fine-tuned version of \[([^\]]+)\]\(https://huggingface\.co/([^\)]+)\)"
+                            match = re.search(
+                                pattern_finetune, parent_readme, re.IGNORECASE
+                            )
+                            if match:
+                                gp_model = match.group(2).strip()
+                                if gp_model:
+                                    gp_name = (
+                                        gp_model.split("/")[-1]
+                                        if "/" in gp_model
+                                        else gp_model
+                                    )
+                                    parent_lineage["parent_models"].append(gp_name)
+
+                    # Add grandparents to the queue
+                    for grandparent_name in parent_lineage.get("parent_models", []):
+                        if grandparent_name not in processed_ancestors:
+                            ancestors_to_process.append(grandparent_name)
+                            logger.info(
+                                f"[LINEAGE] Found grandparent: {grandparent_name}"
+                            )
+
+                        # Add edge: grandparent -> parent
+                        gp_id = gen_id(grandparent_name)
+                        edge = {
+                            "from_node_artifact_id": gp_id,
+                            "to_node_artifact_id": parent_id,
+                            "relationship": "base_model",
+                        }
+                        if edge not in edges:
+                            edges.append(edge)
+                            logger.info(
+                                f"[LINEAGE] Added edge: {grandparent_name} -> {parent_name}"
+                            )
 
         # CRITICAL: Also find child models (models based on this one)
         # Per instructor: "All three requests must produce the same graph"
@@ -1821,23 +1969,47 @@ def get_artifact_lineage(id: str, request: Request):
                         except:
                             pass
 
-                # Check if this artifact references our target model
+                # Check if this artifact references our target model as parent
                 is_child = False
-                if artifact_readme and target_artifact["name"] in artifact_readme:
-                    logger.info(
-                        f"[LINEAGE] Found {artifact['name']} mentions {target_artifact['name']} in README"
-                    )
-                    is_child = True
-                elif target_artifact["name"] in str(base_model) or target_artifact[
-                    "name"
-                ] in str(base_model_name):
-                    logger.info(
-                        f"[LINEAGE] Found {artifact['name']} based on {target_artifact['name']} via metadata"
-                    )
-                    is_child = True
+                child_parent_name = None
 
-                if is_child:
+                if artifact_readme:
+                    import re
+
+                    # Check if this artifact is an ONNX version of target
+                    pattern_onnx = rf'ONNX version of \[[^\]]*{re.escape(target_artifact["name"])}[^\]]*\]'
+                    if re.search(pattern_onnx, artifact_readme, re.IGNORECASE):
+                        is_child = True
+                        child_parent_name = target_artifact["name"]
+                        logger.info(
+                            f"[LINEAGE] Found {artifact['name']} is ONNX version of {target_artifact['name']}"
+                        )
+
+                    # Check if fine-tuned from target
+                    if not is_child:
+                        pattern_finetune = rf'fine-tuned version of \[[^\]]*{re.escape(target_artifact["name"])}[^\]]*\]'
+                        if re.search(pattern_finetune, artifact_readme, re.IGNORECASE):
+                            is_child = True
+                            child_parent_name = target_artifact["name"]
+                            logger.info(
+                                f"[LINEAGE] Found {artifact['name']} fine-tuned from {target_artifact['name']}"
+                            )
+
+                # Also check metadata
+                if not is_child:
+                    if target_artifact["name"] in str(base_model) or target_artifact[
+                        "name"
+                    ] in str(base_model_name):
+                        is_child = True
+                        child_parent_name = target_artifact["name"]
+                        logger.info(
+                            f"[LINEAGE] Found {artifact['name']} based on {target_artifact['name']} via metadata"
+                        )
+
+                if is_child and child_parent_name:
                     child_id = gen_id(artifact["name"])
+                    parent_node_id = gen_id(child_parent_name)
+
                     # Check if not already in nodes
                     if not any(n["artifact_id"] == child_id for n in nodes):
                         nodes.append(
@@ -1847,16 +2019,91 @@ def get_artifact_lineage(id: str, request: Request):
                                 "source": "config_json",
                             }
                         )
-                        edges.append(
-                            {
-                                "from_node_artifact_id": artifact_id,
-                                "to_node_artifact_id": child_id,
-                                "relationship": "base_model",
+
+                    # Add edge
+                    edge = {
+                        "from_node_artifact_id": parent_node_id,
+                        "to_node_artifact_id": child_id,
+                        "relationship": "base_model",
+                    }
+                    if edge not in edges:
+                        edges.append(edge)
+                        logger.info(
+                            f"[LINEAGE] Added child model: {child_parent_name} -> {artifact['name']}"
+                        )
+
+                        # Recursively find this child's children (grandchildren)
+                        # Extract lineage for the child
+                        child_lineage = (
+                            extractor.extract_lineage(artifact_readme, artifact["name"])
+                            if artifact_readme
+                            else {
+                                "parent_models": [],
+                                "datasets": [],
+                                "code_repos": [],
+                                "evaluation_datasets": [],
                             }
                         )
-                        logger.info(
-                            f"[LINEAGE] Added child model: {target_artifact['name']} -> {artifact['name']}"
-                        )
+
+                        # Apply fallback regex for child
+                        if artifact_readme and not child_lineage.get("parent_models"):
+                            import re
+
+                            pattern_onnx = r"ONNX version of \[([^\]]+)\]\(https://huggingface\.co/([^\)]+)\)"
+                            match = re.search(
+                                pattern_onnx, artifact_readme, re.IGNORECASE
+                            )
+                            if match:
+                                child_parent = match.group(2).strip()
+                                if child_parent:
+                                    child_parent_name_extracted = (
+                                        child_parent.split("/")[-1]
+                                        if "/" in child_parent
+                                        else child_parent
+                                    )
+                                    child_lineage["parent_models"].append(
+                                        child_parent_name_extracted
+                                    )
+
+                            if not child_lineage.get("parent_models"):
+                                pattern_finetune = r"fine-tuned version of \[([^\]]+)\]\(https://huggingface\.co/([^\)]+)\)"
+                                match = re.search(
+                                    pattern_finetune, artifact_readme, re.IGNORECASE
+                                )
+                                if match:
+                                    child_parent = match.group(2).strip()
+                                    if child_parent:
+                                        child_parent_name_extracted = (
+                                            child_parent.split("/")[-1]
+                                            if "/" in child_parent
+                                            else child_parent
+                                        )
+                                        child_lineage["parent_models"].append(
+                                            child_parent_name_extracted
+                                        )
+
+                        # If the child has a different parent than what we expected, add that edge too
+                        for actual_parent in child_lineage.get("parent_models", []):
+                            if actual_parent != child_parent_name:
+                                actual_parent_id = gen_id(actual_parent)
+                                edge = {
+                                    "from_node_artifact_id": actual_parent_id,
+                                    "to_node_artifact_id": child_id,
+                                    "relationship": "base_model",
+                                }
+                                if edge not in edges:
+                                    # Remove the old edge if it exists
+                                    edges[:] = [
+                                        e
+                                        for e in edges
+                                        if e.get("to_node_artifact_id") != child_id
+                                        or e.get("from_node_artifact_id")
+                                        == actual_parent_id
+                                    ]
+                                    edges.append(edge)
+                                    logger.info(
+                                        f"[LINEAGE] Corrected edge: {actual_parent} -> {artifact['name']}"
+                                    )
             except Exception as e:
                 logger.debug(f"[LINEAGE] Error checking {artifact['name']}: {e}")
                 continue
