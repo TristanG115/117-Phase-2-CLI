@@ -1,0 +1,119 @@
+2025-12-01 13:50:38,247 INFO: Logging initialized successfully.
+2025-12-01 13:50:38,259 INFO: Config loaded from: C:\Users\trist\OneDrive\Documents\Programs\softwareDesignGroup\117-Phase-2-CLI\.aws\config.json
+2025-12-01 13:50:39,062 INFO: S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
+2025-12-01 13:50:39,063 - model_evaluator - INFO - Starting evaluation of URL file: sample_input.txt
+2025-12-01 13:50:39,063 - model_evaluator - INFO - Processing line 1 with 3 URLs
+2025-12-01 13:50:39,654 - ModelHandler - INFO - Fetched HuggingFace API data for google-bert/bert-base-uncased: downloads=59779704, likes=2494
+2025-12-01 13:50:39,656 - ModelHandler - INFO - License found in cardData for google-bert/bert-base-uncased: apache-2.0 (score=1.0)
+2025-12-01 13:50:39,657 - ModelHandler - INFO - Fetched HuggingFace API data for google-bert/bert-base-uncased: downloads=59779704, likes=2494
+2025-12-01 13:50:39,659 - ModelHandler - INFO - Model size from safetensors: 105.01 MB
+2025-12-01 13:50:39,659 - SizeScoreMetric - INFO - Calculating hardware compatibility for model size: 105.01 MB
+2025-12-01 13:50:39,661 - ModelHandler - INFO - Fetched HuggingFace API data for google-bert/bert-base-uncased: downloads=59779704, likes=2494
+2025-12-01 13:50:39,662 - ModelHandler - INFO - Documentation score for google-bert/bert-base-uncased: 0.10
+2025-12-01 13:50:39,663 - ModelHandler - INFO - Fetched HuggingFace API data for google-bert/bert-base-uncased: downloads=59779704, likes=2494
+2025-12-01 13:50:40,205 - DatasetHandler - INFO - Fetched HuggingFace dataset API data for bookcorpus/bookcorpus: downloads=6362
+2025-12-01 13:50:40,206 - DatasetHandler - INFO - Dataset documentation score for bookcorpus/bookcorpus: 0.70
+2025-12-01 13:50:40,211 - DatasetHandler - INFO - Fetched HuggingFace dataset API data for bookcorpus/bookcorpus: downloads=6362
+2025-12-01 13:50:40,212 - DatasetHandler - INFO - Fetched HuggingFace dataset API data for bookcorpus/bookcorpus: downloads=6362
+2025-12-01 13:50:40,434 - CodeHandler - INFO - Fetched GitHub API data for google-research/bert: stars=39707, forks=9713
+2025-12-01 13:50:40,882 - CodeHandler - INFO - Found 25 contributors for google-research/bert
+2025-12-01 13:50:40,884 - DatasetQualityMetric - INFO - Starting dataset quality metric calculation
+2025-12-01 13:50:40,884 - DatasetQualityMetric - INFO - Falling back to heuristic dataset quality evaluation
+2025-12-01 13:50:40,884 - DatasetHandler - INFO - Dataset quality score for bookcorpus/bookcorpus: 0.90
+2025-12-01 13:50:40,884 - DatasetQualityMetric - INFO - Heuristic dataset quality score=0.90, latency=0ms
+2025-12-01 13:50:40,974 - CodeHandler - INFO - Fetched GitHub API data for google-research/bert: stars=39707, forks=9713
+2025-12-01 13:50:40,991 - CodeHandler - INFO - Fetched GitHub API data for google-research/bert: stars=39707, forks=9713
+2025-12-01 13:50:41,014 - CodeHandler - INFO - Fetched repository tree for google-research/bert: 21 items
+2025-12-01 13:50:41,016 - CodeHandler - INFO - Found evaluation code in google-research/bert
+2025-12-01 13:50:41,016 - CodeHandler - INFO - Found test files in google-research/bert
+2025-12-01 13:50:41,018 - ReproducibilityMetric - INFO - Could not execute code: 'CodeHandler' object has no attribute 'startswith'
+2025-12-01 13:50:41,018 - ReviewednessMetric - WARNING - Code repository does not support reviewedness calculation
+2025-12-01 13:50:41,448 - CodeHandler - INFO - Fetched repository tree for google-research/bert: 21 items
+2025-12-01 13:50:41,449 - CodeHandler - INFO - Found test files in google-research/bert
+2025-12-01 13:50:41,450 - CodeHandler - INFO - Code quality score for google-research/bert: 0.55
+2025-12-01 13:50:41,546 - CodeHandler - INFO - Fetched repository tree for google-research/bert: 21 items
+2025-12-01 13:50:41,547 - CodeHandler - INFO - Documentation score for google-research/bert: 0.40
+2025-12-01 13:50:41,588 - CodeHandler - INFO - Fetched repository tree for google-research/bert: 21 items
+2025-12-01 13:50:41,590 - CodeHandler - INFO - Found test files in google-research/bert
+2025-12-01 13:50:41,591 - model_evaluator - INFO - Processing line 2 with 1 URLs
+2025-12-01 13:50:42,098 - ModelHandler - INFO - Fetched HuggingFace API data for parvk11/audience_classifier_model: downloads=1026, likes=0
+2025-12-01 13:50:42,099 - ModelHandler - INFO - Documentation score for parvk11/audience_classifier_model: 0.10
+2025-12-01 13:50:42,099 - DatasetQualityMetric - INFO - Starting dataset quality metric calculation
+2025-12-01 13:50:42,099 - DatasetQualityMetric - WARNING - No dataset resources available
+2025-12-01 13:50:42,099 - ReproducibilityMetric - WARNING - No code provided
+2025-12-01 13:50:42,136 - ModelHandler - INFO - Fetched HuggingFace API data for parvk11/audience_classifier_model: downloads=1026, likes=0
+2025-12-01 13:50:42,138 - ModelHandler - INFO - Fetched HuggingFace API data for parvk11/audience_classifier_model: downloads=1026, likes=0
+2025-12-01 13:50:42,140 - ModelHandler - WARNING - No license found for parvk11/audience_classifier_model
+2025-12-01 13:50:42,149 - ModelHandler - INFO - Fetched HuggingFace API data for parvk11/audience_classifier_model: downloads=1026, likes=0
+2025-12-01 13:50:42,587 - ModelHandler - INFO - Model size calculated: 255.71 MB (aggregated from API/tree/HEAD)
+2025-12-01 13:50:42,587 - SizeScoreMetric - INFO - Calculating hardware compatibility for model size: 255.71 MB
+2025-12-01 13:50:42,588 - model_evaluator - INFO - Processing line 3 with 1 URLs
+2025-12-01 13:50:43,071 - ModelHandler - INFO - Fetched HuggingFace API data for openai/whisper-tiny: downloads=886069, likes=386
+2025-12-01 13:50:43,072 - ModelHandler - INFO - Found model-index benchmarks for openai/whisper-tiny
+2025-12-01 13:50:43,072 - DatasetQualityMetric - INFO - Starting dataset quality metric calculation
+2025-12-01 13:50:43,072 - DatasetQualityMetric - WARNING - No dataset resources available
+2025-12-01 13:50:43,072 - ReproducibilityMetric - WARNING - No code provided
+2025-12-01 13:50:43,073 - ModelHandler - INFO - Fetched HuggingFace API data for openai/whisper-tiny: downloads=886069, likes=386
+2025-12-01 13:50:43,074 - ModelHandler - INFO - Fetched HuggingFace API data for openai/whisper-tiny: downloads=886069, likes=386
+2025-12-01 13:50:43,075 - ModelHandler - INFO - Model size from safetensors: 36.01 MB
+2025-12-01 13:50:43,075 - ModelHandler - INFO - Fetched HuggingFace API data for openai/whisper-tiny: downloads=886069, likes=386
+2025-12-01 13:50:43,076 - ModelHandler - INFO - License found in cardData for openai/whisper-tiny: apache-2.0 (score=1.0)
+2025-12-01 13:50:43,077 - SizeScoreMetric - INFO - Calculating hardware compatibility for model size: 36.01 MB
+2025-12-01 13:50:43,078 - ModelHandler - INFO - Documentation score for openai/whisper-tiny: 0.10
+2025-12-01 13:50:43,079 - model_evaluator - INFO - Evaluation completed. Generated 3 results
+2025-12-01 13:51:12,572 INFO: Logging initialized successfully.
+2025-12-01 13:51:12,572 INFO: Config loaded from: C:\Users\trist\OneDrive\Documents\Programs\softwareDesignGroup\117-Phase-2-CLI\.aws\config.json
+2025-12-01 13:51:12,902 INFO: S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
+2025-12-01 13:51:12,903 - model_evaluator - INFO - Starting evaluation of URL file: sample_input.txt
+2025-12-01 13:51:12,903 - model_evaluator - INFO - Processing line 1 with 3 URLs
+2025-12-01 13:51:13,371 - ModelHandler - INFO - Fetched HuggingFace API data for google-bert/bert-base-uncased: downloads=59779704, likes=2494
+2025-12-01 13:51:13,372 - ModelHandler - INFO - Fetched HuggingFace API data for google-bert/bert-base-uncased: downloads=59779704, likes=2494
+2025-12-01 13:51:13,374 - ModelHandler - INFO - License found in cardData for google-bert/bert-base-uncased: apache-2.0 (score=1.0)
+2025-12-01 13:51:13,378 - ModelHandler - INFO - Fetched HuggingFace API data for google-bert/bert-base-uncased: downloads=59779704, likes=2494
+2025-12-01 13:51:13,380 - ModelHandler - INFO - Model size from safetensors: 105.01 MB
+2025-12-01 13:51:13,380 - DatasetQualityMetric - INFO - Starting dataset quality metric calculation
+2025-12-01 13:51:13,380 - DatasetQualityMetric - INFO - Falling back to heuristic dataset quality evaluation
+2025-12-01 13:51:13,380 - ModelHandler - INFO - Fetched HuggingFace API data for google-bert/bert-base-uncased: downloads=59779704, likes=2494
+2025-12-01 13:51:13,382 - ModelHandler - INFO - Documentation score for google-bert/bert-base-uncased: 0.10
+2025-12-01 13:51:13,812 - DatasetHandler - INFO - Fetched HuggingFace dataset API data for bookcorpus/bookcorpus: downloads=6362
+2025-12-01 13:51:13,849 - DatasetHandler - INFO - Fetched HuggingFace dataset API data for bookcorpus/bookcorpus: downloads=6362
+2025-12-01 13:51:13,850 - DatasetHandler - INFO - Dataset quality score for bookcorpus/bookcorpus: 0.90
+2025-12-01 13:51:13,851 - DatasetQualityMetric - INFO - Heuristic dataset quality score=0.90, latency=470ms
+2025-12-01 13:51:13,851 - DatasetHandler - INFO - Fetched HuggingFace dataset API data for bookcorpus/bookcorpus: downloads=6362
+2025-12-01 13:51:13,853 - DatasetHandler - INFO - Dataset documentation score for bookcorpus/bookcorpus: 0.70
+2025-12-01 13:51:14,085 - CodeHandler - INFO - Fetched GitHub API data for google-research/bert: stars=39707, forks=9713
+2025-12-01 13:51:14,434 - CodeHandler - INFO - Found 25 contributors for google-research/bert
+2025-12-01 13:51:14,437 - ReproducibilityMetric - WARNING - Exception during reproducibility test: 'CodeHandler' object has no attribute 'startswith'
+2025-12-01 13:51:14,438 - ReviewednessMetric - WARNING - Code repository does not support reviewedness calculation
+2025-12-01 13:51:14,596 - CodeHandler - INFO - Fetched GitHub API data for google-research/bert: stars=39707, forks=9713
+2025-12-01 13:51:14,723 - CodeHandler - INFO - Fetched repository tree for google-research/bert: 21 items
+2025-12-01 13:51:14,725 - CodeHandler - INFO - Found evaluation code in google-research/bert
+2025-12-01 13:51:14,931 - CodeHandler - INFO - Fetched GitHub API data for google-research/bert: stars=39707, forks=9713
+2025-12-01 13:51:14,932 - CodeHandler - INFO - Found test files in google-research/bert
+2025-12-01 13:51:14,932 - CodeHandler - INFO - Code quality score for google-research/bert: 0.55
+2025-12-01 13:51:15,125 - CodeHandler - INFO - Fetched repository tree for google-research/bert: 21 items
+2025-12-01 13:51:15,126 - CodeHandler - INFO - Documentation score for google-research/bert: 0.40
+2025-12-01 13:51:15,127 - model_evaluator - INFO - Processing line 2 with 1 URLs
+2025-12-01 13:51:15,616 - ModelHandler - INFO - Fetched HuggingFace API data for parvk11/audience_classifier_model: downloads=1026, likes=0
+2025-12-01 13:51:15,617 - ModelHandler - INFO - Documentation score for parvk11/audience_classifier_model: 0.10
+2025-12-01 13:51:15,617 - DatasetQualityMetric - INFO - Starting dataset quality metric calculation
+2025-12-01 13:51:15,617 - DatasetQualityMetric - WARNING - No dataset resources available
+2025-12-01 13:51:15,617 - ReproducibilityMetric - WARNING - No code provided
+2025-12-01 13:51:15,618 - ModelHandler - INFO - Fetched HuggingFace API data for parvk11/audience_classifier_model: downloads=1026, likes=0
+2025-12-01 13:51:15,619 - ModelHandler - INFO - Fetched HuggingFace API data for parvk11/audience_classifier_model: downloads=1026, likes=0
+2025-12-01 13:51:15,621 - ModelHandler - WARNING - No license found for parvk11/audience_classifier_model
+2025-12-01 13:51:15,634 - ModelHandler - INFO - Fetched HuggingFace API data for parvk11/audience_classifier_model: downloads=1026, likes=0
+2025-12-01 13:51:16,020 - ModelHandler - INFO - Model size calculated: 255.71 MB (aggregated from API/tree/HEAD)
+2025-12-01 13:51:16,020 - model_evaluator - INFO - Processing line 3 with 1 URLs
+2025-12-01 13:51:16,513 - ModelHandler - INFO - Fetched HuggingFace API data for openai/whisper-tiny: downloads=886069, likes=386
+2025-12-01 13:51:16,514 - ModelHandler - INFO - Documentation score for openai/whisper-tiny: 0.10
+2025-12-01 13:51:16,514 - ModelHandler - INFO - Found model-index benchmarks for openai/whisper-tiny
+2025-12-01 13:51:16,515 - ModelHandler - INFO - Fetched HuggingFace API data for openai/whisper-tiny: downloads=886069, likes=386
+2025-12-01 13:51:16,515 - DatasetQualityMetric - INFO - Starting dataset quality metric calculation
+2025-12-01 13:51:16,515 - DatasetQualityMetric - WARNING - No dataset resources available
+2025-12-01 13:51:16,515 - ReproducibilityMetric - WARNING - No code provided
+2025-12-01 13:51:16,518 - ModelHandler - INFO - Fetched HuggingFace API data for openai/whisper-tiny: downloads=886069, likes=386
+2025-12-01 13:51:16,520 - ModelHandler - INFO - License found in cardData for openai/whisper-tiny: apache-2.0 (score=1.0)
+2025-12-01 13:51:16,562 - ModelHandler - INFO - Fetched HuggingFace API data for openai/whisper-tiny: downloads=886069, likes=386
+2025-12-01 13:51:16,564 - ModelHandler - INFO - Model size from safetensors: 36.01 MB
+2025-12-01 13:51:16,565 - model_evaluator - INFO - Evaluation completed. Generated 3 results

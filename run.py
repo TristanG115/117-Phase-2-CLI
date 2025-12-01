@@ -7,9 +7,10 @@ import sys
 
 import requests
 
+from API.storage import StorageUnavailableError
 from handlers import ingest_handler, registry_handler
 from model_evaluator import ModelEvaluator
-from storage import StorageUnavailableError
+
 API_DIR = os.path.join(os.path.dirname(__file__), "API")  # uppercase folder
 if API_DIR not in sys.path:
     sys.path.append(API_DIR)
@@ -24,7 +25,9 @@ def validate_github_token() -> None:
         sys.exit(1)
     headers = {"Authorization": f"token {token}"}
     try:
-        resp = requests.get("https://api.github.com/rate_limit", headers=headers, timeout=5)
+        resp = requests.get(
+            "https://api.github.com/rate_limit", headers=headers, timeout=5
+        )
         if resp.status_code != 200:
             sys.stderr.write("Error: Invalid GITHUB_TOKEN\n")
             sys.exit(1)
@@ -87,7 +90,9 @@ pytest==8.3.2
 coverage==7.3.2
 """
                 )
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", REQUIREMENTS])
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "-r", REQUIREMENTS]
+        )
         logging.info("Dependencies installed successfully.")
         print("Dependencies installed successfully")
     except subprocess.CalledProcessError as e:
@@ -152,12 +157,16 @@ def run_tests():
             total_lines += len(analysis[1]) + len(analysis[2])
             covered_lines += len(analysis[1])
 
-    coverage_percent = int((covered_lines / total_lines * 100)) if total_lines > 0 else 0
+    coverage_percent = (
+        int((covered_lines / total_lines * 100)) if total_lines > 0 else 0
+    )
     total_tests = result.testsRun
     passed_tests = total_tests - len(result.failures) - len(result.errors)
 
     # exact syntax autograder expects
-    sys.stdout.write(f"{passed_tests}/{total_tests} test cases passed. {coverage_percent}% line coverage achieved.\n")
+    sys.stdout.write(
+        f"{passed_tests}/{total_tests} test cases passed. {coverage_percent}% line coverage achieved.\n"
+    )
     sys.stdout.flush()
     sys.exit(0)
 
@@ -237,15 +246,15 @@ def main():  # noqa: C901
         results = registry_handler.search_models(query)
         print(json.dumps(results, indent=2))
         sys.exit(0)
-    
+
     elif cmd == "lineage":
         if len(sys.argv) < 3:
             print("Usage: ./run lineage <model_url_or_name>")
             sys.exit(1)
-        
+
         model_identifier = sys.argv[2]
         registry_handler.init_registry()
-        
+
         try:
             lineage_data = registry_handler.get_lineage_graph(model_identifier)
             print(json.dumps(lineage_data, indent=2))
@@ -256,7 +265,7 @@ def main():  # noqa: C901
         except Exception as e:
             print(f"Error generating lineage: {e}")
             sys.exit(1)
-    
+
     elif cmd == "reset":
         registry_handler.init_registry()
         registry_handler.reset_registry()
