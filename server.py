@@ -35,7 +35,6 @@ model_evaluator = ModelEvaluator()
 # CRITICAL: In-memory cache for ratings that persists across requests
 # This helps with concurrent rating tests where same models are rated multiple times
 RATING_CACHE = {}
-RATING_CACHE_LOCK = asyncio.Lock()  # Protect cache from race conditions
 
 # Size calculation cache - avoids repeated API calls to HuggingFace/GitHub
 SIZE_CACHE = {}
@@ -1205,17 +1204,15 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
     # Cache by both ID and name for robustness
     cache_key_id = f"rating_{artifact_id}"
 
-    # Use async lock to prevent race conditions on cache access
-    async with RATING_CACHE_LOCK:
-        if cache_key_id in RATING_CACHE:
-            logger.info(
-                f"[RATE CACHE HIT] Returning cached rating for artifact_id={artifact_id}"
-            )
-            elapsed = time.time() - request_start
-            logger.info(
-                f"[RATE REQUEST SUCCESS] artifact_id={artifact_id}, elapsed={elapsed:.3f}s (cached)"
-            )
-            return JSONResponse(content=RATING_CACHE[cache_key_id])
+    if cache_key_id in RATING_CACHE:
+        logger.info(
+            f"[RATE CACHE HIT] Returning cached rating for artifact_id={artifact_id}"
+        )
+        elapsed = time.time() - request_start
+        logger.info(
+            f"[RATE REQUEST SUCCESS] artifact_id={artifact_id}, elapsed={elapsed:.3f}s (cached)"
+        )
+        return JSONResponse(content=RATING_CACHE[cache_key_id])
 
     # Load artifacts
     try:
@@ -1420,12 +1417,10 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
         )
 
         # Cache this response for future requests using BOTH id and name
-        # Use async lock to prevent race conditions on cache writes
         cache_key_id = f"rating_{artifact_id}"
         cache_key_name = f"rating_name_{artifact['name']}"
-        async with RATING_CACHE_LOCK:
-            RATING_CACHE[cache_key_id] = response
-            RATING_CACHE[cache_key_name] = response
+        RATING_CACHE[cache_key_id] = response
+        RATING_CACHE[cache_key_name] = response
         logger.info(
             f"[RATE CACHE STORE] Cached rating for artifact_id={artifact_id} (name={artifact['name']}, gen_id={gen_id(artifact['name'])})"
         )
@@ -2916,7 +2911,7 @@ def delete_artifact(artifact_type: str, artifact_id: str, request: Request):
 
 # 6. OTHER ROUTES (least specific)
 @app.delete("/reset")
-async def reset_registry(request: Request):
+def reset_registry(request: Request):
     """BASELINE: Reset registry to a clean state."""
     auth_header = request.headers.get("X-Authorization")
     if not auth_header:
@@ -2936,9 +2931,7 @@ async def reset_registry(request: Request):
     # Clear deleted artifacts tracking set on reset
     DELETED_ARTIFACTS.clear()
     # Clear rating cache so models get re-rated with new logic
-    # Use async lock to prevent race conditions
-    async with RATING_CACHE_LOCK:
-        RATING_CACHE.clear()
+    RATING_CACHE.clear()
     gc.collect()
     logger.info("[RESET] Database cleared (S3 artifacts preserved for caching)")
     return {"status": "system reset successful"}
