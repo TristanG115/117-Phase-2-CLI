@@ -298,10 +298,12 @@ def _extract_related_urls_from_hf(model_url: str) -> list:
                 logger.info(f"[RATING] Found HF dataset URL: {dataset_url}")
 
         # Pattern 4: GitHub repository links (for code)
+        # IMPORTANT: Normalize GitHub URLs to help classifier recognize them
         github_pattern = r"https://github\.com/([a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+)"
         github_repos = re.findall(github_pattern, readme_content)
         for repo in github_repos:
-            github_url = f"https://github.com/{repo}"
+            # Normalize: remove trailing slashes, .git extensions, etc.
+            github_url = f"https://github.com/{repo}".rstrip("/").replace(".git", "")
             if github_url not in urls and github_url != model_url:
                 urls.append(github_url)
                 logger.info(f"[RATING] Found GitHub repo: {github_url}")
@@ -321,13 +323,15 @@ def _extract_related_urls_from_hf(model_url: str) -> list:
                     urls.append(ds_url)
                     logger.info(f"[RATING] Lineage found dataset: {ds_url}")
 
-            # Add code repos from lineage
+            # Add code repos from lineage - normalize them too
             for repo in lineage_data.get("code_repos", []):
                 if repo and repo not in urls:
                     if not repo.startswith("http"):
                         repo_url = f"https://github.com/{repo}"
                     else:
                         repo_url = repo
+                    # Normalize
+                    repo_url = repo_url.rstrip("/").replace(".git", "")
                     urls.append(repo_url)
                     logger.info(f"[RATING] Lineage found code repo: {repo_url}")
 
@@ -336,6 +340,9 @@ def _extract_related_urls_from_hf(model_url: str) -> list:
 
     except Exception as e:
         logger.warning(f"[RATING] Error extracting related URLs: {e}")
+
+    # Deduplicate URLs
+    urls = list(dict.fromkeys(urls))  # Preserve order while removing duplicates
 
     logger.info(f"[RATING] Total URLs for evaluation: {len(urls)} - {urls}")
     return urls
@@ -349,8 +356,49 @@ async def rate_model_background(artifact_id: int, name: str, url: str):
         # Extract related URLs from HuggingFace model card
         evaluation_urls = _extract_related_urls_from_hf(url)
 
+        # Update artifact with discovered dataset/code URLs for better metric calculation
+        # This ensures the URLs are properly stored and accessible to metrics
+        github_repos = [u for u in evaluation_urls if "github.com" in u]
+        dataset_urls = [u for u in evaluation_urls if "huggingface.co/datasets" in u]
+
+        if github_repos or dataset_urls:
+            artifact = registry_handler.get_artifact_by_id(str(artifact_id))
+            if artifact:
+                # Update code_url if we found GitHub repos
+                if github_repos and artifact.get("code_url") == "unknown":
+                    registry_handler.update_artifact(
+                        str(artifact_id),
+                        code_url=github_repos[0],  # Use first GitHub repo found
+                    )
+                    logger.info(
+                        f"[RATING] Updated artifact code_url: {github_repos[0]}"
+                    )
+
+                # Update dataset_url if we found datasets
+                if dataset_urls and artifact.get("dataset_url") == "unknown":
+                    registry_handler.update_artifact(
+                        str(artifact_id),
+                        dataset_url=dataset_urls[0],  # Use first dataset found
+                    )
+                    logger.info(
+                        f"[RATING] Updated artifact dataset_url: {dataset_urls[0]}"
+                    )
+
         # Run the evaluation with all discovered URLs
-        results = model_evaluator.evaluate_urls(evaluation_urls)
+        logger.info(f"[RATING DEBUG] Passing {len(evaluation_urls)} URLs to evaluator:")
+        for eval_url in evaluation_urls:
+            url_type = "UNKNOWN"
+            if "huggingface.co/datasets" in eval_url:
+                url_type = "DATASET"
+            elif "github.com" in eval_url:
+                url_type = "CODE (GitHub)"
+            elif "huggingface.co" in eval_url:
+                url_type = "MODEL"
+            logger.info(f"[RATING DEBUG]   - {url_type}: {eval_url}")
+
+        results = model_evaluator.evaluate_urls(
+            evaluation_urls, artifact_id=artifact_id
+        )
 
         if not results or len(results) == 0:
             logger.warning(f"No rating results for {name}")
