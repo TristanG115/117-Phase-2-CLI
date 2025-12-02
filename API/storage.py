@@ -225,3 +225,62 @@ class S3Storage:
                 raise HTTPException(
                     status_code=500, detail=f"Metadata retrieval failed: {e}"
                 )
+
+    # ---- Staging helpers for transactions ----
+    def get_staging_prefix(self, txn_id: str) -> str:
+        """Return the S3 prefix used for staging objects for a given transaction."""
+        return f"_staging/{txn_id}/"
+    def stage_upload(self, file_obj: BinaryIO, txn_id: str, key: str, metadata: Optional[Dict[str, str]] = None) -> str:
+        """Upload object to a staging prefix for the given transaction and return staged key."""
+        staged_key = os.path.join(self.get_staging_prefix(txn_id), key).replace("\\", "/")
+        try:
+            extra_args = {}
+            if metadata:
+                extra_args["Metadata"] = metadata
+
+            # Ensure directory-like key handling
+            self.s3.upload_fileobj(file_obj, self.bucket_name, staged_key, ExtraArgs=extra_args)
+            logger.info(f"Staged file to s3://{self.bucket_name}/{staged_key}")
+            return staged_key
+        except ClientError as e:
+            logger.error(f"Failed to stage upload {staged_key}: {e}")
+            raise StorageUnavailableError("Failed to stage upload")
+
+    def commit_stage(self, txn_id: str, staged_key: str, final_key: str, remove_staged: bool = True) -> Dict[str, str]:
+        """Copy object from staging to final location. Optionally remove staged object."""
+        try:
+            copy_source = {"Bucket": self.bucket_name, "Key": staged_key}
+            self.s3.copy_object(CopySource=copy_source, Bucket=self.bucket_name, Key=final_key)
+            logger.info(f"Copied staged {staged_key} -> {final_key}")
+            if remove_staged:
+                try:
+                    self.s3.delete_object(Bucket=self.bucket_name, Key=staged_key)
+                    logger.info(f"Deleted staged object {staged_key}")
+                except ClientError:
+                    logger.warning(f"Failed to delete staged object {staged_key} after commit")
+            return {"message": "committed", "final_key": final_key}
+        except ClientError as e:
+            logger.error(f"Failed to commit staged object {staged_key}: {e}")
+            raise StorageUnavailableError("Failed to commit staged object")
+
+    def abort_stage(self, txn_id: str) -> Dict[str, Any]:
+        """Delete all staged objects under the staging prefix for txn_id."""
+        prefix = self.get_staging_prefix(txn_id)
+        try:
+            # List and delete objects under prefix
+            paginator = self.s3.get_paginator("list_objects_v2")
+            to_delete = []
+            for page in paginator.paginate(Bucket=self.bucket_name, Prefix=prefix):
+                for obj in page.get("Contents", []):
+                    to_delete.append({"Key": obj["Key"]})
+
+            if to_delete:
+                # Batch delete (max 1000 per request)
+                for i in range(0, len(to_delete), 1000):
+                    chunk = to_delete[i : i + 1000]
+                    self.s3.delete_objects(Bucket=self.bucket_name, Delete={"Objects": chunk})
+            logger.info(f"Aborted staging for txn {txn_id}, deleted {len(to_delete)} objects")
+            return {"deleted": len(to_delete)}
+        except ClientError as e:
+            logger.error(f"Failed to abort staging for txn {txn_id}: {e}")
+            raise StorageUnavailableError("Failed to abort staging")

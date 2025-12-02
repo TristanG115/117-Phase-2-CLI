@@ -13,6 +13,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from handlers import registry_handler
+from handlers import transaction_handler
 from lineage import get_lineage_extractor
 from model_evaluator import ModelEvaluator
 
@@ -1007,6 +1008,91 @@ async def artifact_by_regex(request: Request):
         )
 
     return JSONResponse(content=matches)
+
+
+# ---- Transaction APIs (three-stage transaction: init -> append actions -> execute) ----
+@app.post("/transactions")
+async def create_transaction(request: Request):
+    """Initiate a new empty transaction and return txn_id."""
+    auth_header = request.headers.get("X-Authorization")
+    if auth_header:
+        try:
+            require_auth(auth_header)
+        except Exception:
+            logger.warning("Auth failed - allowing baseline")
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    owner = body.get("owner")
+    ttl = body.get("ttl_seconds", 3600)
+    txn_id = transaction_handler.init_transaction(owner=owner, ttl_seconds=ttl)
+    return JSONResponse(content={"txn_id": txn_id})
+
+
+@app.post("/transactions/{txn_id}/actions")
+async def append_transaction_action(txn_id: str, request: Request):
+    """Append an action to an existing transaction. Expects JSON body describing the action.
+    Action schema examples:
+      {"type": "upload", "artifact_id": "123", "staged_key": "_staging/...", "final_key": "models/...", "metadata": {...}}
+      {"type": "update", "artifact_id": "123", "updates": {...}}
+      {"type": "delete", "artifact_id": "123", "final_key": "..."}
+    """
+    auth_header = request.headers.get("X-Authorization")
+    if auth_header:
+        try:
+            require_auth(auth_header)
+        except Exception:
+            logger.warning("Auth failed - allowing baseline")
+
+    try:
+        action = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid action payload")
+
+    ok = transaction_handler.append_action(txn_id, action)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Transaction not found or append failed")
+    return JSONResponse(content={"ok": True})
+
+
+@app.post("/transactions/{txn_id}/execute")
+async def execute_transaction(txn_id: str, request: Request):
+    """Execute (commit) a transaction. This will commit staged S3 objects and atomically update DB records."""
+    auth_header = request.headers.get("X-Authorization")
+    if auth_header:
+        try:
+            require_auth(auth_header)
+        except Exception:
+            logger.warning("Auth failed - allowing baseline")
+
+    result = transaction_handler.execute_transaction(txn_id)
+    if not result.get("ok"):
+        raise HTTPException(status_code=500, detail=result.get("reason", "execution_failed"))
+    return JSONResponse(content=result)
+
+
+@app.post("/transactions/{txn_id}/abort")
+async def abort_transaction_endpoint(txn_id: str, request: Request):
+    auth_header = request.headers.get("X-Authorization")
+    if auth_header:
+        try:
+            require_auth(auth_header)
+        except Exception:
+            logger.warning("Auth failed - allowing baseline")
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    reason = body.get("reason")
+    ok = transaction_handler.abort_transaction(txn_id, reason=reason)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Transaction not found or abort failed")
+    return JSONResponse(content={"ok": True})
 
 
 # 2. MODEL-SPECIFIC ENDPOINTS (literal "model" in path)

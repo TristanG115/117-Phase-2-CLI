@@ -10,6 +10,8 @@ from typing import Any, Dict, List, Optional
 
 import boto3
 from botocore.exceptions import ClientError
+import uuid
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -419,3 +421,177 @@ class DynamoDB:
         """Legacy method - redirects to update_artifact"""
         if not self.update_artifact(model_id, **updates):
             raise RuntimeError(f"Failed to update model {model_id}")
+
+    # ---- Transaction support (using same table, txn items stored with artifact_id 'txn:{txn_id}') ----
+    def _txn_key(self, txn_id: str) -> Dict[str, str]:
+        return {"artifact_id": f"txn:{txn_id}"}
+
+    def init_transaction(self, owner: Optional[str] = None, ttl_seconds: int = 3600) -> str:
+        """Create a new empty transaction record and return txn_id."""
+        txn_id = uuid.uuid4().hex
+        now = datetime.utcnow().isoformat() + "Z"
+        item = {
+            "artifact_id": f"txn:{txn_id}",
+            "type": "transaction",
+            "status": "collecting",
+            "actions": [],
+            "owner": owner or "unknown",
+            "created_at": now,
+            "updated_at": now,
+            # TTL attribute as unix epoch seconds for automatic cleanup (optional)
+            "ttl": int(time.time()) + int(ttl_seconds),
+        }
+
+        try:
+            self.table.put_item(Item=self._python_to_dynamo(item))
+            logger.info(f"Initialized transaction {txn_id}")
+            return txn_id
+        except ClientError as e:
+            logger.error(f"Failed to init transaction: {e}")
+            raise RuntimeError(f"Failed to init transaction: {e}")
+
+    def append_transaction_action(self, txn_id: str, action: Dict[str, Any]) -> bool:
+        """Append an action dict to the transaction's actions list."""
+        key = self._txn_key(txn_id)
+        try:
+            # Convert action to Dynamo-friendly types
+            action_conv = self._python_to_dynamo(action)
+            self.table.update_item(
+                Key=key,
+                UpdateExpression="SET actions = list_append(if_not_exists(actions, :empty_list), :a), updated_at = :u",
+                ExpressionAttributeValues={
+                    ":a": [action_conv],
+                    ":empty_list": [],
+                    ":u": datetime.utcnow().isoformat() + "Z",
+                },
+            )
+            logger.info(f"Appended action to txn {txn_id}: {action}")
+            return True
+        except ClientError as e:
+            logger.error(f"Failed to append action to txn {txn_id}: {e}")
+            return False
+
+    def get_transaction(self, txn_id: str) -> Optional[Dict[str, Any]]:
+        key = self._txn_key(txn_id)
+        try:
+            resp = self.table.get_item(Key=key)
+            item = resp.get("Item")
+            if not item:
+                return None
+            return self._dynamo_to_python(item)
+        except ClientError as e:
+            logger.error(f"Failed to get txn {txn_id}: {e}")
+            return None
+
+    def conditional_set_status(self, txn_id: str, from_status: str, to_status: str) -> bool:
+        """Atomically change status from `from_status` to `to_status` using a condition expression."""
+        key = self._txn_key(txn_id)
+        try:
+            self.table.update_item(
+                Key=key,
+                UpdateExpression="SET #s = :new, updated_at = :u",
+                ConditionExpression="#s = :old",
+                ExpressionAttributeNames={"#s": "status"},
+                ExpressionAttributeValues={
+                    ":old": from_status,
+                    ":new": to_status,
+                    ":u": datetime.utcnow().isoformat() + "Z",
+                },
+            )
+            logger.info(f"Transaction {txn_id} status {from_status} -> {to_status}")
+            return True
+        except ClientError as e:
+            logger.warning(f"Conditional status update failed for txn {txn_id}: {e}")
+            return False
+
+    def mark_committed(self, txn_id: str) -> bool:
+        key = self._txn_key(txn_id)
+        try:
+            self.table.update_item(
+                Key=key,
+                UpdateExpression="SET #s = :c, updated_at = :u",
+                ExpressionAttributeNames={"#s": "status"},
+                ExpressionAttributeValues={
+                    ":c": "committed",
+                    ":u": datetime.utcnow().isoformat() + "Z",
+                },
+            )
+            logger.info(f"Transaction {txn_id} committed")
+            return True
+        except ClientError as e:
+            logger.error(f"Failed to mark txn committed {txn_id}: {e}")
+            return False
+
+    def abort_transaction(self, txn_id: str, reason: Optional[str] = None) -> bool:
+        key = self._txn_key(txn_id)
+        try:
+            updates = {"status": "aborted", "updated_at": datetime.utcnow().isoformat() + "Z"}
+            if reason:
+                updates["abort_reason"] = reason
+            self.table.update_item(
+                Key=key,
+                UpdateExpression="SET " + ", ".join(f"#{k} = :{k}" for k in updates.keys()),
+                ExpressionAttributeNames={f"#{k}": k for k in updates.keys()},
+                ExpressionAttributeValues={f":{k}": v for k, v in updates.items()},
+            )
+            logger.info(f"Transaction {txn_id} aborted: {reason}")
+            return True
+        except ClientError as e:
+            logger.error(f"Failed to abort txn {txn_id}: {e}")
+            return False
+
+    def transact_update_artifacts(self, updates: List[Dict[str, Any]]) -> bool:
+        """
+        Perform a DynamoDB TransactWriteItems to update multiple artifact items atomically.
+
+        `updates` should be a list where each element is a dict:{"artifact_id": str, "updates": {key: value, ...}}
+        """
+        client = boto3.client("dynamodb", region_name=self.region)
+        transact_items = []
+        for u in updates:
+            artifact_id = str(u["artifact_id"])
+            upd = u.get("updates", {})
+            if not upd:
+                continue
+
+            # Prepare UpdateExpression and attribute maps for low-level API (DynamoDB JSON types)
+            expr_parts = []
+            expr_attr_names = {}
+            expr_attr_values = {}
+            for k, v in upd.items():
+                placeholder_name = f"#_{k}"
+                placeholder_value = f":_{k}"
+                expr_parts.append(f"{placeholder_name} = {placeholder_value}")
+                expr_attr_names[placeholder_name] = k
+                # convert values to Dynamo JSON via _python_to_dynamo then to native types
+                expr_attr_values[placeholder_value] = self._python_to_dynamo({k: v})[k]
+
+            # add updated_at
+            expr_parts.append("#_updated_at = :_updated_at")
+            expr_attr_names["#_updated_at"] = "updated_at"
+            expr_attr_values[":_updated_at"] = datetime.utcnow().isoformat() + "Z"
+
+            update_expression = "SET " + ", ".join(expr_parts)
+
+            transact_items.append(
+                {
+                    "Update": {
+                        "TableName": self.table_name,
+                        "Key": {"artifact_id": {"S": artifact_id}},
+                        "UpdateExpression": update_expression,
+                        "ExpressionAttributeNames": expr_attr_names,
+                        "ExpressionAttributeValues": {k: (v if not isinstance(v, Decimal) else Decimal(str(v))) for k, v in expr_attr_values.items()},
+                    }
+                }
+            )
+
+        if not transact_items:
+            return True
+
+        try:
+            client.transact_write_items(TransactItems=transact_items)
+            logger.info("DynamoDB transact update successful")
+            return True
+        except ClientError as e:
+            logger.error(f"DynamoDB transact failed: {e}")
+            return False
