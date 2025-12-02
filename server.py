@@ -396,6 +396,20 @@ async def rate_model_background(artifact_id: int, name: str, url: str):
                 url_type = "MODEL"
             logger.info(f"[RATING DEBUG]   - {url_type}: {eval_url}")
 
+        # Test URL classification directly
+        try:
+            grouped = model_evaluator.url_classifier.group_urls_by_type(evaluation_urls)
+            logger.info(f"[RATING DEBUG] URL Classification Results:")
+            for url_type, url_list in grouped.items():
+                if url_list:
+                    logger.info(
+                        f"[RATING DEBUG]   {url_type.name}: {len(url_list)} URLs"
+                    )
+                    for u in url_list:
+                        logger.info(f"[RATING DEBUG]     - {u}")
+        except Exception as e:
+            logger.error(f"[RATING DEBUG] URL classification error: {e}")
+
         results = model_evaluator.evaluate_urls(
             evaluation_urls, artifact_id=artifact_id
         )
@@ -1367,8 +1381,10 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
             ),
             "reviewedness": float(metadata.get("reviewedness", -1.0)),
             "reviewedness_latency": float(metadata.get("reviewedness_latency", 0)),
-            "tree_score": float(metadata.get("tree_score", 0.0)),
-            "tree_score_latency": float(metadata.get("tree_score_latency", 0)),
+            "tree_score": float(
+                metadata.get("treescore", 0.0)
+            ),  # Fixed: read from "treescore"
+            "tree_score_latency": float(metadata.get("treescore_latency", 0)),
         }
 
         # Handle size_score specially - it can be a dict or missing
