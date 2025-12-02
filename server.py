@@ -1252,6 +1252,11 @@ async def rate_model(artifact_id: str, request: Request):  # noqa: C901
             f"[RATE CACHE STORE] Cached rating for artifact_id={artifact_id} (name={artifact['name']}, gen_id={gen_id(artifact['name'])})"
         )
 
+        # Log the full output for troubleshooting
+        logger.info(
+            f"[RATE OUTPUT] artifact_id={artifact_id}, response={json.dumps(response, indent=2)}"
+        )
+
         return JSONResponse(content=response)
 
     except HTTPException:
