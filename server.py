@@ -235,13 +235,122 @@ def _build_artifact_results(queries, artifacts):
     return results
 
 
+def _extract_related_urls_from_hf(model_url: str) -> list:
+    """
+    Extract related dataset and code URLs from HuggingFace model card.
+    Returns list of URLs (model + any datasets/code found).
+    """
+    urls = [model_url]  # Always include the model URL
+
+    if "huggingface.co" not in model_url:
+        return urls
+
+    try:
+        import re
+
+        import requests
+
+        # Fetch the README from HuggingFace
+        readme_url = f"{model_url.rstrip('/')}/raw/main/README.md"
+        logger.info(f"[RATING] Fetching model card from {readme_url}")
+
+        response = requests.get(readme_url, timeout=10)
+        if response.status_code != 200:
+            logger.warning(f"[RATING] Could not fetch README: {response.status_code}")
+            return urls
+
+        readme_content = response.text
+        logger.info(f"[RATING] Fetched README ({len(readme_content)} chars)")
+
+        # Extract dataset URLs from various patterns
+        # Pattern 1: datasets: ["org/dataset"]
+        dataset_pattern = r"datasets?:\s*\[([^\]]+)\]"
+        dataset_matches = re.findall(dataset_pattern, readme_content, re.IGNORECASE)
+        for match in dataset_matches:
+            # Clean up the match (remove quotes, whitespace)
+            datasets = re.findall(r'["\']([^"\']+)["\']', match)
+            for ds in datasets:
+                if ds and not ds.startswith("http"):
+                    dataset_url = f"https://huggingface.co/datasets/{ds}"
+                    urls.append(dataset_url)
+                    logger.info(f"[RATING] Found dataset: {dataset_url}")
+                elif ds.startswith("http"):
+                    urls.append(ds)
+                    logger.info(f"[RATING] Found dataset URL: {ds}")
+
+        # Pattern 2: Trained on [dataset](url) or trained with [dataset](url)
+        trained_pattern = r"[Tt]rained (?:on|with|using)\s+\[([^\]]+)\]\(([^\)]+)\)"
+        trained_matches = re.findall(trained_pattern, readme_content)
+        for _, url_match in trained_matches:
+            if "huggingface.co/datasets" in url_match:
+                urls.append(url_match)
+                logger.info(f"[RATING] Found training dataset: {url_match}")
+
+        # Pattern 3: Direct HuggingFace dataset links
+        hf_dataset_pattern = (
+            r"https://huggingface\.co/datasets/([a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+)"
+        )
+        hf_datasets = re.findall(hf_dataset_pattern, readme_content)
+        for ds in hf_datasets:
+            dataset_url = f"https://huggingface.co/datasets/{ds}"
+            if dataset_url not in urls:
+                urls.append(dataset_url)
+                logger.info(f"[RATING] Found HF dataset URL: {dataset_url}")
+
+        # Pattern 4: GitHub repository links (for code)
+        github_pattern = r"https://github\.com/([a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+)"
+        github_repos = re.findall(github_pattern, readme_content)
+        for repo in github_repos:
+            github_url = f"https://github.com/{repo}"
+            if github_url not in urls and github_url != model_url:
+                urls.append(github_url)
+                logger.info(f"[RATING] Found GitHub repo: {github_url}")
+
+        # Use lineage extractor as backup
+        try:
+            extractor = get_lineage_extractor()
+            lineage_data = extractor.extract_lineage(readme_content, model_url)
+
+            # Add datasets from lineage
+            for ds in lineage_data.get("datasets", []):
+                if ds and ds not in urls:
+                    if not ds.startswith("http"):
+                        ds_url = f"https://huggingface.co/datasets/{ds}"
+                    else:
+                        ds_url = ds
+                    urls.append(ds_url)
+                    logger.info(f"[RATING] Lineage found dataset: {ds_url}")
+
+            # Add code repos from lineage
+            for repo in lineage_data.get("code_repos", []):
+                if repo and repo not in urls:
+                    if not repo.startswith("http"):
+                        repo_url = f"https://github.com/{repo}"
+                    else:
+                        repo_url = repo
+                    urls.append(repo_url)
+                    logger.info(f"[RATING] Lineage found code repo: {repo_url}")
+
+        except Exception as e:
+            logger.warning(f"[RATING] Lineage extraction failed: {e}")
+
+    except Exception as e:
+        logger.warning(f"[RATING] Error extracting related URLs: {e}")
+
+    logger.info(f"[RATING] Total URLs for evaluation: {len(urls)} - {urls}")
+    return urls
+
+
 async def rate_model_background(artifact_id: int, name: str, url: str):
     """Background task to rate a model after upload and mark invalid if score < 0.5"""
     try:
         logger.info(f"Starting background rating for {name} (ID: {artifact_id})")
 
-        # Run the evaluation
-        results = model_evaluator.evaluate_urls([url])
+        # Extract related URLs from HuggingFace model card
+        evaluation_urls = _extract_related_urls_from_hf(url)
+
+        # Run the evaluation with all discovered URLs
+        results = model_evaluator.evaluate_urls(evaluation_urls)
 
         if not results or len(results) == 0:
             logger.warning(f"No rating results for {name}")
@@ -2757,6 +2866,8 @@ def reset_registry(request: Request):
     registry_handler.reset_registry()
     # Clear deleted artifacts tracking set on reset
     DELETED_ARTIFACTS.clear()
+    # Clear rating cache so models get re-rated with new logic
+    RATING_CACHE.clear()
     gc.collect()
     logger.info("[RESET] Database cleared (S3 artifacts preserved for caching)")
     return {"status": "system reset successful"}
