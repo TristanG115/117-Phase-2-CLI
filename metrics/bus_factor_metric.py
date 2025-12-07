@@ -33,22 +33,23 @@ class BusFactorMetric(BaseMetric):
             else 0
         )
 
-        # More realistic scoring based on actual contributor patterns
-        # Models on HuggingFace typically have 1-2 main contributors
-        # Popular ones might have 5-20 based on downloads/likes
-        if avg_contributors >= 15:
+        # More discriminating scoring - concentrated ownership is risky
+        # Single contributor represents significant knowledge concentration risk
+        if avg_contributors >= 20:
             final_score = 1.0
-        elif avg_contributors >= 8:
+        elif avg_contributors >= 12:
             final_score = 0.9
+        elif avg_contributors >= 8:
+            final_score = 0.75
         elif avg_contributors >= 5:
-            final_score = 0.8
-        elif avg_contributors >= 3:
-            final_score = 0.7
-        elif avg_contributors >= 2:
             final_score = 0.6
+        elif avg_contributors >= 3:
+            final_score = 0.45
+        elif avg_contributors >= 2:
+            final_score = 0.35
         else:
-            # Single contributor gets 0.5 (not terrible, just concentrated)
-            final_score = 0.5
+            # Single contributor is a significant risk
+            final_score = 0.2
 
         end_time = time.time()
         latency_ms = int((end_time - start_time) * 1000)

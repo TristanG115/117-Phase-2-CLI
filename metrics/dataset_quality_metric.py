@@ -116,59 +116,70 @@ Respond with only a number between 0.0 and 1.0."""
             return 0.0
 
     def _evaluate_dataset_quality(self, dataset: Any) -> float:
-        """Heuristic fallback for dataset quality evaluation - MUCH MORE GENEROUS"""
+        """Heuristic fallback for dataset quality evaluation - balanced scoring"""
         try:
             # Use the handler's built-in quality score method if available
             if hasattr(dataset, "get_quality_score"):
-                raw_score = dataset.get_quality_score()
-                # Boost the score to meet 0.5 threshold more often
-                if raw_score < 0.5:
-                    return 0.5 + (raw_score * 0.5)  # 0.0->0.5, 0.4->0.7
-                return raw_score
+                return dataset.get_quality_score()
 
-            # Fallback: manual calculation - MUCH MORE GENEROUS
+            # Fallback: manual calculation with balanced thresholds
             api_data: Dict[str, Any] = {}
             if hasattr(dataset, "get_huggingface_api_data"):
                 api_data = dataset.get_huggingface_api_data() or {}
 
-            # Start with baseline 0.5 for ANY dataset that exists
-            score = 0.5
+            # Start with modest baseline for existing dataset
+            score = 0.25
 
-            # Check for documentation - GENEROUS bonus
-            if api_data.get("cardData") or api_data.get("description"):
-                score += 0.2  # Increased from 0.3 base
-                self.logger.debug("Dataset has documentation: +0.2")
+            # Documentation quality (0.3 potential)
+            has_card = bool(api_data.get("cardData"))
+            has_description = bool(api_data.get("description"))
 
-            # Check for downloads - MORE GENEROUS thresholds
+            if has_card and has_description:
+                score += 0.3
+                self.logger.debug("Dataset has full documentation: +0.3")
+            elif has_card or has_description:
+                score += 0.15
+                self.logger.debug("Dataset has partial documentation: +0.15")
+
+            # Download popularity (0.25 potential)
             downloads = api_data.get("downloads", 0)
-            if downloads > 100:  # Lowered from 1000
-                score += 0.15  # Increased from 0.3
-                self.logger.debug(f"Dataset has {downloads} downloads (>100): +0.15")
-            elif downloads > 10:  # Lowered from 100
-                score += 0.1  # Increased from 0.2
-                self.logger.debug(f"Dataset has {downloads} downloads (>10): +0.1")
-            elif downloads > 0:  # NEW: Give credit for ANY downloads
+            if downloads > 10000:
+                score += 0.25
+                self.logger.debug(f"Dataset has {downloads} downloads (>10k): +0.25")
+            elif downloads > 1000:
+                score += 0.15
+                self.logger.debug(f"Dataset has {downloads} downloads (>1k): +0.15")
+            elif downloads > 100:
+                score += 0.1
+                self.logger.debug(f"Dataset has {downloads} downloads (>100): +0.1")
+            elif downloads > 0:
                 score += 0.05
                 self.logger.debug(f"Dataset has {downloads} downloads: +0.05")
 
-            # Check for tags - MORE GENEROUS
+            # Tags and metadata (0.15 potential)
             tags = api_data.get("tags", [])
-            if len(tags) > 1:  # Lowered from 2
-                score += 0.1  # Increased from 0.2
+            if len(tags) >= 5:
+                score += 0.15
+                self.logger.debug(f"Dataset has {len(tags)} tags: +0.15")
+            elif len(tags) >= 3:
+                score += 0.1
                 self.logger.debug(f"Dataset has {len(tags)} tags: +0.1")
-            elif len(tags) > 0:  # NEW: Credit for ANY tags
+            elif len(tags) >= 1:
                 score += 0.05
                 self.logger.debug(f"Dataset has {len(tags)} tag(s): +0.05")
 
-            # Check for multiple files/configs
+            # Files/structure (0.05 potential)
             siblings = api_data.get("siblings", [])
-            if len(siblings) > 0:  # Lowered from 1
-                score += 0.05  # Reduced from 0.2 but applies more broadly
+            if len(siblings) > 5:
+                score += 0.05
                 self.logger.debug(f"Dataset has {len(siblings)} files: +0.05")
+            elif len(siblings) > 0:
+                score += 0.025
+                self.logger.debug(f"Dataset has {len(siblings)} files: +0.025")
 
             return min(score, 1.0)
 
         except Exception as e:
             self.logger.error(f"Error in heuristic dataset quality evaluation: {e}")
-            # If error, still give baseline 0.5 for having a dataset
-            return 0.5
+            # Minimal baseline on error
+            return 0.2
