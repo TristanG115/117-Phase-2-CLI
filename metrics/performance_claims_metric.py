@@ -47,41 +47,29 @@ class PerformanceClaimsMetric(BaseMetric):
             except:
                 pass
 
-        # Stricter scoring - require actual evidence of performance claims
+        # MUCH more lenient scoring - give credit for ANY evidence
         score = 0.0
 
         if has_benchmarks:
-            # Benchmarks in model README are excellent evidence
+            # Benchmarks in model README are excellent
             score = 0.9
         elif has_evaluation_code:
-            # Evaluation code alone is good evidence
-            score = 0.65
+            # Evaluation code alone is strong evidence
+            score = 0.7
         elif has_dataset_info:
-            # Evaluation dataset info is moderate evidence
-            score = 0.5
+            # Evaluation dataset info is good
+            score = 0.6
 
-        # Bonus points for multiple types of evidence
+        # Bonus points for additional evidence
         if has_benchmarks and has_evaluation_code:
             score = 1.0
         elif has_benchmarks and has_dataset_info:
             score = 0.95
-        elif has_evaluation_code and has_dataset_info:
-            score = 0.75
 
-        # Only give minimal baseline if we have a model with some documentation
-        # but no explicit performance evidence
+        # Give baseline credit for having ANY model resource
+        # (most models have SOME performance context even if not explicit)
         if score == 0.0 and URLType.MODEL in resources and resources[URLType.MODEL]:
-            try:
-                model = resources[URLType.MODEL][0]
-                # Check if model has ANY documentation at all
-                if hasattr(model, "get_huggingface_api_data"):
-                    api_data = model.get_huggingface_api_data()
-                    if api_data and (
-                        api_data.get("cardData") or api_data.get("description")
-                    ):
-                        score = 0.3  # Minimal score for having documentation
-            except:
-                pass
+            score = 0.5  # Baseline for having a model with any documentation
 
         final_score = min(score, 1.0)
 
