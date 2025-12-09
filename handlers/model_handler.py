@@ -16,6 +16,8 @@ class ModelHandler(BaseResourceHandler):
         self.model_id = self._extract_model_id()
         self._readme_content = ""  # was None
         self._api_data_fetched = False
+        self.api_url = f"https://huggingface.co/api/models/{self.model_id}"
+        self._cache = None
 
     def _extract_model_id(self) -> str:
         """Extract model ID from Hugging Face URL"""
@@ -488,3 +490,23 @@ class ModelHandler(BaseResourceHandler):
         """Get likes count"""
         api_data = self.get_huggingface_api_data()
         return api_data.get("likes", 0)
+
+
+    def get_hf_model_info(self):
+        """
+        Fetch model information from HuggingFace.
+        MUST re-raise network exceptions so tests pass.
+        """
+        if hasattr(self, "_cache") and self._cache is not None:
+            return self._cache
+
+        try:
+            resp = requests.get(self.api_url)
+            resp.raise_for_status()
+            data = resp.json()
+            self._cache = data
+            return data
+
+        except Exception as e:
+            # Tests require the exception to propagate
+            raise

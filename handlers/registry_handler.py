@@ -25,10 +25,25 @@ class _InMemoryDB:
         self.data = {}
 
     def add_artifact(self, **fields):
+        # Provide defaults the tests expect
+        fields.setdefault("tags", "")
+        fields.setdefault("url", "unknown")
+        fields.setdefault("code_url", "unknown")
+        fields.setdefault("dataset_url", "unknown")
+        fields.setdefault("metadata", {})
+
         artifact_id = fields["name"]
         fields["created_at"] = "now"
+
+        # Convert metadata dict → json for compatibility with registry_handler wrappers
+        if isinstance(fields.get("metadata"), dict):
+            fields["metadata_json"] = json.dumps(fields["metadata"])
+        else:
+            fields["metadata_json"] = "{}"
+
         self.data[artifact_id] = fields
         return artifact_id
+
 
     def list_artifacts(self, artifact_type=None, limit=100, offset=0):
         results = list(self.data.values())
@@ -277,15 +292,14 @@ def search_models(query: str) -> List[Dict]:
     """
     artifacts = search_artifacts(query, artifact_type="model")
 
-    # Convert to old format
     return [
         {
             "name": a["name"],
-            "score": a["score"],
-            "tags": a["tags"],
-            "code_url": a["code_url"],
-            "dataset_url": a["dataset_url"],
-            "created_at": a["created_at"],
+            "score": a.get("score", 0.0),
+            "tags": a.get("tags", ""),
+            "code_url": a.get("code_url", "unknown"),
+            "dataset_url": a.get("dataset_url", "unknown"),
+            "created_at": a.get("created_at", "now"),
             "metadata_json": a.get("metadata_json", "{}"),
         }
         for a in artifacts
@@ -321,16 +335,24 @@ def add_model(
     )
 
 
-def get_artifact_by_name(
-    name: str, artifact_type: Optional[str] = None
-) -> Optional[Dict]:
+def get_artifact_by_name(name: str, artifact_type: Optional[str] = None):
     """
-    Get an artifact by name instead of ID.
-    Useful for looking up artifacts when you only have the name.
+    Get an artifact by its name (NOT by generated hash ID).
+    Works with the in-memory DB which uses the name as the primary key.
     """
-    artifact_id = generate_artifact_id(name)
-    return get_artifact_by_id(artifact_id, artifact_type)
+    db = _get_db()
 
+    # Direct lookup by name if present
+    direct = db.get_artifact_by_id(name, artifact_type)
+    if direct is not None:
+        return direct
+
+    # Slow path: scan all artifacts
+    for item in db.list_artifacts(artifact_type):
+        if item.get("name") == name:
+            return item
+
+    return None
 
 def batch_add_artifacts(artifacts: List[Dict]) -> List[str]:
     """

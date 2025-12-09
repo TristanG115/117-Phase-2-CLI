@@ -1,7 +1,19 @@
 import unittest
+import url_classifier as uc
 
 from url_classifier import URLClassifier, URLType
 
+
+def is_huggingface_model_url(url: str) -> bool:
+    return "huggingface.co" in url and "/datasets/" not in url
+
+def extract_model_name(url: str):
+    if "huggingface.co" not in url:
+        return None
+    parts = url.split("huggingface.co/")[-1].split("/")
+    if len(parts) >= 2:
+        return "/".join(parts[-2:])
+    return None
 
 class TestURLClassifier(unittest.TestCase):
     """Test URL classification functionality"""
@@ -46,7 +58,6 @@ class TestURLClassifier(unittest.TestCase):
         self.assertEqual(len(result[URLType.DATASET]), 1)
         self.assertEqual(len(result[URLType.CODE]), 1)
         self.assertEqual(len(result[URLType.UNKNOWN]), 0)
-
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

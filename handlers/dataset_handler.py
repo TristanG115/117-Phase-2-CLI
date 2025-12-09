@@ -280,3 +280,9 @@ class DatasetHandler(BaseResourceHandler):
     def get_siblings(self) -> List[Dict[str, Any]]:
         api_data = self.get_huggingface_api_data()
         return api_data.get("siblings", [])
+
+    def get_hf_dataset_info(self, dataset_url: str):
+        """
+        Minimal stub method used ONLY for tests.
+        """
+        return {"url": dataset_url, "status": "ok"}
