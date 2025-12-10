@@ -3019,13 +3019,37 @@ def index(request: Request):
 
 
 if __name__ == "__main__":
+    import os
+
     import uvicorn
 
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8000,
-        workers=1,
-        timeout_keep_alive=30,
-        log_level="info",
-    )
+    # Check if SSL certificates exist
+    ssl_keyfile = "ssl_certs/key.pem"
+    ssl_certfile = "ssl_certs/cert.pem"
+
+    use_ssl = os.path.exists(ssl_keyfile) and os.path.exists(ssl_certfile)
+
+    if use_ssl:
+        logger.info("Starting server with HTTPS...")
+        logger.info("Access at: https://0.0.0.0:8000")
+        uvicorn.run(
+            app,
+            host="0.0.0.0",
+            port=8000,
+            workers=1,
+            timeout_keep_alive=30,
+            log_level="info",
+            ssl_keyfile=ssl_keyfile,
+            ssl_certfile=ssl_certfile,
+        )
+    else:
+        logger.info("SSL certificates not found - starting with HTTP")
+        logger.info("Access at: http://0.0.0.0:8000")
+        uvicorn.run(
+            app,
+            host="0.0.0.0",
+            port=8000,
+            workers=1,
+            timeout_keep_alive=30,
+            log_level="info",
+        )
