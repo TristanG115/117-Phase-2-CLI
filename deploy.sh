@@ -39,19 +39,20 @@ if [ ! -d "ssl_certs" ] || [ ! -f "ssl_certs/cert.pem" ] || [ ! -f "ssl_certs/ke
     # Create ssl_certs directory
     mkdir -p ssl_certs
 
-    # Generate self-signed certificate
-    openssl req -x509 -newkey rsa:4096 -nodes \
+    # Generate self-signed certificate (with fallback IP)
+    INSTANCE_IP=$(timeout 5 curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo '18.191.29.29')
+
+    openssl req -x509 -newkey rsa:2048 -nodes \
         -keyout ssl_certs/key.pem \
         -out ssl_certs/cert.pem \
         -days 365 \
-        -subj "/C=US/ST=Indiana/L=West Lafayette/O=Purdue University/OU=ECE 461/CN=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 || echo 'localhost')" \
+        -subj "/C=US/ST=Indiana/L=WestLafayette/O=Purdue/CN=$INSTANCE_IP" \
         2>/dev/null
 
     if [ -f "ssl_certs/cert.pem" ]; then
-        echo "  ✓ SSL certificates generated successfully"
-        # Set proper permissions
         chmod 600 ssl_certs/key.pem
         chmod 644 ssl_certs/cert.pem
+        echo "  ✓ SSL certificates generated successfully"
     else
         echo "  ✗ Failed to generate SSL certificates - will use HTTP"
     fi
@@ -59,135 +60,77 @@ else
     echo "  ✓ SSL certificates already exist"
 fi
 
-# Update systemd service configuration
-echo "[6/7] Updating systemd service..."
-cat > /tmp/registry-api.service << 'EOF'
-[Unit]
-Description=ECE 461 Registry API Server
-After=network.target
-
-[Service]
-Type=simple
-User=$USER
-WorkingDirectory=$REPO_DIR
-Environment="PATH=$REPO_DIR/venv/bin:/usr/local/bin:/usr/bin:/bin"
-ExecStart=$REPO_DIR/venv/bin/python3 $REPO_DIR/start_server.py
-Restart=always
-RestartSec=3
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Replace placeholders with actual values
-sed -i "s|\$USER|$USER|g" /tmp/registry-api.service
-sed -i "s|\$REPO_DIR|$REPO_DIR|g" /tmp/registry-api.service
-
-# Install the service file
-sudo cp /tmp/registry-api.service /etc/systemd/system/registry-api.service
-sudo systemctl daemon-reload
-
-# Create start_server.py if it doesn't exist
+# Create/update start_server.py if it doesn't exist or is outdated
+echo "[6/7] Ensuring start_server.py exists..."
 if [ ! -f "$REPO_DIR/start_server.py" ]; then
     echo "  Creating start_server.py..."
     cat > "$REPO_DIR/start_server.py" << 'EOFPY'
 #!/usr/bin/env python3
-"""
-Startup script for the registry API server with HTTPS support.
-"""
-import os
-import sys
 import logging
 from pathlib import Path
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 def main():
     import uvicorn
-
     script_dir = Path(__file__).parent.absolute()
     ssl_keyfile = script_dir / "ssl_certs" / "key.pem"
     ssl_certfile = script_dir / "ssl_certs" / "cert.pem"
 
-    use_ssl = ssl_keyfile.exists() and ssl_certfile.exists()
-
-    if use_ssl:
-        logger.info(" Starting server with HTTPS...")
-        logger.info(f"   SSL Key: {ssl_keyfile}")
-        logger.info(f"   SSL Cert: {ssl_certfile}")
-        logger.info("   Access at: https://0.0.0.0:8000")
-
-        uvicorn.run(
-            "server:app",
-            host="0.0.0.0",
-            port=8000,
-            workers=1,
-            timeout_keep_alive=30,
-            log_level="info",
-            ssl_keyfile=str(ssl_keyfile),
-            ssl_certfile=str(ssl_certfile),
-        )
+    if ssl_keyfile.exists() and ssl_certfile.exists():
+        logger.info("="*60)
+        logger.info("STARTING SERVER WITH HTTPS")
+        logger.info("="*60)
+        uvicorn.run("server:app", host="0.0.0.0", port=8000, workers=1,
+                    timeout_keep_alive=30, log_level="info",
+                    ssl_keyfile=str(ssl_keyfile), ssl_certfile=str(ssl_certfile))
     else:
-        logger.warning("  SSL certificates not found - starting with HTTP")
-        logger.info(f"   Looking for: {ssl_certfile.parent}")
-        logger.info("   Access at: http://0.0.0.0:8000")
-
-        uvicorn.run(
-            "server:app",
-            host="0.0.0.0",
-            port=8000,
-            workers=1,
-            timeout_keep_alive=30,
-            log_level="info",
-        )
+        logger.warning("SSL CERTIFICATES NOT FOUND - USING HTTP")
+        uvicorn.run("server:app", host="0.0.0.0", port=8000, workers=1,
+                    timeout_keep_alive=30, log_level="info")
 
 if __name__ == "__main__":
     main()
 EOFPY
     chmod +x "$REPO_DIR/start_server.py"
+    echo "  ✓ start_server.py created"
+else
+    echo "  ✓ start_server.py already exists"
 fi
 
 # Restart service
 echo "[7/7] Restarting service..."
-sudo systemctl enable registry-api
 sudo systemctl restart registry-api
 
 # Wait and check status
 sleep 3
 
 if sudo systemctl is-active --quiet registry-api; then
-    INSTANCE_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 || echo "localhost")
+    INSTANCE_IP=$(timeout 5 curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "localhost")
     echo ""
-    echo " Deployment complete!"
+    echo "Deployment complete!"
     echo ""
 
-    # Check if HTTPS is enabled by looking at the logs
+    # Check if HTTPS is enabled
     sleep 1
-    if sudo journalctl -u registry-api -n 20 | grep -q "Starting server with HTTPS"; then
+    if sudo journalctl -u registry-api -n 20 --no-pager | grep -q "STARTING SERVER WITH HTTPS"; then
         echo " Server running with HTTPS at: https://$INSTANCE_IP:8000"
         echo "   (You may see a browser warning - this is normal for self-signed certificates)"
         echo ""
-        echo " API Docs at: https://$INSTANCE_IP:8000/docs"
+        echo "API Docs at: https://$INSTANCE_IP:8000/docs"
     else
-        echo "  Server running with HTTP at: http://$INSTANCE_IP:8000"
+        echo "Server running with HTTP at: http://$INSTANCE_IP:8000"
         echo ""
-        echo " API Docs at: http://$INSTANCE_IP:8000/docs"
-        echo ""
-        echo "Note: To enable HTTPS, ensure SSL certificates exist in $REPO_DIR/ssl_certs/"
+        echo "API Docs at: http://$INSTANCE_IP:8000/docs"
     fi
 
     echo ""
-    echo " Check logs: sudo journalctl -u registry-api -f"
-    echo " Reload page: Ctrl+Shift+R (hard refresh to clear cache)"
+    echo "Check logs: sudo journalctl -u registry-api -f"
+    echo "Reload page: Ctrl+Shift+R (hard refresh to clear cache)"
 else
-    echo " Service failed to start"
+    echo "Service failed to start"
     echo "Checking logs..."
-    sudo journalctl -u registry-api -n 50
+    sudo journalctl -u registry-api -n 20
     exit 1
 fi

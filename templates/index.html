@@ -39,11 +39,14 @@
     h1 {
       font-size: 2.5em;
       margin-bottom: 10px;
+      /* Enhanced contrast: adds shadow for better readability on gradient */
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
     }
 
     .subtitle {
-      opacity: 0.9;
       font-size: 1.1em;
+      /* Fixed contrast: removed opacity, added text-shadow instead */
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
     }
 
     .toolbar {
@@ -420,9 +423,9 @@
         aria-label="Search artifacts by name"
       />
       <button onclick="searchArtifacts()" class="btn-custom" aria-label="Search for artifacts">Search</button>
-      <button onclick="openModal('uploadModal')" class="btn-custom" aria-label="Upload new artifact">Upload Artifact</button>
-      <button onclick="openModal('ingestModal')" class="btn-custom" aria-label="Ingest model from HuggingFace">Ingest from HuggingFace</button>
-      <button onclick="resetRegistry()" class="btn-danger" aria-label="Reset entire registry, deleting all artifacts">Reset Registry</button>
+      <button onclick="openModal('uploadModal')" class="btn-custom">Upload Artifact</button>
+      <button onclick="openModal('ingestModal')" class="btn-custom">Ingest from HuggingFace</button>
+      <button onclick="resetRegistry()" class="btn-danger">Reset Registry</button>
     </nav>
 
     <section class="stats" role="region" aria-label="Registry statistics">
