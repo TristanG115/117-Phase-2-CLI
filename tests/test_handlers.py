@@ -17,6 +17,30 @@ class TestResourceHandlers(unittest.TestCase):
         self.assertEqual(handler.url, url)
         self.assertEqual(handler.model_id, "google/gemma-3-270m")
 
+<<<<<<< HEAD
+=======
+    @patch("handlers.model_handler.requests.get")
+    def test_model_handler_api_call_and_cache(self, mock_get):
+        """ModelHandler.get_huggingface_api_data hits API once and then uses cache."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"downloads": 123, "likes": 10}
+        mock_get.return_value = mock_response
+
+        handler = ModelHandler("https://huggingface.co/google/gemma-3-270m")
+
+        data1 = handler.get_hf_model_info()
+        data2 = handler.get_hf_model_info()
+
+        self.assertEqual(data1["downloads"], 123)
+        self.assertEqual(data2["likes"], 10)
+        # Should only call the API once due to caching
+        mock_get.assert_called_once()
+
+    # -------------------------
+    # DatasetHandler
+    # -------------------------
+>>>>>>> parent of 763fad3 (90% line coverage, need to consolidate tests and improve error message production)
     def test_dataset_handler_initialization(self):
         """Test 7: DatasetHandler initialization"""
         url = "https://huggingface.co/datasets/xlangai/AgentNet"
@@ -24,6 +48,26 @@ class TestResourceHandlers(unittest.TestCase):
         self.assertEqual(handler.url, url)
         self.assertEqual(handler.dataset_id, "xlangai/AgentNet")
 
+<<<<<<< HEAD
+=======
+    @patch("handlers.dataset_handler.requests.get")
+    def test_dataset_handler_api_call(self, mock_get):
+        """DatasetHandler.get_hf_dataset_info returns parsed JSON."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"downloads": 999, "tags": ["nlp", "agents"]}
+        mock_get.return_value = mock_response
+
+        handler = DatasetHandler("https://huggingface.co/datasets/xlangai/AgentNet")
+        info = handler.get_hf_dataset_info()
+
+        self.assertEqual(info["downloads"], 999)
+        self.assertIn("nlp", info["tags"])
+
+    # -------------------------
+    # CodeHandler
+    # -------------------------
+>>>>>>> parent of 763fad3 (90% line coverage, need to consolidate tests and improve error message production)
     def test_code_handler_initialization(self):
         """Test 8: CodeHandler initialization"""
         url = "https://github.com/SkyworkAI/Matrix-Game"
@@ -146,3 +190,14 @@ class TestRegistryAndIngest(unittest.TestCase):
         result = ingest_handler.ingest_model("https://huggingface.co/google/bert-base-uncased")
         self.assertIn("error", result)
         self.assertIn("Model did not meet threshold criteria.", result["error"])
+<<<<<<< HEAD
+=======
+
+        # Ensure nothing was written into registry on failure
+        models = registry_handler.list_models()
+        self.assertEqual(models, [])
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
+>>>>>>> parent of 763fad3 (90% line coverage, need to consolidate tests and improve error message production)
