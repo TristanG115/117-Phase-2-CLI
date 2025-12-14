@@ -1,148 +1,129 @@
 import os
+import io
 import tempfile
 import zipfile
-from unittest.mock import patch, MagicMock
+from unittest.mock import Mock, patch
 
 import artifact_downloader as ad
 
 
-# ----------------------------------------------------------------------
-# HELPERS
-# ----------------------------------------------------------------------
-
-def touch_zip(path):
-    with zipfile.ZipFile(path, "w") as z:
-        z.writestr("file.txt", "hello")
-
-
-# ----------------------------------------------------------------------
-# SIMPLE HELPERS
-# ----------------------------------------------------------------------
-
 def test_get_s3_key_for_artifact():
-    assert ad.get_s3_key_for_artifact("my/model", "dataset") == \
-           "artifacts/dataset/my_model.zip"
+    assert ad.get_s3_key_for_artifact("name/with/slash", "model") == "artifacts/model/name_with_slash.zip"
 
 
-def test_check_artifact_exists():
-    s3 = MagicMock()
-    s3.file_exists.return_value = True
-    assert ad.check_artifact_exists_in_s3(s3, "x", "y") is True
+def test_upload_and_check_and_download_url(tmp_path):
+    # fake s3 storage
+    class FakeS3:
+        def __init__(self):
+            self.data = {}
+
+        def upload(self, fobj, key, metadata=None):
+            self.data[key] = fobj.read()
+            return True
+
+        def file_exists(self, key):
+            return key in self.data
+
+        def download_url(self, key, expiration=3600):
+            return f"https://s3.fake/{key}"
+
+    s3 = FakeS3()
+
+    # create small zip file on disk
+    zip_path = tmp_path / "x.zip"
+    with zipfile.ZipFile(zip_path, "w") as z:
+        z.writestr("a.txt", "hello")
+
+    s3_key = ad.upload_artifact_to_s3(s3, "artifact", "model", str(zip_path))
+    assert s3_key == "artifacts/model/artifact.zip"
+    assert ad.check_artifact_exists_in_s3(s3, "artifact", "model") is True
+    assert ad.get_artifact_download_url(s3, "artifact", "model") == "https://s3.fake/artifacts/model/artifact.zip"
 
 
-def test_download_url():
-    s3 = MagicMock()
-    s3.download_url.return_value = "http://url"
-    assert ad.get_artifact_download_url(s3, "x", "y") == "http://url"
+def test_upload_artifact_to_s3_failure(tmp_path):
+    class BadS3:
+        def upload(self, fobj, key, metadata=None):
+            raise Exception("nope")
+
+    zip_path = tmp_path / "x.zip"
+    with open(zip_path, "wb") as f:
+        f.write(b"x")
+
+    assert ad.upload_artifact_to_s3(BadS3(), "artifact", "model", str(zip_path)) is None
 
 
-# ----------------------------------------------------------------------
-# HF DOWNLOAD (HTTP fallback)
-# ----------------------------------------------------------------------
+def test_process_artifact_cache_hit(monkeypatch):
+    class FakeS3:
+        def file_exists(self, key):
+            return True
 
-@patch("artifact_downloader.requests.get")
-@patch("artifact_downloader.subprocess.run")
-def test_download_hf_fallback(mock_run, mock_http):
-    mock_run.side_effect = FileNotFoundError()  # disables git-lfs
+        def download_url(self, key, expiration=3600):
+            return "https://s3.fake/url"
 
-    mock_http.return_value.status_code = 200
-    mock_http.return_value.text = "<html></html>"
-    mock_http.return_value.content = b"data"
-
-    with tempfile.TemporaryDirectory() as td:
-        ok = ad.download_huggingface_artifact(
-            "https://huggingface.co/models/x", "artifact", td
-        )
-        assert ok
-        assert os.path.exists(os.path.join(td, "artifact", "index.html"))
+    s3 = FakeS3()
+    key, url = ad.process_artifact_for_s3(s3, "https://huggingface.co/datasets/x/y", "artifact", "dataset")
+    assert key == "artifacts/dataset/artifact.zip"
+    assert url == "https://s3.fake/url"
 
 
-# ----------------------------------------------------------------------
-# GITHUB DOWNLOAD (ZIP fallback)
-# ----------------------------------------------------------------------
+def test_download_and_zip_artifact_unsupported_and_errors(monkeypatch, tmp_path):
+    # Unsupported URL
+    assert ad.download_and_zip_artifact("ftp://example", "a", "other") is None
 
-@patch("artifact_downloader.requests.get")
-@patch("artifact_downloader.subprocess.run")
-def test_download_github_zip(mock_run, mock_http):
-    mock_run.side_effect = FileNotFoundError()
-
-    def fake_resp(*args, **kwargs):
-        resp = MagicMock()
-        resp.status_code = 200
-        resp.iter_content.return_value = [b"123"]
-        return resp
-
-    mock_http.side_effect = fake_resp
-
-    with tempfile.TemporaryDirectory() as td:
-        ok = ad.download_github_repo("https://github.com/a/b", "artifact", td)
-        assert ok
+    # Simulate HTTP path but response non-200
+    class R: pass
+    r = R(); r.status_code = 404; r.text = ""
+    monkeypatch.setattr("requests.get", lambda *a, **k: r)
+    # Use tmp base dir to avoid using /home
+    monkeypatch.setenv("TMP", str(tmp_path))
+    assert ad.download_huggingface_artifact("https://huggingface.co/x/y", "artifact", str(tmp_path)) is False
 
 
-# ----------------------------------------------------------------------
-# ZIP CREATION
-# ----------------------------------------------------------------------
+def test_download_github_repo_zip_success(tmp_path, monkeypatch):
+    # Simulate git clone failing and ZIP download working
+    def fake_get(url, timeout=60, stream=False):
+        class R:
+            status_code = 200
 
-@patch("artifact_downloader.download_huggingface_artifact", return_value=True)
-def test_download_and_zip(mock_dl):
-    with tempfile.TemporaryDirectory() as tmp:
-        # patch mkdtemp → our own temp folder
-        with patch("artifact_downloader.tempfile.mkdtemp") as mk:
-            work = os.path.join(tmp, "w")
-            os.makedirs(work, exist_ok=True)
+            def iter_content(self, chunk_size=8192):
+                # Create in-memory zip bytes
+                bio = io.BytesIO()
+                with zipfile.ZipFile(bio, "w") as z:
+                    z.writestr("file.txt", "hi")
+                bio.seek(0)
+                yield bio.read()
 
-            # create expected artifact folder
-            art = os.path.join(work, "modelX")
-            os.makedirs(art, exist_ok=True)
-            with open(os.path.join(art, "x.txt"), "w") as f:
-                f.write("hi")
+        return R()
 
-            mk.return_value = work
-
-            z = ad.download_and_zip_artifact(
-                "https://huggingface.co/models/x", "modelX", "model"
-            )
-            assert os.path.exists(z)
-            assert zipfile.is_zipfile(z)
+    monkeypatch.setattr("requests.get", fake_get)
+    res = ad.download_github_repo("https://github.com/owner/repo", "artifact", str(tmp_path))
+    assert res is True
 
 
-# ----------------------------------------------------------------------
-# UPLOAD
-# ----------------------------------------------------------------------
+def test_download_huggingface_snapshot_and_git_and_http(tmp_path, monkeypatch):
+    # snapshot_download path
+    monkeypatch.setitem(__import__('sys').modules, 'huggingface_hub', Mock(snapshot_download=lambda **k: None))
+    assert ad.download_huggingface_artifact("https://huggingface.co/owner/model", "artifact", str(tmp_path)) is True
 
-def test_upload_artifact():
-    s3 = MagicMock()
-    s3.upload.return_value = True
+    # simulate huggingface_hub ImportError -> git clone success
+    # Ensure import of huggingface_hub fails by replacing module with an empty mock
+    monkeypatch.setitem(__import__('sys').modules, 'huggingface_hub', Mock())
+    def fake_run(cmd, check=False, capture_output=True, timeout=None):
+        class R: pass
+        r = R(); r.returncode = 0
+        return r
 
-    with tempfile.NamedTemporaryFile(delete=False) as f:
-        f.write(b"abc")
-        path = f.name
+    monkeypatch.setattr("subprocess.run", fake_run)
+    assert ad.download_huggingface_artifact("https://huggingface.co/owner/model", "artifact", str(tmp_path)) is True
 
-    key = ad.upload_artifact_to_s3(s3, "abc", "model", path)
-    assert key.endswith("abc.zip")
-    s3.upload.assert_called()
+    # simulate git clone failure and HTTP download success
+    def fake_run_fail(*a, **k):
+        raise Exception("git fail")
 
+    class PageResp:
+        status_code = 200
+        text = "<html></html>"
 
-# ----------------------------------------------------------------------
-# PROCESS FLOW
-# ----------------------------------------------------------------------
-
-def test_process_artifact_for_s3():
-    s3 = MagicMock()
-    s3.file_exists.return_value = False
-    s3.upload.return_value = True
-    s3.download_url.return_value = "http://signed"
-
-    with tempfile.TemporaryDirectory() as td:
-        fake_zip = os.path.join(td, "fake.zip")
-        touch_zip(fake_zip)
-
-        with patch("artifact_downloader.download_and_zip_artifact", return_value=fake_zip):
-            key, url = ad.process_artifact_for_s3(
-                s3, "https://huggingface.co/x", "nameX", "model"
-            )
-
-<<<<<<< HEAD
     class FileResp:
         status_code = 200
         content = b"data"
@@ -319,7 +300,3 @@ def test_process_artifact_for_s3_upload_flow(monkeypatch, tmp_path):
     assert key == "artifacts/dataset/artifact.zip"
     assert url == "https://s3.fake/url"
 
-=======
-    assert key.endswith("nameX.zip")
-    assert url == "http://signed"
->>>>>>> parent of 763fad3 (90% line coverage, need to consolidate tests and improve error message production)
