@@ -31,8 +31,8 @@ class TestResourceHandlers(unittest.TestCase):
 
         handler = ModelHandler("https://huggingface.co/google/gemma-3-270m")
 
-        data1 = handler.get_huggingface_api_data()
-        data2 = handler.get_huggingface_api_data()
+        data1 = handler.get_hf_model_info()
+        data2 = handler.get_hf_model_info()
 
         self.assertEqual(data1["downloads"], 123)
         self.assertEqual(data2["likes"], 10)
@@ -40,7 +40,7 @@ class TestResourceHandlers(unittest.TestCase):
         mock_get.assert_called_once()
 
     # -------------------------
-    # DatasetHandler - FIXED
+    # DatasetHandler
     # -------------------------
     def test_dataset_handler_initialization(self):
         """DatasetHandler correctly parses dataset_id from URL."""
@@ -51,15 +51,14 @@ class TestResourceHandlers(unittest.TestCase):
 
     @patch("handlers.dataset_handler.requests.get")
     def test_dataset_handler_api_call(self, mock_get):
-        """DatasetHandler.get_huggingface_api_data returns parsed JSON."""
+        """DatasetHandler.get_hf_dataset_info returns parsed JSON."""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"downloads": 999, "tags": ["nlp", "agents"]}
         mock_get.return_value = mock_response
 
         handler = DatasetHandler("https://huggingface.co/datasets/xlangai/AgentNet")
-        # Call the correct method - get_huggingface_api_data() with NO arguments
-        info = handler.get_huggingface_api_data()
+        info = handler.get_hf_dataset_info()
 
         self.assertEqual(info["downloads"], 999)
         self.assertIn("nlp", info["tags"])

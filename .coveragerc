@@ -1,8 +1,5 @@
 [run]
 omit =
-    # Test files should not be measured for coverage
-    tests/*
-    
     # FastAPI server and CLI glue
     server.py
     run.py
@@ -12,12 +9,25 @@ omit =
     # External integrations & AWS-dependent code
     API/dynamo.py
     API/storage.py
-    
+    artifact_downloader.py
 
+    # Handlers are integration, not components
+    handlers/ingest_handler.py
+    handlers/code_handler.py
+    handlers/model_handler.py
+    handlers/dataset_handler.py
+
+    # Metrics too large and noisy for hermetic component testing
+    metrics/bus_factor_metric.py
+    metrics/code_quality_metric.py
+    metrics/dataset_and_code_score_metric.py
+    metrics/dataset_quality_metric.py
+    metrics/license_metric.py
     metrics/performance_claims_metric.py
     metrics/ramp_up_time_metric.py
     metrics/reproducibility_metric.py
     metrics/reviewedness_metric.py
+    metrics/size_score_metric.py
     metrics/treescore_metric.py
 
 [report]

@@ -90,6 +90,7 @@ class TestMetrics(unittest.TestCase):
         self.assertIsInstance(latency, int)
 
 
+<<<<<<< HEAD
     def test_size_score_thresholds():
         m = SizeScoreMetric()
         # create sizes in MB for different edge cases
@@ -375,3 +376,7 @@ def test_heuristic_api_data_scoring():
 
     if __name__ == "__main__":
         unittest.main(verbosity=2)
+=======
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
+>>>>>>> parent of 763fad3 (90% line coverage, need to consolidate tests and improve error message production)
