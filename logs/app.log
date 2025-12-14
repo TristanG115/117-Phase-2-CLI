@@ -1,0 +1,84 @@
+2025-12-08 19:38:51,885 INFO: Logging initialized successfully.
+2025-12-08 19:38:54,061 INFO: Config loaded from: C:\Users\etdol\OneDrive\Desktop\se\117-Phase-2-CLI\.aws\config.json
+2025-12-08 19:38:56,195 INFO: DynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2
+2025-12-08 19:38:56,195 INFO: \u2713 DynamoDB initialized successfully
+2025-12-08 19:38:56,199 ERROR: Failed to initialize registry: Unable to locate credentials
+2025-12-08 19:38:56,203 ERROR: Failed to initialize registry: Unable to locate credentials
+2025-12-08 19:38:56,205 ERROR: Failed to initialize registry: Unable to locate credentials
+2025-12-08 19:38:56,208 INFO: Fetched GitHub API data for SkyworkAI/Matrix-Game: stars=100, forks=0
+2025-12-08 19:38:56,209 INFO: Fetched HuggingFace API data for google/gemma-3-270m: downloads=1000, likes=50
+2025-12-08 19:38:56,210 INFO: Starting dataset quality metric calculation
+2025-12-08 19:38:56,210 INFO: Falling back to heuristic dataset quality evaluation
+2025-12-08 19:38:56,211 INFO: Heuristic dataset quality score=0.85, latency=0ms
+2025-12-08 19:38:56,211 INFO: Starting dataset quality metric calculation
+2025-12-08 19:38:56,211 WARNING: No dataset resources available
+2025-12-08 19:38:56,212 INFO: Calculating hardware compatibility for model size: 500.00 MB
+2025-12-08 19:38:56,212 INFO: Config loaded from: C:\Users\etdol\OneDrive\Desktop\se\117-Phase-2-CLI\.aws\config.json
+2025-12-08 19:38:58,256 INFO: S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
+2025-12-08 19:38:58,256 INFO: Config loaded from: C:\Users\etdol\OneDrive\Desktop\se\117-Phase-2-CLI\.aws\config.json
+2025-12-08 19:39:00,276 INFO: S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
+2025-12-08 19:39:00,276 INFO: Starting evaluation of URL file: nonexistent_file.txt
+2025-12-08 19:39:00,276 ERROR: URL file not found: nonexistent_file.txt
+2025-12-08 19:39:00,276 INFO: Config loaded from: C:\Users\etdol\OneDrive\Desktop\se\117-Phase-2-CLI\.aws\config.json
+2025-12-08 19:39:02,293 INFO: S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
+2025-12-08 19:39:02,295 INFO: Starting evaluation of URL file: C:\Users\etdol\AppData\Local\Temp\tmp6jyfniex.txt
+2025-12-08 19:39:02,295 INFO: Processing line 1 with 1 URLs
+2025-12-08 19:39:02,296 INFO: Fetched HuggingFace API data for google/gemma-3-270m: downloads=1000, likes=50
+2025-12-08 19:39:02,296 WARNING: No license found for google/gemma-3-270m
+2025-12-08 19:39:02,297 INFO: Documentation score for google/gemma-3-270m: 0.00
+2025-12-08 19:39:02,298 INFO: Starting dataset quality metric calculation
+2025-12-08 19:39:02,298 WARNING: No dataset resources available
+2025-12-08 19:39:02,298 WARNING: No code provided
+2025-12-08 19:39:06,738 INFO: Model size calculated: 0.00 MB (aggregated from API/tree/HEAD)
+2025-12-08 19:39:06,738 INFO: Calculating hardware compatibility for model size: 0.00 MB
+2025-12-08 19:39:06,739 INFO: Processing line 2 with 1 URLs
+2025-12-08 19:39:06,739 INFO: Processing line 3 with 1 URLs
+2025-12-08 19:39:06,739 INFO: Evaluation completed. Generated 1 results
+2025-12-08 19:39:06,740 INFO: Config loaded from: C:\Users\etdol\OneDrive\Desktop\se\117-Phase-2-CLI\.aws\config.json
+2025-12-08 19:39:08,747 INFO: S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
+2025-12-08 19:39:08,748 INFO: Config loaded from: C:\Users\etdol\OneDrive\Desktop\se\117-Phase-2-CLI\.aws\config.json
+2025-12-08 19:39:10,761 INFO: S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
+2025-12-08 19:39:10,762 INFO: Config loaded from: C:\Users\etdol\OneDrive\Desktop\se\117-Phase-2-CLI\.aws\config.json
+2025-12-08 19:39:12,784 INFO: S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
+2025-12-08 19:51:40,423 INFO: Logging initialized successfully.
+2025-12-08 19:51:40,543 INFO: Config loaded from: C:\Users\etdol\OneDrive\Desktop\se\117-Phase-2-CLI\.aws\config.json
+2025-12-08 19:51:42,725 INFO: DynamoDB initialized: table=TrustworthyModelRegDB, region=us-east-2
+2025-12-08 19:51:42,725 INFO: \u2713 DynamoDB initialized successfully
+2025-12-08 19:51:42,728 ERROR: Failed to initialize registry: Unable to locate credentials
+2025-12-08 19:51:42,733 ERROR: Failed to initialize registry: Unable to locate credentials
+2025-12-08 19:51:42,735 ERROR: Failed to initialize registry: Unable to locate credentials
+2025-12-08 19:51:42,738 INFO: Fetched GitHub API data for SkyworkAI/Matrix-Game: stars=100, forks=0
+2025-12-08 19:51:42,739 INFO: Fetched HuggingFace API data for google/gemma-3-270m: downloads=1000, likes=50
+2025-12-08 19:51:42,740 INFO: Starting dataset quality metric calculation
+2025-12-08 19:51:42,740 INFO: Falling back to heuristic dataset quality evaluation
+2025-12-08 19:51:42,740 INFO: Heuristic dataset quality score=0.85, latency=0ms
+2025-12-08 19:51:42,740 INFO: Starting dataset quality metric calculation
+2025-12-08 19:51:42,740 WARNING: No dataset resources available
+2025-12-08 19:51:42,741 INFO: Calculating hardware compatibility for model size: 500.00 MB
+2025-12-08 19:51:42,742 INFO: Config loaded from: C:\Users\etdol\OneDrive\Desktop\se\117-Phase-2-CLI\.aws\config.json
+2025-12-08 19:51:44,772 INFO: S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
+2025-12-08 19:51:44,772 INFO: Config loaded from: C:\Users\etdol\OneDrive\Desktop\se\117-Phase-2-CLI\.aws\config.json
+2025-12-08 19:51:46,805 INFO: S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
+2025-12-08 19:51:46,805 INFO: Starting evaluation of URL file: nonexistent_file.txt
+2025-12-08 19:51:46,805 ERROR: URL file not found: nonexistent_file.txt
+2025-12-08 19:51:46,805 INFO: Config loaded from: C:\Users\etdol\OneDrive\Desktop\se\117-Phase-2-CLI\.aws\config.json
+2025-12-08 19:51:48,822 INFO: S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
+2025-12-08 19:51:48,824 INFO: Starting evaluation of URL file: C:\Users\etdol\AppData\Local\Temp\tmp3s97hsoz.txt
+2025-12-08 19:51:48,824 INFO: Processing line 1 with 1 URLs
+2025-12-08 19:51:48,825 INFO: Fetched HuggingFace API data for google/gemma-3-270m: downloads=1000, likes=50
+2025-12-08 19:51:48,825 WARNING: No license found for google/gemma-3-270m
+2025-12-08 19:51:48,826 INFO: Documentation score for google/gemma-3-270m: 0.00
+2025-12-08 19:51:48,827 INFO: Starting dataset quality metric calculation
+2025-12-08 19:51:48,827 WARNING: No dataset resources available
+2025-12-08 19:51:48,827 WARNING: No code provided
+2025-12-08 19:51:53,701 INFO: Model size calculated: 0.00 MB (aggregated from API/tree/HEAD)
+2025-12-08 19:51:53,701 INFO: Calculating hardware compatibility for model size: 0.00 MB
+2025-12-08 19:51:53,702 INFO: Processing line 2 with 1 URLs
+2025-12-08 19:51:53,702 INFO: Processing line 3 with 1 URLs
+2025-12-08 19:51:53,702 INFO: Evaluation completed. Generated 1 results
+2025-12-08 19:51:53,703 INFO: Config loaded from: C:\Users\etdol\OneDrive\Desktop\se\117-Phase-2-CLI\.aws\config.json
+2025-12-08 19:51:55,710 INFO: S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
+2025-12-08 19:51:55,711 INFO: Config loaded from: C:\Users\etdol\OneDrive\Desktop\se\117-Phase-2-CLI\.aws\config.json
+2025-12-08 19:51:57,733 INFO: S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2
+2025-12-08 19:51:57,733 INFO: Config loaded from: C:\Users\etdol\OneDrive\Desktop\se\117-Phase-2-CLI\.aws\config.json
+2025-12-08 19:51:59,747 INFO: S3Storage initialized: bucket=trustworthy-model-reg, region=us-east-2

@@ -605,22 +605,24 @@ def ingest_model(  # noqa: C901
     logging.info(f"Model {model_id} size: {model_size} MB")
 
     # Create tags
+    # Create tags
     tags = ",".join([url for url in [code_url, dataset_url] if url != "unknown"])
     if not tags:
         tags = "model"
 
-        # Add to registry
-        try:
-            artifact_id = registry_handler.add_model(
-                name=model_id,
-                score=result.get("net_score", 0.0),
-                tags=tags,
-                code_url=code_url,
-                dataset_url=dataset_url,
-                metadata_json=json.dumps(result),
-            )
-        except StorageUnavailableError:
-            return {"error": "S3 is unavailable — could not store model artifacts"}
+    # Always attempt registry add
+    try:
+        artifact_id = registry_handler.add_model(
+            name=model_id,
+            score=result.get("net_score", 0.0),
+            tags=tags,
+            code_url=code_url,
+            dataset_url=dataset_url,
+            metadata_json=json.dumps(result),
+        )
+    except StorageUnavailableError:
+        return {"error": "S3 is unavailable — could not store model artifacts"}
+
 
     return {
         "status": "success",

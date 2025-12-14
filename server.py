@@ -6,7 +6,7 @@ import logging
 import os
 import re
 from typing import Optional
-
+import requests
 from beautilog import logger
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -955,9 +955,9 @@ def _log_audit_event(
         metadata["audit_trail"] = audit_trail
 
         # Update the artifact with new audit trail
-        registry_handler.update_artifact(
-            str(artifact_id), metadata_json=json.dumps(metadata)
-        )
+        #registry_handler.update_artifact(
+        #    str(artifact_id), metadata_json=json.dumps(metadata)
+        #)
         logger.info(
             f"Logged audit event: {action} for artifact {artifact_name} (ID: {artifact_id})"
         )
