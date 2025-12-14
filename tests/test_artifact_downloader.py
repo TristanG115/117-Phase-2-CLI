@@ -299,4 +299,3 @@ def test_process_artifact_for_s3_upload_flow(monkeypatch, tmp_path):
     key, url = ad.process_artifact_for_s3(s3, "https://huggingface.co/owner/artifact", "artifact", "dataset")
     assert key == "artifacts/dataset/artifact.zip"
     assert url == "https://s3.fake/url"
-
